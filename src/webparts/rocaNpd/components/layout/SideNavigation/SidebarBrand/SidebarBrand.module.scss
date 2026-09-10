@@ -1,0 +1,63 @@
+@import '../../../../styles/theme-import';
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid $roca-color-nav-border;
+}
+
+.brandCollapsed {
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.75rem 0.5rem;
+  gap: 0;
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: $roca-radius-sm;
+  background: $roca-color-nav-brand-icon-bg;
+  color: $roca-color-text-inverse;
+  flex-shrink: 0;
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: $roca-color-nav-text;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 0.6875rem;
+  color: $roca-color-nav-text-subtitle;
+  line-height: 1.3;
+}
+
+.toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.brandCollapsed .toggle {
+  margin-left: 0;
+}

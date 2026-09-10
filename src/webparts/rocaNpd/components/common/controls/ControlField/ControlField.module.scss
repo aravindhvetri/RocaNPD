@@ -1,0 +1,33 @@
+@import '../../../../styles/theme-import';
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $roca-color-text-primary;
+}
+
+.required {
+  color: $roca-color-error;
+  margin-left: 0.125rem;
+}
+
+.control {
+  width: 100%;
+}
+
+.error {
+  font-size: 0.75rem;
+  color: $roca-color-error;
+}
+
+.helper {
+  font-size: 0.75rem;
+  color: $roca-color-text-muted;
+}

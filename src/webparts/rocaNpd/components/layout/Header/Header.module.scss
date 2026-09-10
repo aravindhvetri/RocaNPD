@@ -1,0 +1,57 @@
+@import "../../../styles/theme-import";
+
+.header {
+  flex-shrink: 0;
+  background-color: $roca-color-header-bg;
+  border-bottom: 1px solid $roca-color-border-light;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 4px $roca-layout-gutter;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $roca-color-primary;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: block;
+  max-height: 3.25rem;
+  width: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logoWrap {
+    justify-content: flex-start;
+  }
+
+  .title {
+    font-size: 0.95rem;
+  }
+
+  .logo {
+    max-height: 2.5rem;
+  }
+}

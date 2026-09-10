@@ -1,0 +1,7 @@
+// Shared theme import for SCSS modules — compiles token values at build time (required for SPFx).
+@import './theme.scss';
+
+// Use in modules:  background: roca-var(--roca-color-nav-bg, $roca-color-nav-bg);
+@function roca-var($css-var, $fallback) {
+  @return var(#{$css-var}, #{$fallback});
+}

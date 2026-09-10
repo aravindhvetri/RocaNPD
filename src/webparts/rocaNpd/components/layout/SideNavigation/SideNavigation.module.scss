@@ -1,0 +1,40 @@
+@import '../../../styles/theme-import';
+@import '../../../styles/nav-scrollbar';
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  background-color: $roca-color-nav-bg;
+  color: $roca-color-nav-text;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.sidebarCollapsed {
+  width: 100%;
+  min-width: 0;
+}
+
+.navScroll {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  padding-bottom: 0.25rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  @include roca-nav-scrollbar;
+}
+
+@media (max-width: 992px) {
+  .sidebar,
+  .sidebarCollapsed {
+    width: 100%;
+    min-width: 0;
+  }
+}

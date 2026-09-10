@@ -1,0 +1,36 @@
+@import '../../../../styles/theme-import';
+
+.sectionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0.25rem auto;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $roca-radius-sm;
+  background-color: rgba(255, 255, 255, 0.06);
+  cursor: default;
+}
+
+.iconDefault {
+  font-size: 1rem;
+  color: $roca-color-nav-icon-default;
+}
+
+.iconAccent {
+  font-size: 1rem;
+  color: $roca-color-nav-icon-accent;
+}
+
+.iconMuted {
+  font-size: 0.875rem;
+  color: $roca-color-nav-text-section-muted;
+}
+
+.divider {
+  height: 1px;
+  margin: 0.5rem 0.75rem;
+  background-color: $roca-color-nav-border;
+}

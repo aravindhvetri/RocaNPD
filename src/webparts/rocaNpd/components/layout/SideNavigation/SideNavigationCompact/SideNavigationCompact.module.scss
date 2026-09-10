@@ -1,0 +1,26 @@
+@import '../../../../styles/theme-import';
+@import '../../../../styles/nav-scrollbar';
+
+.compactNav {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  padding: 0.25rem 0 0.75rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  @include roca-nav-scrollbar;
+}
+
+.topDivider {
+  height: 1px;
+  margin: 0 0.75rem 0.375rem;
+  background-color: $roca-color-nav-border;
+}
+
+.sectionGroup {
+  display: flex;
+  flex-direction: column;
+}
