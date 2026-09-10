@@ -1,0 +1,37 @@
+@import '../../../styles/theme-import';
+
+.selectedBarGold {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-gold};
+}
+
+.selectedBarAmber {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-amber};
+}
+
+.selectedBarLime {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-lime};
+}
+
+.selectedBarMint {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-mint};
+}
+
+.selectedBarSky {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-sky};
+}
+
+.selectedBarCoral {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-coral};
+}
+
+.selectedBarViolet {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-violet};
+}
+
+.selectedBarPeach {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-peach};
+}
+
+.selectedBarTeal {
+  --nav-selected-bar-color: #{$roca-color-nav-bar-teal};
+}

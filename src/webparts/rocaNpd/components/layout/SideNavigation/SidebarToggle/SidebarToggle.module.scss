@@ -1,0 +1,26 @@
+@import '../../../../styles/theme-import';
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: $roca-radius-sm;
+  background-color: transparent;
+  color: $roca-color-nav-text-subtitle;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+
+  &:hover {
+    background-color: $roca-color-nav-item-hover-bg;
+    color: $roca-color-nav-text;
+  }
+}
+
+.icon {
+  font-size: 0.625rem;
+}

@@ -1,0 +1,80 @@
+@import '../../../../styles/theme-import';
+
+.section {
+  border-bottom: 1px solid $roca-color-nav-border;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: $roca-color-nav-text;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: $roca-color-nav-item-hover-bg;
+  }
+}
+
+.sectionTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.sectionIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.sectionIconDefault {
+  color: $roca-color-nav-icon-default;
+}
+
+.sectionIconAccent {
+  color: $roca-color-nav-icon-accent;
+}
+
+.sectionIconMuted {
+  color: $roca-color-nav-text-section-muted;
+}
+
+.sectionTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: $roca-color-nav-text;
+}
+
+.sectionTitleMuted {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: $roca-color-nav-text-section-muted;
+}
+
+.chevron {
+  margin-left: auto;
+  padding-left: 0.5rem;
+  font-size: 0.5625rem;
+  color: $roca-color-nav-text-subtitle;
+  flex-shrink: 0;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.5rem;
+}
+
+.listItems {
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,2 @@
+// Re-export theme tokens for webpart SCSS modules (avoids fragile deep relative paths).
+@import '../../../External/CommonServices/_theme.scss';

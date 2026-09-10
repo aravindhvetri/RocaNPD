@@ -1,0 +1,58 @@
+@import '../../../External/CommonServices/theme.scss';
+
+.appRoot {
+  --roca-color-primary: #{$roca-color-primary};
+  --roca-color-accent: #{$roca-color-accent};
+  --roca-color-text-primary: #{$roca-color-text-primary};
+  --roca-color-text-secondary: #{$roca-color-text-secondary};
+  --roca-color-text-muted: #{$roca-color-text-muted};
+  --roca-color-text-inverse: #{$roca-color-text-inverse};
+  --roca-color-bg-page: #{$roca-color-bg-page};
+  --roca-color-bg-surface: #{$roca-color-bg-surface};
+  --roca-color-bg-subtle: #{$roca-color-bg-subtle};
+  --roca-color-border-light: #{$roca-color-border-light};
+  --roca-color-nav-bg: #{$roca-color-nav-bg};
+  --roca-color-nav-text: #{$roca-color-nav-text};
+  --roca-color-nav-icon: #{$roca-color-nav-icon};
+  --roca-color-nav-active-bg: #{$roca-color-nav-active-bg};
+  --roca-color-nav-active-border: #{$roca-color-nav-active-border};
+  --roca-color-btn-primary-bg: #{$roca-color-btn-primary-bg};
+  --roca-color-btn-primary-text: #{$roca-color-btn-primary-text};
+  --roca-shadow-sm: #{$roca-shadow-sm};
+  --roca-shadow-md: #{$roca-shadow-md};
+
+  box-sizing: border-box;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  color: $roca-color-text-primary;
+  background-color: $roca-color-bg-page;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+
+  :global {
+    .p-button.p-button-primary,
+    .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-help):not(.p-button-danger) {
+      background: $roca-color-btn-primary-bg;
+      border-color: $roca-color-btn-primary-bg;
+      color: $roca-color-btn-primary-text;
+    }
+
+    .p-inputtext:enabled:focus {
+      border-color: $roca-color-border-focus;
+      box-shadow: 0 0 0 0.2rem $roca-color-input-focus-ring;
+    }
+  }
+}

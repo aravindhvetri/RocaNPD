@@ -1,0 +1,123 @@
+// =============================================================================
+// ROCA NPD — Theme Tokens (SCSS variables only)
+// Wireframe: LookupTypeMaster.png, NavSelectDesign.png
+// =============================================================================
+
+// Brand / Primary
+$roca-color-primary: #1d4e56;
+$roca-color-primary-dark: #122a2f;
+$roca-color-primary-light: #2a6b75;
+$roca-color-primary-hover: #255a63;
+$roca-color-accent: #40919d;
+
+// Text
+$roca-color-text-primary: #1a202c;
+$roca-color-text-secondary: #4a5568;
+$roca-color-text-muted: #718096;
+$roca-color-text-placeholder: #9ca3af;
+$roca-color-text-inverse: #ffffff;
+$roca-color-text-link: #1d4e56;
+$roca-color-text-link-hover: #163b42;
+
+// Background
+$roca-color-bg-page: #eef1f4;
+$roca-color-bg-surface: #ffffff;
+$roca-color-bg-subtle: #f8fafc;
+$roca-color-bg-hover: #edf2f7;
+$roca-color-bg-selected: #e6fffa;
+$roca-color-bg-overlay: rgba(45, 55, 72, 0.45);
+
+// Border
+$roca-color-border-default: #d1d5db;
+$roca-color-border-light: #e2e8f0;
+$roca-color-border-dark: #cbd5e0;
+$roca-color-border-focus: #40919d;
+
+// Status (also used for nav icon semantics)
+$roca-color-status-draft: #f97316;
+$roca-color-status-pending: #eab308;
+$roca-color-status-approved: #22c55e;
+$roca-color-status-draft-bg: #f3f4f6;
+$roca-color-status-pending-bg: #fef3c7;
+$roca-color-status-rework: #ca8a04;
+$roca-color-status-rework-bg: #fef9c3;
+$roca-color-status-approved-bg: #d1fae5;
+$roca-color-status-completed: #22c55e;
+$roca-color-status-completed-bg: #d1fae5;
+$roca-color-status-rejected: #dc2626;
+$roca-color-status-rejected-bg: #fee2e2;
+
+// Feedback
+$roca-color-success: #059669;
+$roca-color-success-bg: #d1fae5;
+$roca-color-warning: #d97706;
+$roca-color-warning-bg: #fef3c7;
+$roca-color-error: #dc2626;
+$roca-color-error-bg: #fee2e2;
+$roca-color-info: #0284c7;
+$roca-color-info-bg: #e0f2fe;
+
+// Navigation — NavSelectDesign.png
+$roca-color-nav-bg: #307a8a;
+$roca-color-nav-text: #ffffff;
+$roca-color-nav-text-subtitle: #8ecbd4;
+$roca-color-nav-text-muted: #7a9ea6;
+$roca-color-nav-text-section-muted: #5a8a94;
+$roca-color-nav-icon-default: #ffffff;
+$roca-color-nav-icon-accent: #5ec4d4;
+$roca-color-nav-icon-pending: #eab308;
+$roca-color-nav-icon-approved: #22c55e;
+$roca-color-nav-icon-draft: #f97316;
+$roca-color-nav-border: rgba(255, 255, 255, 0.1);
+$roca-color-nav-item-hover-bg: rgba(255, 255, 255, 0.08);
+$roca-color-nav-item-selected-bg: rgba(64, 145, 157, 0.35);
+$roca-color-nav-item-selected-bar: #eab308;
+$roca-color-nav-bar-gold: #eab308;
+$roca-color-nav-bar-amber: #f59e0b;
+$roca-color-nav-bar-lime: #a3e635;
+$roca-color-nav-bar-mint: #4ade80;
+$roca-color-nav-bar-sky: #38bdf8;
+$roca-color-nav-bar-coral: #fb7185;
+$roca-color-nav-bar-violet: #a78bfa;
+$roca-color-nav-bar-peach: #fdba74;
+$roca-color-nav-bar-teal: #2dd4bf;
+$roca-color-nav-active-border: #40919d;
+$roca-color-nav-primary-action-bg: #2a5560;
+$roca-color-nav-primary-action-hover-bg: #336570;
+$roca-color-nav-brand-icon-bg: #40919d;
+$roca-color-header-bg: #ffffff;
+$roca-color-header-text: #2d3748;
+
+// Data table / Form
+$roca-color-table-header-bg: #f8fafc;
+$roca-color-table-header-text: #2d3748;
+$roca-color-table-row-hover: #f1f5f9;
+$roca-color-table-border: #e2e8f0;
+$roca-color-input-bg: #ffffff;
+$roca-color-input-border: #d1d5db;
+$roca-color-input-focus-ring: rgba(64, 145, 157, 0.25);
+
+// Buttons
+$roca-color-btn-primary-bg: #40919d;
+$roca-color-btn-primary-text: #ffffff;
+$roca-color-btn-primary-hover-bg: #357a85;
+$roca-color-btn-secondary-bg: #ffffff;
+$roca-color-btn-secondary-text: #2d3748;
+$roca-color-btn-secondary-border: #d1d5db;
+$roca-color-btn-secondary-hover-bg: #f8fafc;
+$roca-color-btn-danger-bg: #dc2626;
+$roca-color-btn-danger-text: #ffffff;
+$roca-color-btn-danger-hover-bg: #b91c1c;
+
+// Shadows
+$roca-shadow-sm: 0 1px 2px rgba(45, 55, 72, 0.08);
+$roca-shadow-md: 0 4px 12px rgba(45, 55, 72, 0.12);
+$roca-shadow-lg: 0 10px 24px rgba(45, 55, 72, 0.16);
+
+// Layout
+$roca-layout-gutter: 12px;
+$roca-sidebar-width: 17.5rem;
+$roca-sidebar-width-collapsed: 4.25rem;
+$roca-radius-sm: 6px;
+$roca-radius-md: 8px;
+$roca-radius-pill: 6px;
