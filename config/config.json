@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "roca-npd-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/rocaNpd/RocaNpdWebPart.js",
+          "manifest": "./src/webparts/rocaNpd/RocaNpdWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "RocaNpdWebPartStrings": "lib/webparts/rocaNpd/loc/{locale}.js"
+  }
+}

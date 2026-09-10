@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "roca-npd-client-side-solution",
+    "id": "7483b947-9b9c-4be6-881c-57ec6c56de76",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.23.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "RocaNPD description"
+      },
+      "longDescription": {
+        "default": "RocaNPD description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "roca-npd Feature",
+        "description": "The feature that activates elements of the roca-npd solution.",
+        "id": "f4188c44-369a-4142-9c37-05e52960390d",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/roca-npd.sppkg"
+  }
+}
