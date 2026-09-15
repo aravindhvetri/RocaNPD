@@ -50,7 +50,7 @@ A **SharePoint Framework (SPFx) client-side web part** branded **"NPD REQUESTS �
                                 │ PnPjs v4 (spfi + SPFx)
 ┌───────────────────────────────▼─────────────────────────────────────────┐
 │                    SPFx Web Part (RocaNpdWebPart)                        │
-│  PrimeReact theme + PrimeIcons + PrimeFlex + Inter font                  │
+│  PrimeReact theme + PrimeIcons + PrimeFlex + Poppins font                │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
@@ -369,6 +369,8 @@ Filter navigation, routes, and data queries by role
 
 ### 7.1 NPD Workflow
 
+> **Dynamic routing:** Active approval stages are loaded from `NPD_WorkflowConfig` (see §12.5.1). The sequence below is the default/reference flow — actual routing follows the configured Approval Chain per request type.
+
 ```text
 Initiator: Create → Save Draft (optional) → Submit
         ↓
@@ -380,6 +382,8 @@ Status = Completed → Auto-populate Material Master
 ```
 
 ### 7.2 New Material Group Workflow
+
+> **Dynamic routing:** MG approval steps are configured in `NPD_WorkflowConfig` (typically Initiator → Consultant). See §12.5.1.
 
 ```text
 Initiator: Create → Save Draft (optional) → Submit to Consultant
@@ -548,7 +552,7 @@ import themeStyles from '../../../External/CommonServices/theme.module.scss';
 
 ```typescript
 // RocaNpdWebPart.ts onInit
-loadApplicationStyles(); // PrimeReact theme, PrimeIcons, PrimeFlex, Inter font
+loadApplicationStyles(); // PrimeReact theme, PrimeIcons, PrimeFlex, Poppins font
 ```
 
 **Important:** Do **not** `import` PrimeReact / PrimeIcons CSS from `node_modules` in the WebPart. Font `url()` references break SPFx webpack (`___CSS_LOADER_URL_REPLACEMENT_*` error). Use `SPComponentLoader.loadCss()` instead.
@@ -574,7 +578,7 @@ loadApplicationStyles(); // PrimeReact theme, PrimeIcons, PrimeFlex, Inter font
 
 Responsibilities:
 
-- Load global PrimeReact CSS and Inter font
+- Load global PrimeReact CSS and Poppins font
 - Instantiate React tree with `WebPartContext`
 - Pass props: `context`, `userDisplayName`, `hasTeamsContext`, theme flags
 - Handle SPFx lifecycle (`onInit`, `onDispose`, `onThemeChanged`)
@@ -767,6 +771,7 @@ src/
 | NPD Item | Transaction | NPD line items (child) |
 | Material Group Request | Transaction | Material group header |
 | Material Group Request Item | Transaction | Material group entries (child) |
+| NPD_Templates | Document Library | Import Excel templates (`TemplateType` choice) |
 
 ### 12.2 Entity Relationships
 
@@ -801,12 +806,60 @@ Material Group Request (Completed) ──► Lookup Master (new values)
 
 ### 12.5 Brand Material Extension Master
 
-| Field | Type | Notes |
-|---|---|---|
-| Brand | Text/Lookup | Matches Brand lookup value |
-| Material Extension (Plant/Warehouse Codes) | Text (comma-separated) or multi-value | e.g. CPND, CRPT, CDEW |
+**SharePoint list:** `NPD_BrandMaterialExtensionMaster` (`Config.ListNames.BrandMaterialExtension`)
+
+| Internal Name | UI Label | Type | Notes |
+|---|---|---|---|
+| `Title` | Brand | Text | Unique per active record; ComboBox sourced from ROCA `Brandmaster` |
+| `Plant` | Plant | Multiline text | Comma-separated plant codes; MultiSelect sourced from ROCA `PlantMaster` |
+| `IsDeleted` | — | Boolean | Soft delete |
+
+**UI route:** `/admin/brand-extension` → `BrandMaterialExtensionMaster`
+
+**Services:** `brandMaterialExtensionService.ts` (CRUD), `rocaMasterDataService.ts` (cross-site options), `plantValueUtils.ts` (parse/join Plant values)
 
 **Drives:** Plant/Source dropdown on NPD form — enabled after Material Type selected, filtered by selected Brand's extension list.
+
+### 12.5.1 Workflow Configuration Master
+
+**SharePoint list:** `NPD_WorkflowConfig` (`Config.ListNames.WorkflowConfig`)
+
+| Internal Name | UI Label | Type | Notes |
+|---|---|---|---|
+| `Title` | Request Type | Text | `NPD Request` or `MG Request` from `Config.WorkflowRequestTypes` |
+| `CurrentRole` | Current Role | Text | Handoff source role for this step |
+| `NextRole` | Next Role | Text | Approver role receiving the request next |
+| `IsDeleted` | — | Boolean | Soft delete |
+
+**Storage model:** One SharePoint item per approval step. Multiple items share the same `Title` (Request Type). Example NPD chain (2 steps):
+
+```text
+Title=NPD Request, CurrentRole=Initiator,      NextRole=Vertical Head
+Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
+```
+
+**Display:** Group by Request Type; render **Approval Chain** = ordered roles joined with ` → ` (e.g. `Initiator → Vertical Head → MIS Coordinator`).
+
+**Ordering logic:** `orderWorkflowSteps()` walks from `Config.WorkflowDefaults.NpdStartRole` / `MgStartRole`, matching `CurrentRole` → `NextRole` links sequentially.
+
+**NPD Request rules:**
+
+- Start role: Initiator (read-only Current Role on step 1)
+- Next Role options: ROCA `RoleMaster` where `System/Title eq NPD` (expand `System` lookup); Initiator and `Config.WorkflowNpdExcludedNextRoles` (e.g. Consultant) excluded
+- Multi-step chains supported; used roles excluded from subsequent Next Role dropdowns
+- **Add Step** shown only when valid roles remain (`canAddWorkflowStep()`)
+- Only the **last step's Next Role** is editable; earlier steps lock once the next step is added
+
+**MG Request rules:**
+
+- Start role: Initiator
+- Single step only; Next Role = `Config.WorkflowDefaults.MgNextRole` (Consultant)
+
+**UI route:** `/admin/workflow-config` → `WorkflowConfigurationMaster`
+
+**Services:** `workflowConfigurationService.ts` (CRUD), `workflowConfigurationUtils.ts` (chain ordering/grouping), `rocaMasterDataService.fetchRocaNpdRoleOptions()` (cross-site roles)
+
+**Drives:** Runtime approval routing for NPD and Material Group requests — future modules must load active steps from this list rather than hardcoding stage sequences.
 
 ### 12.6 NPD Request (Header)
 
@@ -1493,13 +1546,98 @@ Use PrimeReact `Toast` component in `AppShell`, controlled by Redux `app.toast`.
 
 ## 21. Import / Export Architecture
 
-| Feature | Library | Module |
+Import and Export are **first-class reusable capabilities** documented in **`ProjectStandards.md` Section 5.8**. All master screens should follow the same pattern introduced on Lookup Type Master.
+
+### 21.1 Libraries and Packages
+
+| Capability | Library | Notes |
 |---|---|---|
-| Export CSV (lists) | xlsx or custom CSV | NPD All Requests, Approved Requests |
-| Export Excel (admin) | xlsx-js-style | Material Master, Plant Master |
-| Import template download | xlsx | Material Master, Plant Master |
-| Import bulk upload | xlsx + validation | Material Master, Plant Master |
-| NPD Item Import | xlsx | New NPD Request form |
+| Excel read (import) | `xlsx` | Parse `.xlsx` / `.xls` in browser |
+| Excel write (export) | `xlsx` | Generate `.xlsx` download |
+| Styled Excel (future) | `xlsx-js-style` | Use only when wireframe requires cell styling |
+
+### 21.2 SharePoint Template Library
+
+| Item | Value |
+|---|---|
+| Document library | `NPD_Templates` → `Config.LibraryNames.NPDTemplates` |
+| Metadata column | `TemplateType` (Choice) |
+| Lookup Type template | `TemplateType = "Lookup Type"` → `Config.TemplateTypes.LookupType` |
+| Service | `templateService.ts` — `fetchTemplateByType`, `downloadTemplateFile` |
+| File download | `SPServices.SPDownloadFileBlob` (PnP `getBlob()`) |
+
+Query pattern: filter library **list items** where `TemplateType eq '{choice}'`, expand `File`, take most recently modified.
+
+### 21.3 Common Services
+
+| Service | Responsibility |
+|---|---|
+| `templateService.ts` | Resolve and download templates from `NPD_Templates` |
+| `importService.ts` | File validation, sheet parse, header match, duplicate partition |
+| `exportService.ts` | Column-driven Excel export + browser download |
+| `{domain}Service.ts` | Map rows to SharePoint fields; `bulkCreate*`; `export*ToExcel`; `import*FromFile` |
+
+### 21.4 Common UI
+
+| Component | Path | Purpose |
+|---|---|---|
+| `ImportDialog` | `common/importExport/ImportDialog/` | Wireframe Import popup — upload zone + template panel + Cancel/Import |
+
+Feature modules pass titles and wire callbacks; they do **not** reimplement the popup layout.
+
+### 21.5 Duplicate Handling (Import)
+
+1. Read values from the column matching `Config.FieldLabels.*`.
+2. Compare **case-insensitively** against existing active SharePoint records.
+3. Detect duplicates **within the same file** (second occurrence flagged).
+4. Emit Toast warning per duplicate: `"<Name>" already exists.`
+5. Insert only non-duplicate rows via `SPServices.batchInsert`.
+6. Refresh grid from server after insert.
+
+### 21.6 Export Behavior
+
+1. Export rows **currently visible** on the master screen (after search/filter).
+2. Column headers match `Config.FieldLabels` / wireframe.
+3. Trigger download via `exportService.exportToExcel`.
+4. Toast success / empty-state warning.
+
+### 21.7 Module Rollout
+
+| Module | Import | Export | TemplateType choice |
+|---|---|---|---|
+| Lookup Type Master | ✅ Implemented | ✅ Implemented | `Lookup Type` |
+| Lookup Master | ✅ Implemented | ✅ Implemented | `Lookup` |
+| Plant Master | Planned | Planned | TBD |
+| Material Master | Planned | Planned | TBD |
+| NPD Item grid | Planned | N/A | TBD |
+
+See **`ProjectStandards.md` Section 5.8** for implementation checklist when adding to a new master.
+
+### 21.8 Cross-Site ROCA Master Data
+
+Some admin screens load reference data from a **separate ROCA SharePoint site** (not the NPD app site).
+
+| Component | Path | Role |
+|---|---|---|
+| URL resolver | `rocaSiteUrlResolver.ts` | `resolveCurrentSiteUrl()` + `resolveRocaMasterSiteUrl()` — environment mapping |
+| Data service | `rocaMasterDataService.ts` | `fetchRocaBrandOptions`, `fetchRocaPlantOptions` |
+| SP read | `SPServices.getAnotherSPReadItems()` | Cross-site list queries |
+| Config | `Config.RocaMasterListNames` | `Brandmaster`, `PlantMaster` |
+| App context | `appSlice.siteUrl` | Set in `initializeApp` from web part context |
+
+**Environment mapping:**
+
+| Origin | Current site path contains | ROCA master site |
+|---|---|---|
+| `chandrudemo.sharepoint.com` | — | `/sites/Roca` |
+| `rocasanitario.sharepoint.com` | `rinanpdev` | `/sites/RINMASTERDEV` |
+| `rocasanitario.sharepoint.com` | `rinanp` | `/sites/RBPPLWOW` |
+
+**Plant Master filter:** `IsDeleted eq false` via `getActiveRecordFilters()`. Options use **`PlantCode`** only (not `Title`).
+
+**Plant storage:** Selected MultiSelect values joined with `", "` (`joinCommaSeparatedPlants`); edit loads via `parseCommaSeparatedPlants`.
+
+See **`ProjectStandards.md` Section 5.10** for rules (R-CS01–R-CS05).
 
 ---
 

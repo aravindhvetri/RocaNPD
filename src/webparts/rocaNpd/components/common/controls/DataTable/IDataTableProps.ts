@@ -6,6 +6,7 @@ export interface IDataTableColumn<T> {
   sortable?: boolean;
   body?: (row: T) => React.ReactNode;
   style?: React.CSSProperties;
+  headerStyle?: React.CSSProperties;
 }
 
 export interface IDataTableProps<T extends Record<string, unknown>> {
@@ -15,6 +16,13 @@ export interface IDataTableProps<T extends Record<string, unknown>> {
   emptyMessage?: string;
   paginator?: boolean;
   rows?: number;
+  rowsPerPageOptions?: number[];
   dataKey?: string;
   className?: string;
+  header?: React.ReactNode;
+  globalFilter?: string;
+  globalFilterFields?: string[];
+  paginatorPosition?: "top" | "bottom" | "both";
+  paginatorTemplate?: string;
+  currentPageReportTemplate?: string;
 }

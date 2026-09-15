@@ -1,0 +1,81 @@
+@import "../../../../styles/_theme-import.scss";
+@import "../../../../styles/_datatable-pagination.scss";
+
+.dataTable {
+  :global {
+    @include roca-datatable-pagination;
+    .p-datatable-table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    .p-datatable-thead > tr > th {
+      background-color: $roca-color-master-table-header;
+      color: $roca-color-text-inverse;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.625rem 0.875rem;
+      border: none !important;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .p-sortable-column .p-sortable-column-icon {
+      font-size: 12px;
+      width: 12px;
+      height: 12px;
+      color: rgba(255, 255, 255, 0.55);
+      margin-left: 0.25rem;
+    }
+
+    .p-sortable-column.p-highlight {
+      background-color: $roca-color-master-table-header !important;
+      color: $roca-color-text-inverse !important;
+    }
+
+    .p-datatable-tbody > tr > td {
+      font-size: 0.8125rem;
+      padding: 0.625rem 0.875rem;
+      border: none !important;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .p-datatable-tbody > tr {
+      background-color: $roca-color-bg-surface;
+    }
+
+    .p-datatable-tbody > tr.p-row-odd {
+      background-color: $roca-color-bg-subtle;
+    }
+
+    .p-datatable-tbody > tr:hover {
+      background-color: $roca-color-bg-hover;
+    }
+
+    .p-datatable .p-datatable-tbody > tr > td,
+    .p-datatable .p-datatable-thead > tr > th {
+      border-width: 0 !important;
+    }
+
+  }
+}
+
+.actionCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.editAction {
+  :global(.p-button-icon) {
+    color: $roca-color-edit-icon;
+    font-size: 0.875rem;
+  }
+}
+
+.deleteAction {
+  :global(.p-button-icon) {
+    color: $roca-color-error;
+    font-size: 0.875rem;
+  }
+}

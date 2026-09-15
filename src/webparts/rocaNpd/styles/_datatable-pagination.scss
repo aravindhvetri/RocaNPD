@@ -1,0 +1,144 @@
+@import '../../../External/CommonServices/theme.scss';
+
+$roca-paginator-control-size: 2.25rem;
+$roca-paginator-gap: 0.625rem;
+$roca-paginator-nav-bg: #f5f7f9;
+$roca-paginator-active-bg: $roca-color-master-table-header;
+$roca-paginator-font-size: 0.8125rem;
+$roca-paginator-icon-size: 0.75rem;
+
+@mixin roca-datatable-pagination {
+  .p-paginator {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $roca-paginator-gap;
+    padding: 1rem 1.25rem 1.125rem;
+    font-size: $roca-paginator-font-size;
+    font-family: 'Poppins', sans-serif;
+    border-top: 1px solid $roca-color-table-border;
+    background: $roca-color-bg-surface;
+  }
+
+  .p-paginator-current {
+    margin-right: auto;
+    color: $roca-color-text-muted;
+    font-size: $roca-paginator-font-size;
+    font-weight: 400;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+
+  .p-paginator-pages {
+    display: flex;
+    align-items: center;
+    gap: $roca-paginator-gap;
+  }
+
+  .p-paginator-first,
+  .p-paginator-prev,
+  .p-paginator-next,
+  .p-paginator-last {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: $roca-paginator-control-size;
+    width: $roca-paginator-control-size;
+    height: $roca-paginator-control-size;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: $roca-paginator-nav-bg;
+    color: $roca-color-text-primary;
+    flex-shrink: 0;
+    cursor: pointer;
+
+    .p-paginator-icon {
+      font-size: $roca-paginator-icon-size;
+      width: $roca-paginator-icon-size;
+      height: $roca-paginator-icon-size;
+      color: inherit;
+    }
+
+    &:not(.p-disabled):hover {
+      background: $roca-color-bg-hover;
+      color: $roca-color-text-secondary;
+    }
+
+    &.p-disabled {
+      opacity: 0.35;
+      background: $roca-paginator-nav-bg;
+      color: $roca-color-text-muted;
+    }
+
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &.p-focus {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-paginator-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: auto;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0 0.25rem;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: $roca-color-text-primary;
+    font-size: $roca-paginator-font-size;
+    font-weight: 500;
+    line-height: $roca-paginator-control-size;
+    min-height: $roca-paginator-control-size;
+    cursor: pointer;
+
+    &:not(.p-highlight):hover {
+      background: transparent;
+      color: $roca-color-text-primary;
+    }
+
+    &.p-highlight {
+      min-width: $roca-paginator-control-size;
+      width: $roca-paginator-control-size;
+      height: $roca-paginator-control-size;
+      padding: 0;
+      border-radius: 50%;
+      background: $roca-paginator-active-bg !important;
+      border-color: $roca-paginator-active-bg !important;
+      color: $roca-color-text-inverse !important;
+      font-weight: 600;
+    }
+
+    &.p-highlight:hover {
+      background: $roca-paginator-active-bg !important;
+      color: $roca-color-text-inverse !important;
+    }
+
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &.p-focus {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    &.p-highlight:focus,
+    &.p-highlight:focus-visible {
+      background: $roca-paginator-active-bg !important;
+      border-color: $roca-paginator-active-bg !important;
+      color: $roca-color-text-inverse !important;
+    }
+  }
+}

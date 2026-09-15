@@ -11,11 +11,11 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 40 | 25 | 15 |
+| B — Technical Foundation | 41 | 27 | 14 |
 | C — SharePoint Data | 24 | 0 | 24 |
 | D — Security & Roles | 22 | 0 | 22 |
 | E — UI / UX / Theme | 27 | 6 | 21 |
-| F — Admin Module | 36 | 0 | 36 |
+| F — Admin Module | 50 | 21 | 29 |
 | G — NPD Module | 42 | 0 | 42 |
 | H — Material Group Module | 24 | 0 | 24 |
 | I — Workflow & Automation | 20 | 0 | 20 |
@@ -26,9 +26,9 @@
 | N — Testing | 24 | 0 | 24 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **334** | **34** | **300** |
+| **TOTAL** | **349** | **56** | **293** |
 
-**Last Updated:** 10 September 2026
+**Last Updated:** 11 September 2026
 
 ---
 
@@ -81,7 +81,7 @@
 - [x] **CHK-B16** `initializeApp` thunk runs on app mount
 - [ ] **CHK-B17** Loading states display during async operations
 - [ ] **CHK-B18** Error states captured in slices and shown to user
-- [ ] **CHK-B19** Toast notifications work for success and error
+- [x] **CHK-B19** Toast notifications work for success, error, and warning (common styled Toast)
 
 ### B.4 Routing & App Shell
 
@@ -99,7 +99,8 @@
 - [ ] **CHK-B28** SearchFilterBar filters list data correctly
 - [ ] **CHK-B29** EmptyState displays when no records found
 - [ ] **CHK-B30** LoaderOverlay shows during data fetch and save operations
-- [ ] **CHK-B31** ExportButton generates valid CSV / Excel files
+- [x] **CHK-B31** Export generates valid Excel file via `exportService.ts` (Lookup Type Master verified)
+- [x] **CHK-B31a** Reusable Import/Export services and `ImportDialog` documented in ProjectStandards Section 5.8
 
 ### B.6 Common Controls — PrimeReact Wrappers
 
@@ -113,6 +114,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-B37** Button wrapper supports primary / secondary / danger / text variants
 - [x] **CHK-B38** Dialog and ConfirmDialog wrappers handle open/close and footer actions
 - [x] **CHK-B39** DataTable wrapper supports pagination, sorting, loading, and empty state
+- [x] **CHK-B39a** DataTable — no grid lines; subtle sort icons; pagination report text without box
+- [x] **CHK-B39b** `MasterTablePanel` reset-filters icon on all master screens
+- [x] **CHK-B39c** Poppins font family applied app-wide
+- [x] **CHK-B39d** Form dialog title/label hierarchy and footer button styling via `_form-dialog-standard.scss`
+- [x] **CHK-B39e** User-facing **Lookup Type** spelling consistent in nav, headings, and dialogs
 - [ ] **CHK-B40** Toast wrapper connected to Redux notification queue
 - [x] **CHK-B41** `common/controls/index.ts` barrel export — feature modules import from here only
 - [ ] **CHK-B42** No feature module file imports directly from `primereact/*`
@@ -260,18 +266,33 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### F.1 Lookup Type Master
 
-- [ ] **CHK-F01** List displays all lookup types
-- [ ] **CHK-F02** Create new lookup type works
-- [ ] **CHK-F03** Edit lookup type works
-- [ ] **CHK-F04** Required-field validation enforced
+- [x] **CHK-F01** List displays all active lookup types (`IsDeleted` excluded)
+- [x] **CHK-F02** Create new lookup type works (Add Lookup Type popup, SharePoint `NPD_LookupType`)
+- [x] **CHK-F03** Edit lookup type works (Edit Lookup Type popup)
+- [x] **CHK-F04** Required-field and duplicate validation via warning Toast (no inline errors)
+- [x] **CHK-F04a** Soft delete via `IsDeleted` — deleted records hidden from grid
+- [x] **CHK-F04b** Search filters lookup types in DataTable
+- [x] **CHK-F04c** Import popup matches wireframe (upload zone, template panel, Cancel/Import)
+- [x] **CHK-F04f** Import downloads template from `NPD_Templates` where `TemplateType = "Lookup Type"`
+- [x] **CHK-F04g** Import duplicate names show warning Toast: `"<Name>" already exists.`
+- [x] **CHK-F04h** Import inserts only new records; list refreshes after success
+- [x] **CHK-F04i** Export downloads Excel for currently displayed (filtered) lookup types
+- [x] **CHK-F04d** Bottom pagination with entry count matches new design
+- [x] **CHK-F04e** Delete confirmation uses common `DeleteConfirmDialog` design
+- [x] **CHK-F04j** LookupType delete blocked when used by Lookup records (dependency Toast)
 
 ### F.2 Lookup Master
 
-- [ ] **CHK-F05** List displays lookups with Code, Name, Type
-- [ ] **CHK-F06** Create lookup with type dropdown works
-- [ ] **CHK-F07** Edit lookup works
-- [ ] **CHK-F08** Delete lookup works
-- [ ] **CHK-F09** Lookup correctly linked to Lookup Type Master
+- [x] **CHK-F05** List displays lookups with Lookup Type and Lookup Name columns
+- [x] **CHK-F06** Add Lookup popup matches wireframe (Lookup Type dropdown, Lookup Name field)
+- [x] **CHK-F07** Edit lookup works
+- [x] **CHK-F08** Soft delete lookup works when no dependency exists
+- [x] **CHK-F09** Lookup correctly linked to Lookup Type Master (`NPD_Lookup.LookupType`)
+- [x] **CHK-F09a** Import uses `NPD_Templates` where `TemplateType = "Lookup"`
+- [x] **CHK-F09b** Import duplicate names show warning Toast
+- [x] **CHK-F09c** Export downloads Excel for filtered grid data
+- [x] **CHK-F09d** LookupType delete blocked when referenced by Lookup records (Toast)
+- [x] **CHK-F09e** Lookup delete blocked when referenced in Brand Material Extension (Toast)
 
 ### F.3 Plant Master
 
@@ -298,14 +319,23 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### F.6 Brand Material Extension
 
-- [ ] **CHK-F24** Brand → Plant/Warehouse mapping displays correctly
-- [ ] **CHK-F25** Plant values sourced from Plant Master
-- [ ] **CHK-F26** Create / Edit / Delete works
+- [x] **CHK-F24** Brand → Plant mapping displays correctly in grid
+- [x] **CHK-F25** Brand options sourced from ROCA `Brandmaster`; Plant from ROCA `PlantMaster`
+- [x] **CHK-F26** Add / Edit / Delete works with common popup and Toast validation
+- [x] **CHK-F26a** Plant stored as comma-separated values; MultiSelect repopulates on edit
+- [x] **CHK-F26b** ROCA site URL resolved via `resolveRocaMasterSiteUrl()` (not hardcoded in UI)
+- [x] **CHK-F26c** Duplicate Brand blocked with warning Toast
 
 ### F.7 Workflow Configuration
 
-- [ ] **CHK-F27** Workflow stages display (Initiator → VH → MIS)
-- [ ] **CHK-F28** Configure Workflow modal saves correctly
+- [x] **CHK-F27** Workflow stages display as grouped Approval Chain (e.g. Initiator → VH → MIS)
+- [x] **CHK-F28** Configure Workflow modal saves correctly (NPD multi-step + MG Consultant step)
+- [x] **CHK-F28a** NPD Next Role from ROCA RoleMaster (`System/Title eq NPD`); Initiator, Consultant, and used roles excluded
+- [x] **CHK-F28b** Edit replaces existing steps; Delete soft-deletes all steps for request type
+- [x] **CHK-F28c** Duplicate request type blocked; validation via Toast only
+- [x] **CHK-F28d** Add Step hidden when no valid Next Role options remain for a new step
+- [x] **CHK-F28e** Only latest step Next Role editable; earlier steps locked after next step added
+- [x] **CHK-F28f** Form dialog font size and button/icon sizing consistent with master popup standards
 
 ### F.8 Material Master
 

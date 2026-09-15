@@ -134,8 +134,8 @@ export const NAV_SECTIONS: INavSectionConfig[] = [
     sectionIconTone: "default",
     items: [
       { id: "admin-material", label: "Material Master", route: "/admin/material-master", icon: "pi pi-database", selectedBarTone: "sky" },
-      { id: "admin-lookup-type", label: "LookUp Type", route: "/admin/lookup-type", icon: "pi pi-list", selectedBarTone: "mint" },
-      { id: "admin-lookup", label: "LookUp", route: "/admin/lookup", icon: "pi pi-list", selectedBarTone: "teal" },
+      { id: "admin-lookup-type", label: "Lookup Type", route: "/admin/lookup-type", icon: "pi pi-list", selectedBarTone: "mint" },
+      { id: "admin-lookup", label: "Lookup", route: "/admin/lookup", icon: "pi pi-list", selectedBarTone: "teal" },
       { id: "admin-plant", label: "Plant Master", route: "/admin/plant", icon: "pi pi-folder", selectedBarTone: "violet" },
       { id: "admin-role", label: "Role", route: "/admin/role", icon: "pi pi-users", selectedBarTone: "peach" },
       { id: "admin-approver", label: "Approver Configuration", route: "/admin/approver-config", icon: "pi pi-user-edit", selectedBarTone: "lime" },

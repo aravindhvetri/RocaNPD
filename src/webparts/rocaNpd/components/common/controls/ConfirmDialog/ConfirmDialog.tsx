@@ -1,6 +1,8 @@
 import * as React from "react";
 import { ConfirmDialog as PrimeConfirmDialog } from "primereact/confirmdialog";
+import { getAppRootElement } from "../../appRootTarget";
 import type { IConfirmDialogProps } from "./IConfirmDialogProps";
+import styles from "./ConfirmDialog.module.scss";
 
 const ConfirmDialog: React.FC<IConfirmDialogProps> = ({
   visible,
@@ -11,6 +13,7 @@ const ConfirmDialog: React.FC<IConfirmDialogProps> = ({
   acceptClassName,
   onAccept,
   onReject,
+  onHide,
 }) => (
   <PrimeConfirmDialog
     visible={visible}
@@ -19,7 +22,11 @@ const ConfirmDialog: React.FC<IConfirmDialogProps> = ({
     acceptLabel={acceptLabel}
     rejectLabel={rejectLabel}
     acceptClassName={acceptClassName}
-    onHide={onReject}
+    className={styles.confirmDialog}
+    appendTo={getAppRootElement()}
+    onHide={() => {
+      onHide?.();
+    }}
     accept={onAccept}
     reject={onReject}
   />

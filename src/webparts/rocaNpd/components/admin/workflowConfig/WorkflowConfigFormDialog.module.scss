@@ -1,0 +1,105 @@
+@import "../../../styles/_theme-import.scss";
+@import "../../../styles/_form-dialog-standard.scss";
+
+$form-control-font-size: 0.8125rem;
+
+.formDialog {
+  @include roca-form-dialog-shell;
+}
+
+.footer {
+  @include roca-form-dialog-footer;
+}
+
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.formField,
+.stepField {
+  @include roca-form-dialog-field;
+}
+
+.sectionDivider {
+  margin: 0.25rem 0 0.5rem;
+  border: none;
+  border-top: 1px solid $roca-color-border-light;
+}
+
+.sectionTitle {
+  margin: 0 0 0.625rem;
+  font-size: $form-control-font-size;
+  font-weight: 600;
+  color: $roca-color-text-primary;
+  font-family: "Poppins", sans-serif;
+}
+
+.stepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stepCard {
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-sm;
+  padding: 0.875rem;
+  background-color: $roca-color-bg-subtle;
+}
+
+.stepFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.removeStepButton {
+  margin-bottom: 0.125rem;
+
+  :global(.p-button-icon) {
+    color: $roca-color-error;
+    font-size: 0.875rem;
+  }
+}
+
+.addStepRow {
+  margin-top: 0.25rem;
+}
+
+.addStepButton {
+  font-size: $form-control-font-size;
+  background: $roca-color-btn-add-new-bg;
+  border-color: $roca-color-btn-add-new-bg;
+
+  :global(.p-button-icon) {
+    font-size: 12px !important;
+  }
+
+  :global(.p-button-icon-left) {
+    margin-right: 0.3125rem;
+  }
+
+  :global(.p-button-label) {
+    font-size: $form-control-font-size;
+    font-weight: 500;
+    font-family: "Poppins", sans-serif;
+  }
+
+  &:enabled:hover {
+    background: $roca-color-btn-add-new-hover-bg;
+    border-color: $roca-color-btn-add-new-hover-bg;
+  }
+
+  &:enabled:focus,
+  &:enabled:focus-visible,
+  &:enabled:active,
+  &:global(.p-focus) {
+    background: $roca-color-btn-add-new-bg !important;
+    border-color: $roca-color-btn-add-new-bg !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}

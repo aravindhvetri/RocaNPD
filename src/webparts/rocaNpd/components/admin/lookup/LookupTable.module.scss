@@ -1,0 +1,135 @@
+@import '../../../styles/_theme-import.scss';
+
+.table {
+  :global {
+    .p-datatable-thead > tr > th {
+      background-color: $roca-color-master-table-header;
+      color: $roca-color-text-inverse;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.625rem 0.875rem;
+      border-color: $roca-color-master-table-header;
+    }
+
+    .p-sortable-column .p-sortable-column-icon {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .p-sortable-column.p-highlight {
+      background-color: $roca-color-master-table-header !important;
+      color: $roca-color-text-inverse !important;
+    }
+
+    .p-datatable-tbody > tr > td {
+      font-size: 0.8125rem;
+      padding: 0.625rem 0.875rem;
+      border-color: $roca-color-table-border;
+    }
+
+    .p-datatable-tbody > tr {
+      background-color: $roca-color-bg-surface;
+    }
+
+    .p-datatable-tbody > tr.p-row-odd {
+      background-color: $roca-color-bg-subtle;
+    }
+
+    .p-datatable-tbody > tr:hover {
+      background-color: $roca-color-bg-hover;
+    }
+
+    .p-paginator {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.8125rem;
+      border-top: 1px solid $roca-color-table-border;
+      background: $roca-color-bg-surface;
+    }
+
+    .p-paginator-current {
+      margin-right: auto;
+      color: $roca-color-text-muted;
+      font-size: 0.8125rem;
+    }
+
+    .p-paginator-page {
+      min-width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      border: none;
+      color: $roca-color-text-secondary;
+      font-size: 0.8125rem;
+      background: transparent;
+
+      &.p-highlight {
+        background: $roca-color-btn-add-new-bg !important;
+        border-color: $roca-color-btn-add-new-bg !important;
+        color: $roca-color-text-inverse !important;
+      }
+
+      &:not(.p-highlight):hover {
+        background: $roca-color-bg-hover;
+        color: $roca-color-text-secondary;
+      }
+
+      &:focus,
+      &:focus-visible,
+      &:active,
+      &.p-focus {
+        box-shadow: none !important;
+        outline: none !important;
+      }
+
+      &.p-highlight:focus,
+      &.p-highlight:focus-visible {
+        background: $roca-color-btn-add-new-bg !important;
+        border-color: $roca-color-btn-add-new-bg !important;
+        color: $roca-color-text-inverse !important;
+      }
+    }
+
+    .p-paginator-first,
+    .p-paginator-prev,
+    .p-paginator-next,
+    .p-paginator-last {
+      min-width: 1.75rem;
+      height: 1.75rem;
+      border: none;
+      background: transparent;
+      color: $roca-color-text-muted;
+
+      &:focus,
+      &:focus-visible,
+      &:active,
+      &.p-focus {
+        box-shadow: none !important;
+        outline: none !important;
+        background: transparent !important;
+      }
+    }
+  }
+}
+
+.actionCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.editAction {
+  :global(.p-button-icon) {
+    color: $roca-color-edit-icon;
+    font-size: 0.875rem;
+  }
+}
+
+.deleteAction {
+  :global(.p-button-icon) {
+    color: $roca-color-error;
+    font-size: 0.875rem;
+  }
+}

@@ -1,8 +1,19 @@
 import * as React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Config } from "../../../../External/CommonServices/Config";
+import BrandMaterialExtensionMaster from "../admin/brandMaterialExtension/BrandMaterialExtensionMaster";
+import LookupMaster from "../admin/lookup/LookupMaster";
+import LookupTypeMaster from "../admin/lookupType/LookupTypeMaster";
+import WorkflowConfigurationMaster from "../admin/workflowConfig/WorkflowConfigurationMaster";
 import RoutePlaceholder from "./RoutePlaceholder/RoutePlaceholder";
 import { ROUTE_DEFINITIONS } from "./routeDefinitions";
+
+const IMPLEMENTED_ROUTES: Record<string, React.ReactElement> = {
+  "/admin/lookup-type": <LookupTypeMaster />,
+  "/admin/lookup": <LookupMaster />,
+  "/admin/brand-extension": <BrandMaterialExtensionMaster />,
+  "/admin/workflow-config": <WorkflowConfigurationMaster />,
+};
 
 const AppRoutes: React.FC = () => (
   <Routes>
@@ -15,10 +26,12 @@ const AppRoutes: React.FC = () => (
         key={route.path}
         path={route.path}
         element={
-          <RoutePlaceholder
-            title={route.title}
-            description={route.description}
-          />
+          IMPLEMENTED_ROUTES[route.path] ?? (
+            <RoutePlaceholder
+              title={route.title}
+              description={route.description}
+            />
+          )
         }
       />
     ))}

@@ -1,0 +1,88 @@
+@import '../../../../styles/_theme-import.scss';
+
+.rocaToast {
+  :global {
+    .p-toast {
+      width: 22rem;
+      opacity: 1;
+    }
+
+    .p-toast-message {
+      margin: 0 0 0.75rem;
+      border: 1px solid $roca-color-border-light;
+      border-radius: $roca-radius-md;
+      box-shadow: $roca-shadow-md;
+      background: $roca-color-bg-surface;
+      overflow: hidden;
+    }
+
+    .p-toast-message-content {
+      padding: 0.875rem 2rem 0.875rem 0.875rem;
+      border-left-width: 4px;
+      border-left-style: solid;
+    }
+
+    .p-toast-message-warn .p-toast-message-content {
+      border-left-color: $roca-color-toast-warning-accent;
+    }
+
+    .p-toast-message-success .p-toast-message-content {
+      border-left-color: $roca-color-success;
+    }
+
+    .p-toast-message-error .p-toast-message-content {
+      border-left-color: $roca-color-error;
+    }
+
+    .p-toast-message-info .p-toast-message-content {
+      border-left-color: $roca-color-info;
+    }
+
+    .p-toast-message-icon {
+      font-size: 1.125rem;
+    }
+
+    .p-toast-message-warn .p-toast-message-icon {
+      color: $roca-color-toast-warning-accent;
+    }
+
+    .p-toast-message-success .p-toast-message-icon {
+      color: $roca-color-success;
+    }
+
+    .p-toast-message-error .p-toast-message-icon {
+      color: $roca-color-error;
+    }
+
+    .p-toast-message-info .p-toast-message-icon {
+      color: $roca-color-info;
+    }
+
+    .p-toast-summary {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: $roca-color-text-primary;
+    }
+
+    .p-toast-detail {
+      margin: 0.125rem 0 0;
+      font-size: 0.8125rem;
+      color: $roca-color-text-secondary;
+    }
+
+    .p-toast-icon-close {
+      width: 1.5rem;
+      height: 1.5rem;
+      color: $roca-color-text-muted;
+
+      &:enabled:hover,
+      &:enabled:focus,
+      &:enabled:active {
+        background: transparent;
+        color: $roca-color-text-primary;
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    }
+  }
+}

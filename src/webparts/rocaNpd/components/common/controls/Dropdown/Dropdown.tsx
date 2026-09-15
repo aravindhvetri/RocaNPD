@@ -1,7 +1,9 @@
 import * as React from "react";
 import { Dropdown as PrimeDropdown } from "primereact/dropdown";
+import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IDropdownProps } from "./IDropdownProps";
+import styles from "./Dropdown.module.scss";
 
 const Dropdown: React.FC<IDropdownProps> = ({
   id,
@@ -26,7 +28,7 @@ const Dropdown: React.FC<IDropdownProps> = ({
     required={required}
     error={error}
     helperText={helperText}
-    className={className}
+    className={`${styles.dropdown} ${className ?? ""}`}
   >
     <PrimeDropdown
       inputId={id}
@@ -38,6 +40,8 @@ const Dropdown: React.FC<IDropdownProps> = ({
       filter={filter}
       showClear={showClear}
       disabled={disabled || readOnly}
+      appendTo={getAppRootElement()}
+      panelClassName={styles.panel}
       className={`w-full ${error ? "p-invalid" : ""}`}
       data-testid={testId}
       onChange={(e) => onChange(e.value ?? null)}

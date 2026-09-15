@@ -1,4 +1,5 @@
 @import '../../../External/CommonServices/theme.scss';
+@import './_primereact-overrides.scss';
 
 .appRoot {
   --roca-color-primary: #{$roca-color-primary};
@@ -13,18 +14,28 @@
   --roca-color-border-light: #{$roca-color-border-light};
   --roca-color-nav-bg: #{$roca-color-nav-bg};
   --roca-color-nav-text: #{$roca-color-nav-text};
-  --roca-color-nav-icon: #{$roca-color-nav-icon};
-  --roca-color-nav-active-bg: #{$roca-color-nav-active-bg};
+  --roca-color-nav-icon: #{$roca-color-nav-icon-default};
+  --roca-color-nav-active-bg: #{$roca-color-nav-item-selected-bg};
   --roca-color-nav-active-border: #{$roca-color-nav-active-border};
   --roca-color-btn-primary-bg: #{$roca-color-btn-primary-bg};
   --roca-color-btn-primary-text: #{$roca-color-btn-primary-text};
   --roca-shadow-sm: #{$roca-shadow-sm};
   --roca-shadow-md: #{$roca-shadow-md};
 
+  // Override PrimeReact bootstrap4-light-blue theme tokens.
+  --primary-color: #{$roca-color-btn-primary-bg};
+  --primary-color-text: #{$roca-color-btn-primary-text};
+  --highlight-bg: #{$roca-color-bg-selected};
+  --highlight-text-color: #{$roca-color-text-primary};
+  --focus-ring: 0 0 0 0 transparent;
+  --p-focus-ring-color: transparent;
+  --p-focus-ring-shadow: none;
+
   box-sizing: border-box;
   position: fixed;
   inset: 0;
   z-index: 1;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -33,7 +44,8 @@
   overflow: hidden;
   color: $roca-color-text-primary;
   background-color: $roca-color-bg-page;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+  font-size: 0.8125rem;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
 
   *,
@@ -43,16 +55,6 @@
   }
 
   :global {
-    .p-button.p-button-primary,
-    .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-help):not(.p-button-danger) {
-      background: $roca-color-btn-primary-bg;
-      border-color: $roca-color-btn-primary-bg;
-      color: $roca-color-btn-primary-text;
-    }
-
-    .p-inputtext:enabled:focus {
-      border-color: $roca-color-border-focus;
-      box-shadow: 0 0 0 0.2rem $roca-color-input-focus-ring;
-    }
+    @include roca-primereact-overrides;
   }
 }

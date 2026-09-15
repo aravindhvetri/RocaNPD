@@ -1,0 +1,40 @@
+@import '../../../../styles/_form-dialog-standard.scss';
+
+.deleteDialog {
+  @include roca-form-dialog-shell;
+
+  :global {
+    .p-dialog-content {
+      text-align: center;
+    }
+
+    .p-dialog-footer {
+      justify-content: center;
+      border-top: none;
+    }
+  }
+}
+
+.iconWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.trashIcon {
+  font-size: 2.75rem;
+  color: $roca-color-error;
+}
+
+.message {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: $roca-color-text-secondary;
+  line-height: 1.5;
+  font-family: 'Poppins', sans-serif;
+}
+
+.footer {
+  @include roca-form-dialog-footer;
+  justify-content: center;
+}

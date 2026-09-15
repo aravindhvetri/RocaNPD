@@ -1,0 +1,13 @@
+@import '../../../styles/_theme-import.scss';
+
+.master {
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.tablePanel {
+  background-color: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  box-shadow: $roca-shadow-sm;
+  overflow: hidden;
+}

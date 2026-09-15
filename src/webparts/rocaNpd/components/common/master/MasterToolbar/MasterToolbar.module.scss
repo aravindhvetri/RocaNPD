@@ -1,0 +1,41 @@
+@import '../../../../styles/_master-toolbar.scss';
+
+.toolbar {
+  @include master-toolbar-shell;
+}
+
+.title {
+  @include master-toolbar-title;
+}
+
+.actions {
+  @include master-toolbar-actions;
+}
+
+.filterGroup {
+  @include master-toolbar-filter-group;
+}
+
+.searchWrap {
+  @include master-toolbar-search-wrap;
+}
+
+.searchIcon {
+  @include master-toolbar-search-icon;
+}
+
+.searchInput {
+  @include master-toolbar-search-input;
+}
+
+.resetButton {
+  @include master-toolbar-reset-button;
+}
+
+.actionButton {
+  @include master-toolbar-action-button;
+}
+
+.addNewButton {
+  @include master-toolbar-add-new-button;
+}

@@ -1,0 +1,9 @@
+@import '../../../../styles/_form-dialog-standard.scss';
+
+.confirmDialog {
+  @include roca-form-dialog-shell;
+
+  :global(.p-dialog-footer) {
+    @include roca-form-dialog-footer;
+  }
+}

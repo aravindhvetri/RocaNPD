@@ -4,6 +4,7 @@ import { Config, UserRole } from "../../External/CommonServices/Config";
 export interface IAppState {
   userDisplayName: string;
   userEmail: string;
+  siteUrl: string;
   activeRole: UserRole;
   initialized: boolean;
 }
@@ -11,6 +12,7 @@ export interface IAppState {
 const initialState: IAppState = {
   userDisplayName: "",
   userEmail: "",
+  siteUrl: "",
   activeRole: Config.Roles.Admin,
   initialized: false,
 };
@@ -21,10 +23,15 @@ const appSlice = createSlice({
   reducers: {
     setUserContext(
       state,
-      action: PayloadAction<{ displayName: string; email: string }>,
+      action: PayloadAction<{
+        displayName: string;
+        email: string;
+        siteUrl: string;
+      }>,
     ) {
       state.userDisplayName = action.payload.displayName;
       state.userEmail = action.payload.email;
+      state.siteUrl = action.payload.siteUrl;
     },
     setActiveRole(state, action: PayloadAction<UserRole>) {
       state.activeRole = action.payload;

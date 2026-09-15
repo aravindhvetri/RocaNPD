@@ -1,0 +1,20 @@
+@import '../../../../styles/_theme-import.scss';
+
+.dropdown {
+  width: 100%;
+
+  :global(.p-dropdown) {
+    width: 100%;
+    font-size: 0.8125rem;
+    border-radius: $roca-radius-sm;
+  }
+
+  :global(.p-dropdown-label) {
+    font-size: 0.8125rem;
+    color: $roca-color-text-primary;
+  }
+}
+
+.panel {
+  font-size: 0.8125rem;
+}

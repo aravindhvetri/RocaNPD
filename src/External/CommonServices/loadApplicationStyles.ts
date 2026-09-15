@@ -1,5 +1,6 @@
 import { SPComponentLoader } from "@microsoft/sp-loader";
 import { hideSharePointChrome, lockWebPartViewport } from "./hideSharePointChrome";
+import { injectRocaPrimeOverrides } from "./injectRocaPrimeOverrides";
 
 /**
  * PrimeReact / PrimeIcons CSS must be loaded at runtime via SPComponentLoader.
@@ -12,13 +13,20 @@ const STYLE_URLS: readonly string[] = [
   `${CDN}/primereact@10.9.7/resources/themes/bootstrap4-light-blue/theme.css`,
   `${CDN}/primeicons@7.0.0/primeicons.css`,
   `${CDN}/primeflex@4.0.0/primeflex.css`,
-  "https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap",
+  "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
 ];
 
-export function loadApplicationStyles(rootElement?: HTMLElement): void {
+export function loadApplicationStyles(rootElement?: HTMLElement): Promise<void> {
   hideSharePointChrome();
   if (rootElement) {
     lockWebPartViewport(rootElement);
   }
-  STYLE_URLS.forEach((url) => SPComponentLoader.loadCss(url));
+
+  injectRocaPrimeOverrides();
+
+  return Promise.all(STYLE_URLS.map((url) => SPComponentLoader.loadCss(url))).then(
+    () => {
+      injectRocaPrimeOverrides();
+    },
+  );
 }

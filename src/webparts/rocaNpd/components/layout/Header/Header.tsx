@@ -1,8 +1,7 @@
 import * as React from "react";
 import { Config } from "../../../../../External/CommonServices/Config";
+import logoUrl from "../../../assets/RocaNewLogo.jpg";
 import styles from "./Header.module.scss";
-
-const logoUrl: string = require("../../../assets/RocaNewLogo.jpg");
 
 const Header: React.FC = () => (
   <header className={styles.header}>
