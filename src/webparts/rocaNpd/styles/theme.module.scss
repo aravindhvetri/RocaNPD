@@ -1,5 +1,5 @@
-@import '../../../External/CommonServices/theme.scss';
-@import './_primereact-overrides.scss';
+@import "../../../External/CommonServices/theme.scss";
+@import "./_primereact-overrides.scss";
 
 .appRoot {
   --roca-color-primary: #{$roca-color-primary};
@@ -45,7 +45,14 @@
   color: $roca-color-text-primary;
   background-color: $roca-color-bg-page;
   font-size: 0.8125rem;
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+  font-family:
+    "Poppins",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
     sans-serif;
 
   *,
