@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { useAppSelector } from "../../../../../store/hooks";
 import Header from "../Header/Header";
 import RoleIndicator from "../RoleIndicator/RoleIndicator";
@@ -28,6 +29,9 @@ const AppShell: React.FC<IAppShellProps> = ({ children }) => {
         </div>
         <main className={styles.content}>{children}</main>
       </div>
+      <span className={styles.versionLabel} aria-hidden="true">
+        {Config.AppVersion}
+      </span>
     </div>
   );
 };

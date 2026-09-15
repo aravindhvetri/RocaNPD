@@ -1,0 +1,20 @@
+@import '../../../../styles/_theme-import.scss';
+
+.multiSelect {
+  width: 100%;
+
+  :global(.p-multiselect) {
+    width: 100%;
+    font-size: 0.8125rem;
+    border-radius: $roca-radius-sm;
+  }
+
+  :global(.p-multiselect-label) {
+    font-size: 0.8125rem;
+    color: $roca-color-text-primary;
+  }
+}
+
+.panel {
+  font-size: 0.8125rem;
+}

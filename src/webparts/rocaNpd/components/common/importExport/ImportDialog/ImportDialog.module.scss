@@ -1,0 +1,122 @@
+@import "../../../../styles/_form-dialog-standard.scss";
+
+.importDialog {
+  @include roca-form-dialog-shell;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.75rem;
+  font-size: 12px;
+  font-weight: 400;
+  color: $roca-color-accent;
+  font-family: "Poppins", sans-serif;
+}
+
+.dropZone {
+  display: flex;
+  min-height: 11rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  border: 1px dashed $roca-color-border-default;
+  border-radius: $roca-radius-sm;
+  background-color: $roca-color-bg-surface;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover,
+  &.dropZoneActive {
+    border-color: $roca-color-accent;
+    background-color: $roca-color-bg-subtle;
+  }
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.uploadIcon {
+  font-size: 1.75rem;
+  color: $roca-color-accent;
+}
+
+.dropZonePrimary {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $roca-color-text-primary;
+  font-family: "Poppins", sans-serif;
+}
+
+.dropZoneSecondary {
+  margin: 0;
+  font-size: 0.75rem;
+  color: $roca-color-text-muted;
+  line-height: 1.4;
+  font-family: "Poppins", sans-serif;
+}
+
+.selectedFileName {
+  margin: 0.625rem 0 0;
+  font-size: 0.75rem;
+  color: $roca-color-text-secondary;
+  word-break: break-word;
+  font-family: "Poppins", sans-serif;
+}
+
+.templatePanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.templateRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+}
+
+.templateFileName {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: $roca-color-text-primary;
+  word-break: break-word;
+  font-family: "Poppins", sans-serif;
+}
+
+.templateUnavailable {
+  margin: 0;
+  font-size: 0.75rem;
+  color: $roca-color-text-muted;
+  font-family: "Poppins", sans-serif;
+}
+
+.downloadButton {
+  flex-shrink: 0;
+
+  :global(.p-button-icon) {
+    font-size: 0.875rem;
+    color: $roca-color-accent;
+  }
+
+  &:enabled:focus,
+  &:enabled:active,
+  &:global(.p-focus) {
+    box-shadow: none !important;
+    outline: none !important;
+    background: transparent !important;
+  }
+}
+
+.footer {
+  @include roca-form-dialog-footer;
+}

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Dialog as PrimeDialog } from "primereact/dialog";
+import { getAppRootElement } from "../../appRootTarget";
 import type { IDialogProps } from "./IDialogProps";
 
 const Dialog: React.FC<IDialogProps> = ({
@@ -10,11 +11,14 @@ const Dialog: React.FC<IDialogProps> = ({
   footer,
   width = "32rem",
   closable = true,
+  className,
 }) => (
   <PrimeDialog
     header={title}
     visible={visible}
     style={{ width }}
+    className={className}
+    appendTo={getAppRootElement()}
     modal
     closable={closable}
     draggable={false}

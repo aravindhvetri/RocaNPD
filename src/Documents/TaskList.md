@@ -11,10 +11,10 @@
 | Phase | Total Tasks | Completed | Status |
 |---|---:|---:|---|
 | Phase 0 — Project Preparation | 13 | 1 | In Progress |
-| Phase 1 — Application Foundation | 64 | 36 | In Progress |
+| Phase 1 — Application Foundation | 64 | 37 | In Progress |
 | Phase 2 — SharePoint Data Structure | 22 | 0 | Not Started |
 | Phase 3 — Security & Role Management | 14 | 0 | Not Started |
-| Phase 4 — Admin Module | 48 | 0 | Not Started |
+| Phase 4 — Admin Module | 64 | 17 | In Progress |
 | Phase 5 — NPD Initiator Module | 32 | 0 | Not Started |
 | Phase 6 — NPD Vertical Head Module | 16 | 0 | Not Started |
 | Phase 7 — NPD MIS Coordinator Module | 22 | 0 | Not Started |
@@ -28,9 +28,9 @@
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **367** | **36** | **In Progress** |
+| **TOTAL** | **383** | **54** | **In Progress** |
 
-**Last Updated:** 10 September 2026
+**Last Updated:** 11 September 2026
 
 ---
 
@@ -73,7 +73,7 @@
 - [x] **T-0112** Implement `setupSP()` in `SPServices.ts` (PnP v4 migration)
 - [x] **T-0113** Pass `spfxContext` and `sp` props to child components
 - [x] **T-0114** Add Redux `<Provider>` in `RocaNpd.tsx`
-- [ ] **T-0115** Configure `store/index.ts` with all feature slices (app + ui done; feature slices pending)
+- [ ] **T-0115** Configure `store/index.ts` with all feature slices (app + ui + admin lookupType done; remaining feature slices pending)
 - [x] **T-0116** Create typed hooks (`useAppDispatch`, `useAppSelector`)
 
 ### 1.3 Styling & Theme
@@ -103,7 +103,7 @@
 - [ ] **T-0142** Implement `SearchFilterBar.tsx` (search + filter dropdowns)
 - [ ] **T-0143** Implement `EmptyState.tsx`
 - [ ] **T-0144** Implement `LoaderOverlay.tsx` (full-page and inline)
-- [ ] **T-0145** Implement `ExportButton.tsx` (CSV / Excel trigger)
+- [ ] **T-0145** Implement `ExportButton.tsx` (CSV / Excel trigger) — `exportService.ts` + screen-level export done for Lookup Type
 
 ### 1.5.1 Common Controls — PrimeReact Wrappers (`common/controls/`)
 
@@ -116,15 +116,15 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0165** Implement `DataTable` wrapper (pagination, sorting, loading, empty state)
 - [x] **T-0166** Implement `Toast`, `FileUpload`, `Checkbox`, `Tag` wrappers
 - [x] **T-0167** Create `common/controls/index.ts` barrel export
-- [ ] **T-0168** Wire `Toast` to Redux `appSlice` notification queue
+- [ ] **T-0168** Wire `Toast` to Redux `appSlice` notification queue (component styled + `showWarningToast` / `showSuccessToast` / `showErrorToast` helpers done)
 
 ### 1.6 Common Services & Config
 
-- [ ] **T-0150** Populate `Config.ts` with list names, lookup type keys, status constants, roles (routes + nav + roles done)
-- [ ] **T-0151** Populate `Interface.ts` with all domain TypeScript interfaces
+- [ ] **T-0150** Populate `Config.ts` with list names, lookup type keys, status constants, roles (routes + nav + roles + `ListNames.LookupType` done)
+- [ ] **T-0151** Populate `Interface.ts` with all domain TypeScript interfaces (`ILookupType` done)
 - [ ] **T-0152** Create `roleService.ts` (user role + brand resolution)
 - [ ] **T-0153** Create `lookupService.ts` (lookup queries with cache helpers)
-- [ ] **T-0154** Create `exportService.ts` (CSV/Excel export)
+- [x] **T-0154** Create `exportService.ts`, `importService.ts`, `templateService.ts` (reusable Import/Export)
 - [ ] **T-0155** Implement global error handling pattern (toast + slice error state)
 - [ ] **T-0156** Implement global loading state pattern
 
@@ -193,20 +193,30 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ### 4.1 Lookup Type Master
 
-- [ ] **T-0401** Implement Lookup Type Master list screen
-- [ ] **T-0402** Implement Create Lookup Type form / dialog
-- [ ] **T-0403** Implement Edit Lookup Type
-- [ ] **T-0404** Implement search / list functionality
-- [ ] **T-0405** Implement required-field validation
+- [x] **T-0401** Implement Lookup Type Master list screen
+- [x] **T-0402** Implement Create Lookup Type form / dialog
+- [x] **T-0403** Implement Edit Lookup Type
+- [x] **T-0404** Implement search / list functionality
+- [x] **T-0405** Implement required-field validation
+- [x] **T-0406** Implement soft delete via `IsDeleted` (common `softDelete.ts` pattern)
+- [x] **T-0407** Redesign Lookup Type Master UI (toolbar, table, pagination, Import/Export buttons)
+- [x] **T-0407a** Implement reusable `ImportDialog` (wireframe Import popup + template download panel)
+- [x] **T-0407b** Implement Lookup Type Import (NPD_Templates, duplicate warnings, batch insert)
+- [x] **T-0407c** Implement Lookup Type Export (Excel of filtered grid data)
+- [x] **T-0408** Redesign Add/Edit popup and common `DeleteConfirmDialog` per latest wireframes
+- [x] **T-0409** Validation via common Toast (no inline field errors)
 
 ### 4.2 Lookup Master
 
-- [ ] **T-0410** Implement Lookup Master list screen
-- [ ] **T-0411** Implement Create Lookup form (Code, Name, Lookup Type dropdown)
-- [ ] **T-0412** Implement Edit Lookup
-- [ ] **T-0413** Implement Delete Lookup
-- [ ] **T-0414** Implement Lookup → Lookup Type mapping
-- [ ] **T-0415** Implement validation
+- [x] **T-0410** Implement Lookup Master list screen (toolbar, table, pagination — same pattern as LookupType)
+- [x] **T-0411** Implement Add/Edit Lookup popup (Lookup Type dropdown + Lookup Name — wireframe)
+- [x] **T-0412** Implement Edit Lookup
+- [x] **T-0413** Implement soft delete Lookup with dependency validation
+- [x] **T-0414** Implement Lookup → Lookup Type mapping (`NPD_Lookup.LookupType` → `NPD_LookupType`)
+- [x] **T-0415** Implement validation (required fields, duplicate Toast, import duplicates)
+- [x] **T-0415a** Implement Lookup Import/Export (template `TemplateType = "Lookup"`)
+- [x] **T-0415b** Implement reusable delete dependency validation (`dependencyValidationService.ts`)
+- [x] **T-0415c** Block LookupType delete when referenced by Lookup records
 
 ### 4.3 Plant Master
 
@@ -236,19 +246,33 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ### 4.6 Brand Material Extension Master
 
-- [ ] **T-0450** Implement Brand Material Extension list screen
-- [ ] **T-0451** Implement Create form (Brand dropdown, Plant/Warehouse multi-select)
-- [ ] **T-0452** Source plant values from Plant Master
-- [ ] **T-0453** Implement Edit / Delete
-- [ ] **T-0454** Validate brand mapping display
+- [x] **T-0450** Implement Brand Material Extension list screen
+- [x] **T-0451** Implement Add/Edit popup (Brand ComboBox, Plant MultiSelect)
+- [x] **T-0452** Source Brand from ROCA `Brandmaster`; Plant from ROCA `PlantMaster` (`IsDeleted = false`)
+- [x] **T-0453** Implement Edit / Delete (soft delete)
+- [x] **T-0454** Store/read Plant as comma-separated values; populate MultiSelect on edit
+- [x] **T-0455** Add reusable `resolveRocaMasterSiteUrl()` + `rocaMasterDataService.ts`
+- [x] **T-0456** Duplicate Brand validation + required-field Toast validation
 
 ### 4.7 Workflow Configuration Master
 
-- [ ] **T-0460** Implement Workflow Configuration screen
-- [ ] **T-0461** Implement Configure Workflow modal (Initiator → VH → MIS sequence)
-- [ ] **T-0462** Persist and load active workflow stages
+- [x] **T-0460** Implement Workflow Configuration screen (grouped Approval Chain, search, Add/Edit/Delete)
+- [x] **T-0461** Implement Configure Workflow modal (step builder, NPD multi-step, MG single-step Consultant)
+- [x] **T-0462** Persist and load active workflow stages in `NPD_WorkflowConfig` (one record per step)
+- [x] **T-0463** NPD role filtering: exclude Consultant via `WorkflowNpdExcludedNextRoles`; dynamic Add Step visibility
+- [x] **T-0464** Lock earlier step Next Role when chain grows; only latest step editable/removable
+- [x] **T-0465** Workflow form dialog consistent font size (`0.8125rem`) and standard Add Step icon sizing
 
-### 4.8 Material Master
+### 4.8 Global UI Standards (All Masters)
+
+- [x] **T-0490** Poppins font family app-wide via CDN + `theme.module.scss`
+- [x] **T-0491** Shared DataTable styling — no grid lines, subtle sort icons, plain pagination report text
+- [x] **T-0492** Reusable `MasterTablePanel` with reset-filters icon above every master DataTable
+- [x] **T-0493** Shared form dialog SCSS (`_form-dialog-standard.scss`) — title/label hierarchy + footer buttons
+- [x] **T-0494** Consistent **Lookup Type** spelling in nav, headings, routes, and dialog titles
+- [x] **T-0495** Apply global standards to Lookup Type, Lookup, Brand Material Extension, Workflow Configuration masters
+
+### 4.9 Material Master
 
 - [ ] **T-0470** Implement Material Master list screen
 - [ ] **T-0471** Implement search (group, category, range, PCS, creator)
@@ -268,8 +292,8 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ### 4.10 Admin Redux & Services
 
-- [ ] **T-0485** Create `adminSlice.ts` and `adminThunks.ts`
-- [ ] **T-0486** Create `adminService.ts` for all master CRUD operations
+- [x] **T-0485** Create `adminSlice.ts` and lookup type thunks (`lookupTypeThunks.ts`)
+- [ ] **T-0486** Create `adminService.ts` for all master CRUD operations (`lookupTypeService.ts` done)
 
 ---
 

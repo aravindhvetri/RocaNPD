@@ -7,4 +7,6 @@ export interface IConfirmDialogProps {
   acceptClassName?: string;
   onAccept: () => void;
   onReject: () => void;
+  /** Called when the dialog closes (escape, overlay, or after accept/reject). */
+  onHide?: () => void;
 }

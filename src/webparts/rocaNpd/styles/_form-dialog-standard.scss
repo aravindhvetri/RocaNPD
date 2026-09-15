@@ -1,0 +1,140 @@
+@import '../../../External/CommonServices/theme.scss';
+
+$roca-dialog-title-size: 1.125rem;
+$roca-dialog-label-size: 0.75rem;
+$roca-dialog-control-size: 0.8125rem;
+
+@mixin roca-form-dialog-shell {
+  :global {
+    .p-dialog-header {
+      justify-content: center;
+      padding: 1.25rem 1.25rem 0.75rem;
+      background-color: $roca-color-bg-surface;
+      border-bottom: none;
+    }
+
+    .p-dialog-title {
+      width: 100%;
+      font-size: $roca-dialog-title-size;
+      font-weight: 600;
+      text-align: center;
+      color: $roca-color-text-primary;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .p-dialog-header-icons {
+      position: absolute;
+      right: 0.75rem;
+      top: 0.75rem;
+    }
+
+    .p-dialog-header-icon {
+      color: $roca-color-text-muted;
+
+      &:enabled:focus,
+      &:enabled:active {
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    }
+
+    .p-dialog-content {
+      padding: 0.5rem 1.25rem 1rem;
+      background-color: $roca-color-bg-surface;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .p-dialog-footer {
+      padding: 0.875rem 1.25rem 1.25rem;
+      background-color: $roca-color-bg-surface;
+      border-top: 1px solid $roca-color-border-light;
+    }
+  }
+}
+
+@mixin roca-form-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+
+  :global(.p-button) {
+    min-width: 5.5rem;
+    font-family: 'Poppins', sans-serif;
+    font-size: $roca-dialog-control-size;
+    font-weight: 600;
+    border-radius: $roca-radius-sm;
+    padding: 0.4375rem 1.125rem;
+    line-height: 1.25;
+
+    &:enabled:focus,
+    &:enabled:focus-visible,
+    &:enabled:active,
+    &:global(.p-focus) {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  :global(.p-button.p-button-outlined.p-button-secondary) {
+    background: $roca-color-bg-surface;
+    border-color: $roca-color-input-border;
+    color: $roca-color-text-secondary;
+
+    &:enabled:hover {
+      background: $roca-color-bg-subtle;
+      border-color: $roca-color-input-border;
+      color: $roca-color-text-secondary;
+    }
+  }
+
+  :global(.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link)) {
+    background: $roca-color-btn-add-new-bg;
+    border-color: $roca-color-btn-add-new-bg;
+    color: $roca-color-text-inverse;
+
+    &:enabled:hover {
+      background: $roca-color-btn-add-new-hover-bg;
+      border-color: $roca-color-btn-add-new-hover-bg;
+      color: $roca-color-text-inverse;
+    }
+  }
+}
+
+@mixin roca-form-dialog-field {
+  margin-bottom: 0;
+
+  :global(.field) {
+    margin-bottom: 0;
+    gap: 0.375rem;
+  }
+
+  :global(.label) {
+    font-size: $roca-dialog-label-size;
+    font-weight: 500;
+    color: $roca-color-text-secondary;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  :global(.p-inputtext),
+  :global(.p-dropdown),
+  :global(.p-multiselect),
+  :global(.p-inputtextarea) {
+    width: 100%;
+    font-size: $roca-dialog-control-size;
+    font-family: 'Poppins', sans-serif;
+    border-radius: $roca-radius-sm;
+
+    &:enabled:focus,
+    &:enabled:active {
+      border-color: $roca-color-border-focus;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  :global(.p-dropdown-label),
+  :global(.p-multiselect-label) {
+    font-size: $roca-dialog-control-size;
+    font-family: 'Poppins', sans-serif;
+  }
+}

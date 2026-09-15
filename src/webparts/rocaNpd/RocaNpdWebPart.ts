@@ -42,11 +42,11 @@ export default class RocaNpdWebPart extends BaseClientSideWebPart<IRocaNpdWebPar
   }
 
   protected onInit(): Promise<void> {
-    loadApplicationStyles(this.domElement);
-
-    return this._getEnvironmentMessage().then((message) => {
-      this._environmentMessage = message;
-    });
+    return loadApplicationStyles(this.domElement).then(() =>
+      this._getEnvironmentMessage().then((message) => {
+        this._environmentMessage = message;
+      }),
+    );
   }
 
   private _getEnvironmentMessage(): Promise<string> {

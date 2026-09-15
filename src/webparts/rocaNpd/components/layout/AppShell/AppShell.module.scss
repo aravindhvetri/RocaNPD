@@ -1,6 +1,7 @@
 @import '../../../styles/theme-import';
 
 .appShell {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -10,6 +11,19 @@
   max-height: 100%;
   overflow: hidden;
   background-color: $roca-color-bg-page;
+}
+
+.versionLabel {
+  position: absolute;
+  right: $roca-layout-gutter;
+  bottom: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1;
+  color: $roca-color-text-muted;
+  font-family: 'Poppins', sans-serif;
+  user-select: none;
+  pointer-events: none;
 }
 
 .body {
@@ -47,7 +61,8 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background-color: $roca-color-bg-page;
 }
 

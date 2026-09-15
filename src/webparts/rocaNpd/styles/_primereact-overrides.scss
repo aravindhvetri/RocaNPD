@@ -1,0 +1,310 @@
+@import '../../../External/CommonServices/theme.scss';
+@import './_roca-form-controls.scss';
+@import './_datatable-pagination.scss';
+
+@mixin roca-primereact-overrides {
+  font-family: 'Poppins', sans-serif;
+
+  // Remove focus rings / box shadows on all PrimeReact components.
+  .p-component:focus,
+  .p-component:focus-visible,
+  .p-component:active {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .p-paginator-current {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+
+  .p-button {
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.8125rem;
+    padding: 0.4375rem 0.875rem;
+
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &.p-focus,
+    &:enabled:focus,
+    &:enabled:focus-visible,
+    &:enabled:active {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-link {
+    &:focus,
+    &:focus-visible,
+    &:active {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-button.p-button-icon-only,
+  .p-button.p-button-text.p-button-icon-only {
+    &:enabled:focus,
+    &:enabled:active,
+    &.p-focus {
+      box-shadow: none !important;
+      outline: none !important;
+      background: transparent !important;
+      border-color: transparent !important;
+    }
+  }
+
+  .p-button.p-button-danger {
+    &:enabled:focus,
+    &:enabled:active,
+    &.p-focus {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-button.p-button-primary,
+  .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-help):not(.p-button-danger) {
+    background: $roca-color-btn-primary-bg;
+    border-color: $roca-color-btn-primary-bg;
+    color: $roca-color-btn-primary-text;
+
+    &:enabled:hover {
+      background: $roca-color-btn-primary-hover-bg;
+      border-color: $roca-color-btn-primary-hover-bg;
+      color: $roca-color-btn-primary-text;
+    }
+
+    &:enabled:focus,
+    &:enabled:active,
+    &.p-focus {
+      background: $roca-color-btn-primary-bg;
+      border-color: $roca-color-btn-primary-bg;
+      color: $roca-color-btn-primary-text;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-button.p-button-outlined.p-button-secondary {
+    background: $roca-color-btn-secondary-bg;
+    border-color: $roca-color-btn-secondary-border;
+    color: $roca-color-btn-secondary-text;
+
+    &:enabled:hover {
+      background: $roca-color-btn-secondary-hover-bg;
+      border-color: $roca-color-btn-secondary-border;
+      color: $roca-color-btn-secondary-text;
+    }
+
+    &:enabled:focus,
+    &:enabled:active,
+    &.p-focus {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-button.p-button-text {
+    color: $roca-color-text-muted;
+
+    &:enabled:hover {
+      background: transparent;
+      color: $roca-color-text-primary;
+    }
+
+    &:enabled:focus,
+    &:enabled:active,
+    &.p-focus {
+      background: transparent;
+      color: $roca-color-text-muted;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-inputtext {
+    font-size: 0.8125rem;
+    border-color: $roca-color-input-border;
+    color: $roca-color-text-primary;
+
+    &::placeholder {
+      color: $roca-color-text-placeholder;
+    }
+
+    &:enabled:hover,
+    &:enabled:focus,
+    &:enabled:active {
+      border-color: $roca-color-input-border;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+  .p-dropdown {
+    font-size: 0.8125rem;
+    border-color: $roca-color-input-border;
+
+    &:not(.p-disabled):hover {
+      border-color: $roca-color-border-dark;
+    }
+
+    .p-dropdown-label {
+      font-size: 0.8125rem;
+    }
+  }
+
+  .p-multiselect {
+    font-size: 0.8125rem;
+    border-color: $roca-color-input-border;
+
+    &:not(.p-disabled):hover {
+      border-color: $roca-color-border-dark;
+    }
+
+    .p-multiselect-label {
+      font-size: 0.8125rem;
+    }
+  }
+
+  @include roca-form-control-overrides;
+
+  @include roca-datatable-pagination;
+
+  .p-datatable {
+    font-size: 0.8125rem;
+
+    .p-datatable-header {
+      padding: 0;
+      border: none;
+      background: transparent;
+    }
+
+    .p-datatable-thead > tr > th {
+      background: $roca-color-master-table-header;
+      color: $roca-color-text-inverse;
+      border: none !important;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      padding: 0.625rem 0.875rem;
+    }
+
+    .p-sortable-column {
+      &:focus,
+      &.p-focus {
+        box-shadow: none !important;
+        outline: none !important;
+      }
+
+      &:not(.p-highlight):hover {
+        background: $roca-color-master-table-header;
+        color: $roca-color-text-inverse;
+      }
+    }
+
+    .p-sortable-column.p-highlight {
+      background: $roca-color-master-table-header !important;
+      color: $roca-color-text-inverse !important;
+    }
+
+    .p-sortable-column .p-sortable-column-icon {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      width: 12px;
+      height: 12px;
+    }
+
+    .p-sortable-column.p-highlight .p-sortable-column-icon {
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .p-datatable-tbody > tr > td {
+      border-color: $roca-color-table-border;
+      padding: 0.625rem 0.75rem;
+      color: $roca-color-text-primary;
+      font-size: 0.8125rem;
+    }
+
+    .p-datatable-tbody > tr.p-row-odd {
+      background: $roca-color-bg-subtle;
+    }
+
+    .p-datatable-tbody > tr:hover {
+      background: $roca-color-bg-selected;
+    }
+  }
+
+  .p-dialog {
+    border-radius: $roca-radius-md;
+    box-shadow: $roca-shadow-lg;
+    overflow: hidden;
+    font-size: 0.8125rem;
+  }
+
+  .p-dialog-footer {
+    .p-button {
+      font-size: 0.75rem;
+      padding: 0.3125rem 0.75rem;
+
+      &:enabled:focus,
+      &:enabled:active,
+      &.p-focus {
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    }
+
+    .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-danger) {
+      background: $roca-color-primary;
+      border-color: $roca-color-primary;
+
+      &:enabled:hover {
+        background: $roca-color-primary-hover;
+        border-color: $roca-color-primary-hover;
+      }
+
+      &:enabled:focus,
+      &:enabled:active,
+      &.p-focus {
+        background: $roca-color-primary;
+        border-color: $roca-color-primary;
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    }
+  }
+
+  .p-confirm-dialog {
+    font-size: 0.8125rem;
+
+    .p-dialog-content {
+      font-size: 0.8125rem;
+    }
+
+    .p-dialog-footer .p-button {
+      font-size: 0.75rem;
+      padding: 0.3125rem 0.75rem;
+    }
+  }
+
+  .p-dialog-mask {
+    background-color: $roca-color-bg-overlay;
+  }
+
+  a,
+  .p-link {
+    color: $roca-color-text-link;
+
+    &:focus,
+    &:focus-visible {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+  }
+
+}

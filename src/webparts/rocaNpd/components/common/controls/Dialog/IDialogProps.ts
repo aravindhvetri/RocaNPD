@@ -8,4 +8,5 @@ export interface IDialogProps {
   footer?: React.ReactNode;
   width?: string;
   closable?: boolean;
+  className?: string;
 }

@@ -1,0 +1,19 @@
+@import '../../../styles/_form-dialog-standard.scss';
+
+.formDialog {
+  @include roca-form-dialog-shell;
+}
+
+.footer {
+  @include roca-form-dialog-footer;
+}
+
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.formField {
+  @include roca-form-dialog-field;
+}

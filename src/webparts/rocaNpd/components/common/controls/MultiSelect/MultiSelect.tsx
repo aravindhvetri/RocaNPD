@@ -1,7 +1,9 @@
 import * as React from "react";
 import { MultiSelect as PrimeMultiSelect } from "primereact/multiselect";
+import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IMultiSelectProps } from "./IMultiSelectProps";
+import styles from "./MultiSelect.module.scss";
 
 const MultiSelect: React.FC<IMultiSelectProps> = ({
   id,
@@ -16,9 +18,10 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
   options,
   onChange,
   placeholder = "Select",
-  filter,
-  display = "chip",
-  'data-testid': testId,
+  filter = true,
+  display = "comma",
+  selectAll = false,
+  "data-testid": testId,
 }) => (
   <ControlField
     id={id}
@@ -26,7 +29,7 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
     required={required}
     error={error}
     helperText={helperText}
-    className={className}
+    className={`${styles.multiSelect} ${className ?? ""}`}
   >
     <PrimeMultiSelect
       inputId={id}
@@ -37,10 +40,13 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
       placeholder={placeholder}
       filter={filter}
       display={display}
+      selectAll={selectAll}
       disabled={disabled || readOnly}
+      appendTo={getAppRootElement()}
+      panelClassName={styles.panel}
       className={`w-full ${error ? "p-invalid" : ""}`}
       data-testid={testId}
-      onChange={(e) => onChange(e.value ?? [])}
+      onChange={(event) => onChange(event.value ?? [])}
     />
   </ControlField>
 );

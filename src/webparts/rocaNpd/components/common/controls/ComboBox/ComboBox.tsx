@@ -1,7 +1,9 @@
 import * as React from "react";
 import { AutoComplete } from "primereact/autocomplete";
+import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IComboBoxProps } from "./IComboBoxProps";
+import styles from "./ComboBox.module.scss";
 
 const ComboBox: React.FC<IComboBoxProps> = ({
   id,
@@ -18,7 +20,9 @@ const ComboBox: React.FC<IComboBoxProps> = ({
   onSearch,
   placeholder,
   minLength = 0,
-  'data-testid': testId,
+  forceSelection = true,
+  dropdown = true,
+  "data-testid": testId,
 }) => (
   <ControlField
     id={id}
@@ -26,7 +30,7 @@ const ComboBox: React.FC<IComboBoxProps> = ({
     required={required}
     error={error}
     helperText={helperText}
-    className={className}
+    className={`${styles.comboBox} ${className ?? ""}`}
   >
     <AutoComplete
       inputId={id}
@@ -35,13 +39,18 @@ const ComboBox: React.FC<IComboBoxProps> = ({
       field="label"
       placeholder={placeholder}
       minLength={minLength}
+      dropdown={dropdown}
+      forceSelection={forceSelection}
       disabled={disabled || readOnly}
-      className={`w-full ${error ? "p-invalid" : ""}`}
+      appendTo={getAppRootElement()}
+      className={error ? "p-invalid" : undefined}
       inputClassName="w-full"
       data-testid={testId}
-      completeMethod={(e) => onSearch(e.query)}
-      onChange={(e) => onChange(String(e.value ?? ""))}
-      onSelect={(e) => onChange(String(e.value?.value ?? e.value?.label ?? ""))}
+      completeMethod={(event) => onSearch(event.query)}
+      onChange={(event) => onChange(String(event.value ?? ""))}
+      onSelect={(event) =>
+        onChange(String(event.value?.value ?? event.value?.label ?? ""))
+      }
     />
   </ControlField>
 );

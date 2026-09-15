@@ -1,0 +1,20 @@
+@import '../../../../styles/_theme-import.scss';
+
+.comboBox {
+  width: 100%;
+
+  :global(.p-autocomplete) {
+    width: 100%;
+  }
+
+  :global(.p-autocomplete-input) {
+    width: 100%;
+    font-size: 0.8125rem;
+    border-radius: $roca-radius-sm;
+    color: $roca-color-text-primary;
+  }
+}
+
+.panel {
+  font-size: 0.8125rem;
+}

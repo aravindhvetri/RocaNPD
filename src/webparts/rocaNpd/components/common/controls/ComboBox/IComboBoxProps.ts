@@ -8,4 +8,6 @@ export interface IComboBoxProps extends IBaseControlProps {
   onSearch: (query: string) => void;
   placeholder?: string;
   minLength?: number;
+  forceSelection?: boolean;
+  dropdown?: boolean;
 }

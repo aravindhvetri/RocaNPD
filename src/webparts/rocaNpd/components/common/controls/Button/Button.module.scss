@@ -1,0 +1,55 @@
+@import '../../../../styles/_theme-import.scss';
+
+.sizeXs {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.4375rem;
+  line-height: 1.25;
+
+  :global(.p-button-icon) {
+    font-size: 0.625rem;
+  }
+
+  :global(.p-button-icon-left) {
+    margin-right: 0.25rem;
+  }
+
+  :global(.p-button-label) {
+    font-weight: 500;
+  }
+
+  &:enabled:focus,
+  &:enabled:focus-visible,
+  &:enabled:active,
+  &:global(.p-focus) {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
+.sizeSm {
+  font-size: 0.75rem;
+  padding: 0.3125rem 0.75rem;
+}
+
+.sizeMd {
+  font-size: 0.8125rem;
+  padding: 0.4375rem 0.875rem;
+}
+
+.iconOnly {
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0;
+
+  &:enabled:focus,
+  &:enabled:active,
+  &:global(.p-focus),
+  &:global(.p-button:focus),
+  &:global(.p-button:active) {
+    box-shadow: none !important;
+    outline: none !important;
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+}

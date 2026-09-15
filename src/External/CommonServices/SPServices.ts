@@ -357,13 +357,25 @@ const getAnotherSPReadItems = async (
     params.Filter || [],
     params.FilterCondition ? params.FilterCondition : "",
   );
-  return (await web.lists
+
+  let query = web.lists
     .getByTitle(params.Listname)
-    .items.select(params.Select || "*")
-    .filter(filterValue)
-    .expand(params.Expand || "")
-    .top(params.Topcount || 0)
-    .orderBy(params.Orderby || "ID", params.Orderbydecorasc)()) as [];
+    .items.select(params.Select || "*");
+
+  if (filterValue) {
+    query = query.filter(filterValue);
+  }
+
+  if (params.Expand) {
+    query = query.expand(params.Expand);
+  }
+
+  const orderAscending =
+    params.Orderbydecorasc === false ? false : Boolean(params.Orderbydecorasc);
+
+  return (await query
+    .top(params.Topcount || 5000)
+    .orderBy(params.Orderby || "ID", orderAscending)()) as [];
 };
 
 const AnotherSPAddItem = async (params: IAnotherAddList): Promise<any> => {
@@ -614,6 +626,10 @@ const SPReadItemVersionHistory = async (
     .expand(params.Expand || "")()) as [];
 };
 
+const SPDownloadFileBlob = async (serverRelativeUrl: string): Promise<Blob> => {
+  return await getSP().web.getFileByServerRelativePath(serverRelativeUrl).getBlob();
+};
+
 const GenerateFormatId = (
   prefix: string,
   lastId: string,
@@ -670,4 +686,5 @@ export default {
   GetAzureUsers,
   GetAzureUsersGroups,
   SPReadItemVersionHistory,
+  SPDownloadFileBlob,
 };
