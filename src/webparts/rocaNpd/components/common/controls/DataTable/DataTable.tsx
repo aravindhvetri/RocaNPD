@@ -42,13 +42,18 @@ function DataTable<T extends Record<string, unknown>>({
       stripedRows
       showGridlines={false}
     >
-      {columns.map((col) => (
+      {columns.map((col, columnIndex) => (
         <Column
-          key={col.field}
+          key={`${String(col.field)}-${columnIndex}`}
           field={col.field}
           header={col.header}
           sortable={col.sortable}
-          body={col.body ? (row: T) => col.body!(row) : undefined}
+          body={
+            col.body
+              ? (row: T, options: { rowIndex: number }) =>
+                  col.body!(row, options.rowIndex)
+              : undefined
+          }
           style={col.style}
           headerStyle={col.headerStyle}
         />

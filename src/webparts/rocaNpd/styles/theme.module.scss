@@ -1,5 +1,5 @@
-@import '../../../External/CommonServices/theme.scss';
-@import './_primereact-overrides.scss';
+@import "../../../External/CommonServices/theme.scss";
+@import "./_primereact-overrides.scss";
 
 .appRoot {
   --roca-color-primary: #{$roca-color-primary};
@@ -25,7 +25,7 @@
   // Override PrimeReact bootstrap4-light-blue theme tokens.
   --primary-color: #{$roca-color-btn-primary-bg};
   --primary-color-text: #{$roca-color-btn-primary-text};
-  --highlight-bg: #{$roca-color-bg-selected};
+  --highlight-bg: #{$roca-color-option-selected-bg};
   --highlight-text-color: #{$roca-color-text-primary};
   --focus-ring: 0 0 0 0 transparent;
   --p-focus-ring-color: transparent;
@@ -45,7 +45,14 @@
   color: $roca-color-text-primary;
   background-color: $roca-color-bg-page;
   font-size: 0.8125rem;
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+  font-family:
+    "Poppins",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
     sans-serif;
 
   *,

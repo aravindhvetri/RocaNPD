@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Calendar } from "primereact/calendar";
+import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IDatePickerProps } from "./IDatePickerProps";
 
@@ -36,6 +37,7 @@ const DatePicker: React.FC<IDatePickerProps> = ({
       disabled={disabled}
       readOnlyInput={readOnly}
       className={`w-full ${error ? "p-invalid" : ""}`}
+      appendTo={getAppRootElement()}
       data-testid={testId}
       onChange={(e) => onChange((e.value as Date) ?? null)}
     />

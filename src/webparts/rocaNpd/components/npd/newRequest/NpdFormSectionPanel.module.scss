@@ -1,0 +1,32 @@
+@import '../../../styles/_theme-import.scss';
+
+.panel {
+  background-color: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  box-shadow: $roca-shadow-sm;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background-color: $roca-color-master-table-header;
+  color: $roca-color-text-inverse;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.body {
+  padding: 1rem 1.25rem 1.25rem;
+}

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Tag as PrimeTag } from "primereact/tag";
 import type { ITagProps } from "./ITagProps";
+import styles from "./Tag.module.scss";
 
 const Tag: React.FC<ITagProps> = ({
   value,
@@ -14,7 +15,7 @@ const Tag: React.FC<ITagProps> = ({
     severity={severity ?? undefined}
     rounded={rounded}
     icon={icon}
-    className={className}
+    className={`${styles.tag} ${className ?? ""}`}
   />
 );
 

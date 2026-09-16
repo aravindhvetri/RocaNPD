@@ -11,7 +11,34 @@ export const RocaMasterListNames = {
   BrandMaster: "BrandMaster",
   PlantMaster: "PlantMaster",
   RoleMaster: "RoleMaster",
+  ApproversMaster: "ApproversMaster",
 } as const;
+
+/** System lookup Title on ROCA ApproversMaster for NPD initiator brand scope. */
+export const NpdApproverSystems = {
+  NewProductDevelopment: "New Product Development",
+} as const;
+
+/** NPD Request Material Type choices (General Information). */
+export const NpdMaterialTypes = {
+  FinishedProducts: "Finished Products",
+  TradedProducts: "Traded Products",
+} as const;
+
+/** PlantMaster filters for Finished Products Plant / Source dropdown. */
+export const NpdPlantSourceFilters = {
+  FactoryPlantType: "Factory",
+  ActiveYes: "Yes",
+} as const;
+
+/** Traded Products Plant / Source choices (from lookup master / BRD). */
+export const NpdTradedPlantSources = {
+  Imported: "Imported",
+  Domestic: "Domestic",
+} as const;
+
+/** Brands that require Roca Global Code on Item Details rows. */
+export const NpdRocaGlobalCodeBrands = ["Roca", "Laufen", "Armani"] as const;
 
 export const WorkflowRequestTypes = {
   NpdRequest: "NPD Request",
@@ -67,7 +94,10 @@ export const FieldLabels = {
   LookupName: "Lookup Name",
   LookupCode: "Lookup Code",
   Brand: "Brand",
+  BrandMg1: "Brand (MG1)",
+  MaterialType: "Material Type",
   Plant: "Plant",
+  PlantSource: "Plant / Source",
   RequestType: "Request Type",
   CurrentRole: "Current Role",
   NextRole: "Next Role",
@@ -111,6 +141,11 @@ export const Config = {
   WorkflowSystems,
   WorkflowDefaults,
   WorkflowNpdExcludedNextRoles,
+  NpdApproverSystems,
+  NpdMaterialTypes,
+  NpdPlantSourceFilters,
+  NpdTradedPlantSources,
+  NpdRocaGlobalCodeBrands,
 
   Roles: {
     Initiator: "Initiator",

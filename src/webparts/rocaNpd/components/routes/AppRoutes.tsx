@@ -5,10 +5,12 @@ import BrandMaterialExtensionMaster from "../admin/brandMaterialExtension/BrandM
 import LookupMaster from "../admin/lookup/LookupMaster";
 import LookupTypeMaster from "../admin/lookupType/LookupTypeMaster";
 import WorkflowConfigurationMaster from "../admin/workflowConfig/WorkflowConfigurationMaster";
+import NpdRequestForm from "../npd/newRequest/NpdRequestForm";
 import RoutePlaceholder from "./RoutePlaceholder/RoutePlaceholder";
 import { ROUTE_DEFINITIONS } from "./routeDefinitions";
 
 const IMPLEMENTED_ROUTES: Record<string, React.ReactElement> = {
+  "/npd/new": <NpdRequestForm />,
   "/admin/lookup-type": <LookupTypeMaster />,
   "/admin/lookup": <LookupMaster />,
   "/admin/brand-extension": <BrandMaterialExtensionMaster />,

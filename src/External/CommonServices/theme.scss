@@ -25,6 +25,8 @@ $roca-color-bg-surface: #ffffff;
 $roca-color-bg-subtle: #f8fafc;
 $roca-color-bg-hover: #edf2f7;
 $roca-color-bg-selected: #e6fffa;
+$roca-color-option-selected-bg: #b7d4da;
+$roca-color-option-hover-bg: #e4eef0;
 $roca-color-bg-overlay: rgba(45, 55, 72, 0.45);
 
 // Border
@@ -70,7 +72,8 @@ $roca-color-nav-icon-approved: #22c55e;
 $roca-color-nav-icon-draft: #f97316;
 $roca-color-nav-border: rgba(255, 255, 255, 0.1);
 $roca-color-nav-item-hover-bg: rgba(255, 255, 255, 0.08);
-$roca-color-nav-item-selected-bg: rgba(64, 145, 157, 0.35);
+$roca-color-nav-item-selected-bg: #ffffff;
+$roca-color-nav-item-selected-text: #1d4e56;
 $roca-color-nav-item-selected-bar: #eab308;
 $roca-color-nav-bar-gold: #eab308;
 $roca-color-nav-bar-amber: #f59e0b;

@@ -11,10 +11,10 @@
 | Phase | Total Tasks | Completed | Status |
 |---|---:|---:|---|
 | Phase 0 — Project Preparation | 13 | 1 | In Progress |
-| Phase 1 — Application Foundation | 64 | 37 | In Progress |
-| Phase 2 — SharePoint Data Structure | 22 | 0 | Not Started |
+| Phase 1 — Application Foundation | 65 | 38 | In Progress |
+| Phase 2 — SharePoint Data Structure | 22 | 4 | In Progress |
 | Phase 3 — Security & Role Management | 14 | 0 | Not Started |
-| Phase 4 — Admin Module | 64 | 17 | In Progress |
+| Phase 4 — Admin Module | 48 | 18 | In Progress |
 | Phase 5 — NPD Initiator Module | 32 | 0 | Not Started |
 | Phase 6 — NPD Vertical Head Module | 16 | 0 | Not Started |
 | Phase 7 — NPD MIS Coordinator Module | 22 | 0 | Not Started |
@@ -28,9 +28,9 @@
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **383** | **54** | **In Progress** |
+| **TOTAL** | **368** | **60** | **In Progress** |
 
-**Last Updated:** 11 September 2026
+**Last Updated:** 16 September 2026
 
 ---
 
@@ -83,14 +83,15 @@
 - [x] **T-0122** Define all theme color CSS variables on `.roca-npd-app`
 - [ ] **T-0123** Verify PrimeReact components inherit ROCA theme inside app wrapper
 - [x] **T-0124** Document theme usage rules for all future components (see `ProjectStandards.md` Section 9)
+- [x] **T-0125** Overlay/nav UI consistency — filter left padding, Poppins on overlays, `$roca-color-option-selected-bg`, white selected nav item (R-UI06 / R-UI09–R-UI11)
 
 ### 1.4 Routing & App Shell
 
-- [x] **T-0130** Implement `AppRoutes.tsx` with all module routes (placeholder screens)
+- [x] **T-0130** Implement `AppRoutes.tsx` with module routes (placeholder screens; Plant/Role/Approver Config routes omitted — ROCA data)
 - [ ] **T-0131** Implement route guards by role (`ProtectedRoute`) — deferred to next phase
 - [x] **T-0132** Implement `AppShell.tsx` layout wrapper
 - [x] **T-0133** Implement `Header.tsx` (static `headerSample` wireframe + ROCA logo)
-- [x] **T-0134** Implement `SideNavigation.tsx` (NavSelectDesign + shrink.png expand/collapse; role filtering deferred)
+- [x] **T-0134** Implement `SideNavigation.tsx` — Plant Master, Role, and Approver Configuration removed (ROCA-sourced; no local modules)
 - [ ] **T-0135** Implement `PageHeader.tsx` (screen title, breadcrumbs, actions)
 - [x] **T-0136** Implement `RoleIndicator.tsx` (bottom-left active role display)
 - [x] **T-0137** Wire navigation to react-router-dom routes (HashRouter)
@@ -145,9 +146,9 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [ ] **T-0201** Create / confirm Lookup Type Master list and fields
 - [ ] **T-0202** Create / confirm Lookup Master list and fields
 - [ ] **T-0203** Create / confirm Brand Material Extension Master list and fields
-- [ ] **T-0204** Create / confirm Plant Master list and fields
-- [ ] **T-0205** Create / confirm Role Master list and fields
-- [ ] **T-0206** Create / confirm Approver Configuration Master list and fields
+- [x] **T-0204** No local Plant Master list — consume ROCA `PlantMaster` (`Config.RocaMasterListNames`)
+- [x] **T-0205** No local Role Master list — consume ROCA `RoleMaster`
+- [x] **T-0206** No local Approver Configuration list — consume ROCA `ApproversMaster`
 - [ ] **T-0207** Create / confirm Workflow Configuration Master list and fields
 - [ ] **T-0208** Create / confirm Material Master list and fields
 - [ ] **T-0209** Create / confirm NPD Request (header) list and fields
@@ -160,8 +161,8 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [ ] **T-0215** Seed Lookup Type Master (Brand, Material Type, Plant/Source, MG2–MG5, etc.)
 - [ ] **T-0216** Seed initial Lookup Master values (brands, material types, plant codes)
 - [ ] **T-0217** Configure Lookup Type → Lookup Master relationship
-- [ ] **T-0218** Configure Plant Master → Brand Material Extension relationship
-- [ ] **T-0219** Configure Role Master → Approver Configuration relationship
+- [x] **T-0218** Brand Material Extension plants sourced from ROCA `PlantMaster` (no NPD-site Plant Master relationship)
+- [ ] **T-0219** Role/approver routing from ROCA `RoleMaster` + `ApproversMaster` (no local Role → Approver lists)
 - [ ] **T-0220** Configure NPD Request → NPD Item (1:N) relationship
 - [ ] **T-0221** Configure Material Group Request → Item (1:N) relationship
 - [ ] **T-0222** Set SharePoint list permissions per role group
@@ -175,7 +176,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [ ] **T-0301** Implement logged-in user identification (`currentUser`)
 - [ ] **T-0302** Implement Employee ID retrieval (profile / list)
 - [ ] **T-0303** Implement Admin group membership check
-- [ ] **T-0304** Implement role resolution from Approver Configuration Master
+- [ ] **T-0304** Implement role resolution from ROCA `ApproversMaster` (not a local Approver Configuration module)
 - [ ] **T-0305** Implement brand mapping for Initiator and Vertical Head
 - [ ] **T-0306** Store role + brands in Redux `appSlice`
 - [ ] **T-0307** Implement role-based navigation filtering
@@ -218,31 +219,11 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0415b** Implement reusable delete dependency validation (`dependencyValidationService.ts`)
 - [x] **T-0415c** Block LookupType delete when referenced by Lookup records
 
-### 4.3 Plant Master
+### 4.3 Plant / Role / Approver — ROCA site (no local admin modules)
 
-- [ ] **T-0420** Implement Plant Master list screen
-- [ ] **T-0421** Implement New Plant form (Type, Code, Location, State, SLoc, MRP, Status)
-- [ ] **T-0422** Implement Edit Plant
-- [ ] **T-0423** Implement Delete Plant
-- [ ] **T-0424** Implement Search
-- [ ] **T-0425** Implement Import / Export
-- [ ] **T-0426** Validate Plant Code uniqueness
+Plant Master, Role, and Approver Configuration are maintained on the **ROCA site**. This app reads them via cross-site services. Do not add nav items, routes, or NPD-site lists.
 
-### 4.4 Role Master
-
-- [ ] **T-0430** Implement Role Master list screen
-- [ ] **T-0431** Implement Create / Edit / Delete Role
-- [ ] **T-0432** Validate required fields
-
-### 4.5 Approver Configuration Master
-
-- [ ] **T-0440** Implement Approver Configuration list screen
-- [ ] **T-0441** Implement Create form (Role, User Name, Employee ID, Brand multi-select)
-- [ ] **T-0442** Show Brand multi-select for Initiator and Vertical Head roles
-- [ ] **T-0443** Hide Brand for MIS Coordinator and Consultant roles
-- [ ] **T-0444** Support multiple brand mapping per user
-- [ ] **T-0445** Implement Edit / Delete
-- [ ] **T-0446** Validate required fields
+- [x] **T-0419** Remove Plant Master, Role, and Approver Configuration from side navigation and `ROUTE_DEFINITIONS`
 
 ### 4.6 Brand Material Extension Master
 
@@ -310,30 +291,30 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ### 5.2 New NPD Request Form
 
-- [ ] **T-0510** Implement General Information section (Brand, Material Type, Plant/Source)
-- [ ] **T-0511** Implement cascading Plant/Source (disabled until Material Type selected)
+- [x] **T-0510** Implement General Information section (Brand, Material Type, Plant/Source) — Brand from ROCA `ApproversMaster` (client-filter: System, Role, Users email); Material Type from `Config.NpdMaterialTypes`; Plant/Source per material type
+- [x] **T-0511** Implement cascading Plant/Source — disabled until Material Type selected; Finished Products → ROCA `PlantMaster` (Factory + active); Traded Products → `Config.NpdTradedPlantSources` (Imported, Domestic)
 - [ ] **T-0512** Filter Plant/Source by Brand Material Extension
-- [ ] **T-0513** Implement conditional Roca Global Code (Roca, Laufen, Armani brands)
-- [ ] **T-0514** Implement Item Details grid (all columns per wireframe)
-- [ ] **T-0515** Implement row actions: Add, Copy, Delete, Clear
-- [ ] **T-0516** Implement + Add Another Item Line
+- [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
+- [x] **T-0514** Implement Item Details grid (all BRD columns; Material Code / Material Description / HSN / Min. Qty/Box Qty = InputText; other fields = MultiSelect placeholders)
+- [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
+- [x] **T-0516** Implement + Add Another Item Line with small inline plus icon next to label
 - [ ] **T-0517** Implement Import items (Excel)
-- [ ] **T-0518** Implement Total Items counter
-- [ ] **T-0519** Implement Cancel / Back, Save Draft, Submit Request actions
+- [x] **T-0518** Implement Total Item Lines counter in section footer
+- [x] **T-0519** Implement Cancel / Back (navigate to `/npd/all`), Save Draft + Submit Request buttons — Save/Submit logic pending next phase
 
 ### 5.3 NPD Form Validation
 
-- [ ] **T-0520** Validate required General Information fields
-- [ ] **T-0521** Validate Material Code max 18 characters
-- [ ] **T-0522** Validate Material Description max 40 characters
-- [ ] **T-0523** Validate all mandatory item fields
-- [ ] **T-0524** Validate Roca Global Code when applicable
-- [ ] **T-0525** Validate at least one item row on submit
+- [x] **T-0520** Validate required General Information fields — Toast on Submit (no inline field errors)
+- [x] **T-0521** Validate Material Code max 18 characters — Toast on Submit
+- [x] **T-0522** Validate Material Description max 40 characters — Toast on Submit
+- [x] **T-0523** Validate all mandatory item fields — Toast on Submit
+- [x] **T-0524** Validate Roca Global Code when applicable — Toast on Submit
+- [x] **T-0525** Validate at least one item row on submit — Toast on Submit
 
 ### 5.4 NPD Initiator Services & Redux
 
-- [ ] **T-0530** Create `npdSlice.ts` and `npdThunks.ts`
-- [ ] **T-0531** Create `npdService.ts` (header + items CRUD, submit, draft)
+- [x] **T-0530** Create `npdFormSlice.ts` and `npdFormThunks.ts` (General Info form state + ROCA dropdown fetches)
+- [x] **T-0531** Create `npdFormDataService.ts` (initiator brand + factory plant/source fetch) — header/items CRUD pending
 - [ ] **T-0532** Implement batch save for header + items on Save Draft / Submit
 - [ ] **T-0533** Implement view-only detail screen for Pending / Approved requests
 - [ ] **T-0534** Implement edit + resubmit flow for Draft / Rework requests
@@ -368,7 +349,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [ ] **T-0705** Implement editable Item Details grid
 - [ ] **T-0706** Implement Add Line Item
 - [ ] **T-0707** Implement Other Details section (SAP fields)
-- [ ] **T-0708** Auto-populate Storage Location, MRP Group, MRP Controller from Plant Master
+- [ ] **T-0708** Auto-populate Storage Location, MRP Group, MRP Controller from ROCA `PlantMaster`
 - [ ] **T-0709** Auto-populate Material Extension from Brand Material Extension Master
 - [ ] **T-0710** Implement conditional Plant Code / Valuation Class logic
 - [ ] **T-0711** Set Class Type = 001 always

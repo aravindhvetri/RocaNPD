@@ -21,9 +21,51 @@ export function injectRocaPrimeOverrides(): void {
     [data-roca-npd-root] {
       --primary-color: #2d7089;
       --primary-color-text: #ffffff;
-      --highlight-bg: #e6fffa;
+      --highlight-bg: #b7d4da;
       --highlight-text-color: #1a202c;
       --focus-ring: 0 0 0 0 transparent;
+    }
+
+    [data-roca-npd-root],
+    [data-roca-npd-root] .p-component,
+    [data-roca-npd-root] .p-dropdown,
+    [data-roca-npd-root] .p-dropdown-label,
+    [data-roca-npd-root] .p-dropdown-panel,
+    [data-roca-npd-root] .p-dropdown-item,
+    [data-roca-npd-root] .p-dropdown-empty-message,
+    [data-roca-npd-root] .p-dropdown-filter,
+    [data-roca-npd-root] .p-multiselect,
+    [data-roca-npd-root] .p-multiselect-label,
+    [data-roca-npd-root] .p-multiselect-panel,
+    [data-roca-npd-root] .p-multiselect-item,
+    [data-roca-npd-root] .p-multiselect-empty-message,
+    [data-roca-npd-root] .p-multiselect-filter,
+    [data-roca-npd-root] .p-autocomplete,
+    [data-roca-npd-root] .p-autocomplete-input,
+    [data-roca-npd-root] .p-autocomplete-panel,
+    [data-roca-npd-root] .p-autocomplete-item,
+    [data-roca-npd-root] .p-toast,
+    [data-roca-npd-root] .p-toast-message,
+    [data-roca-npd-root] .p-toast-summary,
+    [data-roca-npd-root] .p-toast-detail,
+    [data-roca-npd-root] .p-dialog,
+    [data-roca-npd-root] .p-dialog-title,
+    [data-roca-npd-root] .p-dialog-content,
+    [data-roca-npd-root] .p-confirm-dialog,
+    [data-roca-npd-root] .p-datepicker,
+    [data-roca-npd-root] .p-listbox,
+    [data-roca-npd-root] .p-listbox-item,
+    [data-roca-npd-root] .p-tooltip,
+    [data-roca-npd-root] .p-tooltip-text,
+    [data-roca-npd-root] .p-overlaypanel,
+    [data-roca-npd-root] .p-inputtext,
+    [data-roca-npd-root] .p-tag,
+    [data-roca-npd-root] .p-button {
+      font-family: 'Poppins', sans-serif !important;
+    }
+
+    [data-roca-npd-root] [data-roca-npd-nav] a {
+      color: #ffffff;
     }
 
     [data-roca-npd-root] .p-button:focus,
@@ -135,8 +177,17 @@ export function injectRocaPrimeOverrides(): void {
 
     [data-roca-npd-root] .p-multiselect-items .p-multiselect-item.p-highlight,
     [data-roca-npd-root] .p-dropdown-panel .p-dropdown-item.p-highlight,
-    [data-roca-npd-root] .p-autocomplete-panel .p-autocomplete-item.p-highlight {
-      background: #e6fffa !important;
+    [data-roca-npd-root] .p-autocomplete-panel .p-autocomplete-item.p-highlight,
+    [data-roca-npd-root] .p-listbox .p-listbox-item.p-highlight {
+      background: #b7d4da !important;
+      color: #1a202c !important;
+    }
+
+    [data-roca-npd-root] .p-multiselect-items .p-multiselect-item:not(.p-highlight):hover,
+    [data-roca-npd-root] .p-dropdown-panel .p-dropdown-item:not(.p-highlight):hover,
+    [data-roca-npd-root] .p-autocomplete-panel .p-autocomplete-item:not(.p-highlight):hover,
+    [data-roca-npd-root] .p-listbox .p-listbox-item:not(.p-highlight):hover {
+      background: #e4eef0 !important;
       color: #1a202c !important;
     }
 
@@ -148,12 +199,28 @@ export function injectRocaPrimeOverrides(): void {
       outline: none !important;
     }
 
+    [data-roca-npd-root] .p-multiselect-filter-container,
+    [data-roca-npd-root] .p-dropdown-filter-container {
+      position: relative !important;
+      width: 100% !important;
+    }
+
     [data-roca-npd-root] .p-multiselect-filter-container .p-inputtext,
-    [data-roca-npd-root] .p-dropdown-filter-container .p-inputtext {
+    [data-roca-npd-root] .p-dropdown-filter-container .p-inputtext,
+    [data-roca-npd-root] .p-dropdown-filter,
+    [data-roca-npd-root] .p-multiselect-filter {
+      font-family: 'Poppins', sans-serif !important;
       font-size: 0.75rem !important;
-      padding: 0.3125rem 0.5rem 0.3125rem 1.75rem !important;
+      padding: 0.3125rem 1.75rem 0.3125rem 0.5rem !important;
       border-color: #e2e8f0 !important;
       box-shadow: none !important;
+    }
+
+    [data-roca-npd-root] .p-dropdown-filter-icon,
+    [data-roca-npd-root] .p-multiselect-filter-icon {
+      left: auto !important;
+      right: 0.5rem !important;
+      color: #718096 !important;
     }
 
     [data-roca-npd-root] .p-multiselect-filter-container .p-inputtext:enabled:focus,

@@ -33,6 +33,10 @@
     border-radius: 0 2px 2px 0;
     background-color: var(--nav-selected-bar-color, $roca-color-nav-item-selected-bar);
   }
+
+  .iconDefault {
+    color: $roca-color-nav-item-selected-text !important;
+  }
 }
 
 .icon {
@@ -41,7 +45,7 @@
 }
 
 .iconDefault {
-  color: $roca-color-nav-icon-accent;
+  color: $roca-color-nav-icon-default !important;
 }
 
 .iconPending {

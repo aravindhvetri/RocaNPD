@@ -312,7 +312,7 @@ Add new dependency rules to `Config.DeleteDependencies` when future modules refe
 
 ### 5.11 Cross-Site ROCA Master Data
 
-Some master screens load reference data from a **separate ROCA SharePoint site** (e.g. `BrandMaster`, `PlantMaster`).
+Some master screens load reference data from a **separate ROCA SharePoint site** (`BrandMaster`, `PlantMaster`, `RoleMaster`, `ApproversMaster`). Plant, Role, and Approver Configuration are **not** administered in this app.
 
 | Rule | Description |
 |---|---|
@@ -321,6 +321,7 @@ Some master screens load reference data from a **separate ROCA SharePoint site**
 | **R-CS03** | Cross-site list reads use `SPServices.getAnotherSPReadItems()` + list names from `Config.RocaMasterListNames` |
 | **R-CS04** | Domain-specific orchestration lives in `rocaMasterDataService.ts` |
 | **R-CS05** | Comma-separated multiline fields (e.g. Plant codes) use `plantValueUtils.ts` for parse/join |
+| **R-CS06** | **No local admin modules** for Plant Master, Role, or Approver Configuration — those lists live on the ROCA site (`Config.RocaMasterListNames`). Do not add nav items, routes, or NPD-site lists for them. Consume via `rocaMasterDataService.ts` / `npdFormDataService.ts` |
 
 Environment mapping is centralized in `resolveRocaMasterSiteUrl(currentSiteUrl)` (Chandrudemo → `/sites/ROCA`; Rocasanitario → RINMASTERDEV / RBPPLWOW based on current site path).
 
@@ -335,9 +336,12 @@ All PrimeReact wrappers (`Dropdown`, `MultiSelect`, `ComboBox`, etc.) must follo
 | **R-UI03** | **Checked checkbox state** — `.p-checkbox.p-highlight .p-checkbox-box` uses `$roca-color-accent` background/border (not `--primary-color` blue) |
 | **R-UI04** | **Option alignment** — multiselect/dropdown items use `display: flex`, `align-items: center`, `gap: 0.5rem`; checkbox `flex: 0 0 1rem` so label text sits immediately beside the checkbox |
 | **R-UI05** | **Overlay panels** — use `appendTo={getAppRootElement()}` + shared styles in `_roca-form-controls.scss`; inject post-CDN overrides via `injectRocaPrimeOverrides.ts` |
-| **R-UI06** | **Search filter in panels** — compact font (`0.75rem`), neutral border on focus (no blue glow) |
+| **R-UI06** | **Search filter in panels** — compact Poppins (`0.75rem`); padding `0.5rem` left / `1.75rem` right; search icon pinned to the **right** (never leave empty left space for a missing left icon) |
 | **R-UI07** | **Trigger arrow** — dropdown/multiselect chevron inside the control border; transparent background on hover/focus |
-| **R-UI08** | **Consistency** — new form controls reuse `_roca-form-controls.scss` / `_primereact-overrides.scss`; do not add one-off blue overrides in feature modules |
+| **R-UI08** | **Consistency** — new form controls reuse `_roca-form-controls.scss` / `_primereact-overrides.scss`; do not add one-off overlay, font, or selection overrides in feature modules |
+| **R-UI09** | **Poppins on overlays** — Toast, Dropdown, MultiSelect, ComboBox, Dialog, DatePicker, Tag, and option items must set `font-family: Poppins` (CDN theme does not inherit from `.appRoot`) |
+| **R-UI10** | **Selected option background** — use `$roca-color-option-selected-bg` (theme teal, slightly darker than hover) on `.p-highlight` items; hover uses `$roca-color-option-hover-bg`. Do not use the mint `$roca-color-bg-selected` for option lists |
+| **R-UI11** | **Selected navigation item** — `$roca-color-nav-item-selected-bg: #ffffff` with `$roca-color-nav-item-selected-text` (dark teal) so the active menu is immediately visible on the teal nav |
 
 Implementation files:
 
@@ -412,6 +416,20 @@ All Add/Edit popups use shared mixins from **`styles/_form-dialog-standard.scss`
 | **R-FD04** | **Footer buttons:** Cancel = outlined secondary (white bg, gray border); primary action = teal solid fill; min-width `5.5rem`, weight 600, gap `0.625rem` |
 | **R-FD05** | Footer has top border separator; use `@include roca-form-dialog-shell`, `roca-form-dialog-footer`, `roca-form-dialog-field` |
 | **R-FD06** | Feature dialogs import shared SCSS — do not redefine title/label/footer sizing per module |
+
+### 5.19 NPD Request Form (Initiator)
+
+| Rule | Description |
+|---|---|
+| **R-NPD01** | Route `/npd/new`; UI under `components/npd/newRequest/` — no accordion; **General Information** panel above **Item Details** panel |
+| **R-NPD02** | Section panels use teal header (`$roca-color-master-table-header`) via shared `NpdFormSectionPanel`; Item Details uses shared `DataTable` |
+| **R-NPD03** | Brand options from ROCA `ApproversMaster` — filter System=`Config.NpdApproverSystems.NewProductDevelopment`, Role=`Config.Roles.Initiator`, Users email = `app.userEmail`; expand System, Role, Brand, Users lookups |
+| **R-NPD04** | Material Type options from `Config.NpdMaterialTypes` — never hardcode in components |
+| **R-NPD05** | Plant/Source enabled when Material Type is selected — **Finished Products:** ROCA `PlantMaster` (`PlantType`=Factory, active, `PlantCode`); **Traded Products:** `Config.NpdTradedPlantSources` (Imported, Domestic) |
+| **R-NPD05a** | `ApproversMaster` reads use client-side filtering after expand (System, Role, Users email) — avoid fragile OData filters on lookup/person fields |
+| **R-NPD05b** | `requireRocaMasterSiteUrl()` maps using SPFx `siteUrl` + page URL haystack (not `window.origin` alone) |
+| **R-NPD06** | Cross-site fetch via `npdFormDataService.ts` + `resolveRocaMasterSiteUrl`; Redux in `npdFormSlice` / `npdFormThunks` |
+| **R-NPD07** | Components ≤ 200 lines; split General Info, Item Details, section shell |
 
 ### 5.17 Master Toolbar & Reset Filters
 

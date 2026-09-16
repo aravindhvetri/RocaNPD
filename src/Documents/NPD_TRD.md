@@ -38,13 +38,12 @@ App branding: **"NPD REQUESTS — New Product Development"**, single SPFx soluti
 
 **Administration** (Admin role only)
 - Material Master
-- LookUp Type
-- LookUp
-- Plant Master
-- Role
-- Approver Configuration
+- Lookup Type
+- Lookup
 - Workflow Configuration
 - Brand Material Extension
+
+Plant Master, Role, and Approver Configuration are **not** in this nav — they are read from the ROCA site.
 
 **Analytics & Reports** (Admin role only)
 - Reports
@@ -121,13 +120,13 @@ Edited via a single "Configure Workflow" modal (not a per-row create form) — l
 *(Nav item present; screen not yet captured — fields TBD.)*
 
 ### 3.6 Plant Master
-*(Nav item present; screen not yet captured.)* Likely the master list of Plant/Warehouse codes (e.g. CPND, CRPT, CDEW, CBBY) referenced by Brand Material Extension and the Plant/Source lookup.
+**No NPD admin screen.** Plant codes are read from ROCA `PlantMaster` (Brand Material Extension MultiSelect; Finished Products Plant/Source).
 
 ### 3.7 Role
-*(Nav item present; screen not yet captured.)* Likely master of role names used in Workflow Configuration and Approver Configuration (Initiator, Vertical Head, MIS Coordinator, Consultant, Admin).
+**No NPD admin screen.** Role names are read from ROCA `RoleMaster` (Workflow Configuration Next Role).
 
 ### 3.8 Approver Configuration
-*(Nav item present; screen not yet captured.)* Likely maps each workflow Role stage to actual approver user(s)/group, possibly scoped per Brand or globally.
+**No NPD admin screen.** User ↔ Role ↔ Brand mapping is read from ROCA `ApproversMaster` (Brand MG1, role resolution, routing).
 
 ---
 
@@ -214,9 +213,9 @@ Form: `Select All` / `Clear All` masters, per-master `+ Add Row` (multiple entri
 
 ## 5. Roles & Access Control
 
-- **Admin role** → full Administration section (Material Master, LookUp Type, LookUp, Plant Master, Role, Approver Configuration, Workflow Configuration, Brand Material Extension) + Analytics & Reports.
+- **Admin role** → Administration section (Material Master, Lookup Type, Lookup, Workflow Configuration, Brand Material Extension) + Analytics & Reports. Plant Master, Role, and Approver Configuration are **not** in this app — data is read from the ROCA site.
 - **Initiator role** → only NPD Request and New Material Group sections; no Administration or Reports.
-- Additional workflow roles referenced (Vertical Head, MIS Coordinator, Consultant) act as **approval-stage actors**, not necessarily nav roles — likely resolved via the Role / Approver Configuration lists (to confirm).
+- Additional workflow roles referenced (Vertical Head, MIS Coordinator, Consultant) act as **approval-stage actors**, not necessarily nav roles — resolved via ROCA `ApproversMaster` / `RoleMaster`.
 
 **Admin detection pattern:**
 1. Get current user via `sp.web.currentUser` (PnPjs).
@@ -231,8 +230,9 @@ Form: `Select All` / `Clear All` masters, per-master `+ Add Row` (multiple entri
 ```
 Lookup Type Master ──1:N──► Lookup Master
 Lookup Master (Brand) ──1:N──► Brand Material Extension
-Brand Material Extension ──drives──► Plant/Source dropdown (NPD Request)
-Role ──used by──► Workflow Configuration, Approver Configuration
+ROCA PlantMaster ──drives──► Brand Material Extension plants + Finished Products Plant/Source
+ROCA RoleMaster ──used by──► Workflow Configuration
+ROCA ApproversMaster ──used by──► Brand (MG1), role resolution, routing
 NPD Request ──1:N──► NPD Item
 Material Group Request ──1:N──► Material Group Request Item (per selected Lookup Type)
 ```
@@ -240,7 +240,7 @@ Material Group Request ──1:N──► Material Group Request Item (per selec
 ---
 
 ## 7. Open Items / To Confirm
-- [ ] Field schemas for **Material Master**, **Plant Master**, **Role**, **Approver Configuration** (screens not yet captured)
+- [x] Plant Master, Role, and Approver Configuration are **ROCA site** lists — no NPD admin screens or local lists
 - [ ] Exact SharePoint internal field names vs. display labels used above
 - [ ] Whether Workflow Configuration is one global flow or configurable per Brand / request type
 - [ ] How Vertical Head / MIS Coordinator / Consultant map to real approver users (per Brand? global?)

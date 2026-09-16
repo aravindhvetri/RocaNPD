@@ -1,9 +1,6 @@
 import { Config, WorkflowSystems } from "./Config";
 import type { ISelectOption } from "./Interface";
-import {
-  resolveCurrentSiteUrl,
-  resolveRocaMasterSiteUrl,
-} from "./rocaSiteUrlResolver";
+import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import { getActiveRecordFilters } from "./softDelete";
 import SPServices from "./SPServices";
 
@@ -37,23 +34,10 @@ function mapPlantOption(item: Record<string, unknown>): ISelectOption | null {
   return { label: plantCode, value: plantCode };
 }
 
-function getRocaSiteUrl(contextSiteUrl?: string): string {
-  const currentSiteUrl = resolveCurrentSiteUrl(contextSiteUrl);
-  const rocaSiteUrl = resolveRocaMasterSiteUrl(currentSiteUrl);
-
-  if (!rocaSiteUrl) {
-    throw new Error(
-      "Unable to resolve the ROCA master site URL for this environment.",
-    );
-  }
-
-  return rocaSiteUrl;
-}
-
 export async function fetchRocaBrandOptions(
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
-  const rocaSiteUrl = getRocaSiteUrl(contextSiteUrl);
+  const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
 
   const rows = (await SPServices.getAnotherSPReadItems({
     SiteUrl: rocaSiteUrl,
@@ -71,7 +55,7 @@ export async function fetchRocaBrandOptions(
 export async function fetchRocaNpdRoleOptions(
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
-  const rocaSiteUrl = getRocaSiteUrl(contextSiteUrl);
+  const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
 
   const rows = (await SPServices.getAnotherSPReadItems({
     SiteUrl: rocaSiteUrl,
@@ -108,7 +92,7 @@ export async function fetchRocaNpdRoleOptions(
 export async function fetchRocaPlantOptions(
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
-  const rocaSiteUrl = getRocaSiteUrl(contextSiteUrl);
+  const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
 
   const rows = (await SPServices.getAnotherSPReadItems({
     SiteUrl: rocaSiteUrl,
