@@ -25,29 +25,43 @@ export function resolveCurrentSiteUrl(contextSiteUrl?: string): string {
 
 /**
  * Resolves the ROCA master-data site URL for the current environment.
- * Used when fetching cross-site lists (Brandmaster, PlantMaster, etc.).
+ * Used when fetching cross-site lists (BrandMaster, PlantMaster, ApproversMaster, etc.).
+ *
+ * Uses the SPFx context site URL and full page URL so localhost workbench loads
+ * still map correctly when hosted against chandrudemo / rocasanitario tenants.
  */
 export function resolveRocaMasterSiteUrl(currentSiteUrl?: string): string {
   const siteUrl = resolveCurrentSiteUrl(currentSiteUrl);
-  const mappingHaystack = `${siteUrl} ${
-    typeof window !== "undefined" ? window.location.href : ""
-  }`.toLowerCase();
+  const pageHref =
+    typeof window !== "undefined" ? window.location.href : "";
+  const mappingHaystack = `${siteUrl} ${pageHref}`.toLowerCase();
 
-  if (window.location.origin === "https://chandrudemo.sharepoint.com") {
+  if (mappingHaystack.includes("chandrudemo")) {
     return "https://chandrudemo.sharepoint.com/sites/ROCA";
   }
 
-  if (window.location.origin === "https://rocasanitario.sharepoint.com") {
-    if (mappingHaystack.includes("rinanpdev")) {
-      return "https://rocasanitario.sharepoint.com/sites/RINMASTERDEV";
-    }
+  if (mappingHaystack.includes("rinanpdev")) {
+    return "https://rocasanitario.sharepoint.com/sites/RINMASTERDEV";
+  }
 
-    if (mappingHaystack.includes("rinanp")) {
-      return "https://rocasanitario.sharepoint.com/sites/RBPPLWOW";
-    }
+  if (mappingHaystack.includes("rinanp")) {
+    return "https://rocasanitario.sharepoint.com/sites/RBPPLWOW";
   }
 
   return "";
+}
+
+/** Returns the ROCA master site URL or throws a user-facing configuration error. */
+export function requireRocaMasterSiteUrl(contextSiteUrl?: string): string {
+  const rocaSiteUrl = resolveRocaMasterSiteUrl(contextSiteUrl);
+
+  if (!rocaSiteUrl) {
+    throw new Error(
+      "Unable to resolve the ROCA master site URL for this environment.",
+    );
+  }
+
+  return rocaSiteUrl;
 }
 
 /** @deprecated Use resolveRocaMasterSiteUrl — kept for legacy reference parity */

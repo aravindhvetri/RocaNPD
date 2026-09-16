@@ -10,6 +10,8 @@ export const initializeApp =
       setUserContext({
         displayName: context.pageContext.user.displayName,
         email: context.pageContext.user.email,
+        loginName: context.pageContext.user.loginName,
+        userId: Number(context.pageContext.legacyPageContext.userId) || 0,
         siteUrl: resolveCurrentSiteUrl(context.pageContext.web.absoluteUrl),
       }),
     );

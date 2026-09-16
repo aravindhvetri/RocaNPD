@@ -11,11 +11,11 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 41 | 27 | 14 |
-| C — SharePoint Data | 24 | 0 | 24 |
+| B — Technical Foundation | 45 | 31 | 14 |
+| C — SharePoint Data | 24 | 5 | 19 |
 | D — Security & Roles | 22 | 0 | 22 |
-| E — UI / UX / Theme | 27 | 6 | 21 |
-| F — Admin Module | 50 | 21 | 29 |
+| E — UI / UX / Theme | 28 | 8 | 20 |
+| F — Admin Module | 39 | 24 | 15 |
 | G — NPD Module | 42 | 0 | 42 |
 | H — Material Group Module | 24 | 0 | 24 |
 | I — Workflow & Automation | 20 | 0 | 20 |
@@ -26,9 +26,9 @@
 | N — Testing | 24 | 0 | 24 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **349** | **56** | **293** |
+| **TOTAL** | **343** | **70** | **273** |
 
-**Last Updated:** 11 September 2026
+**Last Updated:** 16 September 2026
 
 ---
 
@@ -117,8 +117,12 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-B39a** DataTable — no grid lines; subtle sort icons; pagination report text without box
 - [x] **CHK-B39b** `MasterTablePanel` reset-filters icon on all master screens
 - [x] **CHK-B39c** Poppins font family applied app-wide
+- [x] **CHK-B39c2** Poppins applied to Toast, Dropdown, MultiSelect, ComboBox, Dialog overlays (post-CDN inject)
 - [x] **CHK-B39d** Form dialog title/label hierarchy and footer button styling via `_form-dialog-standard.scss`
 - [x] **CHK-B39e** User-facing **Lookup Type** spelling consistent in nav, headings, and dialogs
+- [x] **CHK-B39f** Dropdown/MultiSelect search filter has compact left padding (icon on the right)
+- [x] **CHK-B39g** Selected option background uses `$roca-color-option-selected-bg` (theme teal, not mint)
+- [x] **CHK-B39h** Selected navigation item uses white background + dark teal text
 - [ ] **CHK-B40** Toast wrapper connected to Redux notification queue
 - [x] **CHK-B41** `common/controls/index.ts` barrel export — feature modules import from here only
 - [ ] **CHK-B42** No feature module file imports directly from `primereact/*`
@@ -140,9 +144,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-C01** Lookup Type Master list provisioned with correct fields
 - [ ] **CHK-C02** Lookup Master list provisioned with correct fields
 - [ ] **CHK-C03** Brand Material Extension Master list provisioned
-- [ ] **CHK-C04** Plant Master list provisioned
-- [ ] **CHK-C05** Role Master list provisioned
-- [ ] **CHK-C06** Approver Configuration Master list provisioned
+- [x] **CHK-C04** No local Plant Master list — ROCA `PlantMaster` is the plant data source
+- [x] **CHK-C05** No local Role Master list — ROCA `RoleMaster` is the role data source
+- [x] **CHK-C06** No local Approver Configuration list — ROCA `ApproversMaster` is the approver data source
 - [ ] **CHK-C07** Workflow Configuration Master list provisioned
 - [ ] **CHK-C08** Material Master list provisioned
 - [ ] **CHK-C09** NPD Request list provisioned
@@ -155,8 +159,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-C13** Lookup Type Master seeded (Brand, Material Type, Plant/Source, MG2–MG5, etc.)
 - [ ] **CHK-C14** Lookup Master seeded with initial values (brands, types, plants)
 - [ ] **CHK-C15** Lookup Type → Lookup Master relationship works in queries
-- [ ] **CHK-C16** Plant Master → Brand Material Extension relationship works
-- [ ] **CHK-C17** Role Master → Approver Configuration relationship works
+- [x] **CHK-C16** Brand Material Extension plants sourced from ROCA `PlantMaster` (no NPD-site Plant Master list)
+- [x] **CHK-C17** Workflow Next Role from ROCA `RoleMaster`; routing from ROCA `ApproversMaster` (no local Role/Approver lists)
 - [ ] **CHK-C18** NPD Request → NPD Item 1:N relationship works
 - [ ] **CHK-C19** Material Group Request → Item 1:N relationship works
 - [ ] **CHK-C20** Internal field names documented in `Config.ts`
@@ -179,7 +183,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-D01** Logged-in user identified correctly via `currentUser`
 - [ ] **CHK-D02** Employee ID retrieved correctly
 - [ ] **CHK-D03** Admin role assigned when user is in Admin SharePoint group
-- [ ] **CHK-D04** Non-admin role resolved from Approver Configuration Master
+- [ ] **CHK-D04** Non-admin role resolved from ROCA `ApproversMaster`
 - [ ] **CHK-D05** Brand mapping loaded for Initiator and Vertical Head
 - [ ] **CHK-D06** Role cached for session (no repeated SP calls on every navigation)
 
@@ -230,13 +234,14 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-E05** All status badges use `--roca-color-status-*` variables
 - [ ] **CHK-E06** Primary buttons use `--roca-color-btn-primary-*` (teal brand color)
 - [ ] **CHK-E07** Dialog headers use `--roca-color-header-bg` (matches wireframe modal)
-- [ ] **CHK-E08** PrimeReact components styled consistently inside `.roca-npd-app`
+- [x] **CHK-E08** PrimeReact components styled consistently inside `.roca-npd-app` (overlays via `_roca-form-controls.scss` + `injectRocaPrimeOverrides.ts`)
 
 ### E.2 Wireframe Alignment
 
 - [x] **CHK-E09** Left navigation matches NavSelectDesign.png (icon tones, hover, selected bar, pill actions)
+- [x] **CHK-E09a** Administration nav excludes Plant Master, Role, and Approver Configuration (ROCA-sourced; no local modules)
 - [x] **CHK-E06** Primary/accent colors match wireframe (#40919D accent, #162C34 sidebar, semantic nav icons)
-- [x] **CHK-E17b** Nav hover = subtle translucent bg; selected = teal bg + yellow left bar; icons keep semantic colors
+- [x] **CHK-E17b** Nav hover = subtle translucent bg; selected = **white** bg + dark teal text + colored left bar; icons keep semantic colors
 - [x] **CHK-E17c** Sidebar shrink/expand toggle matches shrink.png; content area adjusts; primary actions hover + selected only on click
 - [x] **CHK-E17a** Static header matches `headerSample` wireframe with ROCA Group logo from assets
 - [ ] **CHK-E10** Page headings match wireframe / requirement document
@@ -253,11 +258,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-E18** Empty state shown when lists have no records
 - [ ] **CHK-E19** Success toast shown after Save, Submit, Approve, Complete, etc.
 - [ ] **CHK-E20** Error toast shown on validation failure or SP errors
-- [ ] **CHK-E21** Cancel / Back navigates correctly without unintended data loss warning
+- [x] **CHK-E21** Cancel / Back navigates to All Requests (`/npd/all`) — confirm dialog pending
 - [ ] **CHK-E22** Read-only screens cannot be edited (form controls disabled)
 - [ ] **CHK-E23** Editable screens show only permitted actions for current role
-- [ ] **CHK-E24** Horizontal scroll works on wide Item Details grid
-- [ ] **CHK-E25** Total Items counter updates correctly on NPD form
+- [x] **CHK-E24** Horizontal scroll works on wide Item Details grid (shared surface scrollbar)
+- [x] **CHK-E25** Total Item Lines counter updates correctly on NPD form
 - [ ] **CHK-E26** Dynamic pending/completed counters update on list views
 
 ---
@@ -294,28 +299,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F09d** LookupType delete blocked when referenced by Lookup records (Toast)
 - [x] **CHK-F09e** Lookup delete blocked when referenced in Brand Material Extension (Toast)
 
-### F.3 Plant Master
+### F.3 Plant / Role / Approver — ROCA site (no local admin screens)
 
-- [ ] **CHK-F10** Plant list displays with search
-- [ ] **CHK-F11** New Plant form saves all required fields
-- [ ] **CHK-F12** Plant Code uniqueness enforced
-- [ ] **CHK-F13** Edit and Delete work correctly
-- [ ] **CHK-F14** Import and Export work correctly
-- [ ] **CHK-F15** Active/Inactive status handled correctly
-
-### F.4 Role Master
-
-- [ ] **CHK-F16** Role list displays all roles
-- [ ] **CHK-F17** Create / Edit / Delete role works
-- [ ] **CHK-F18** Required-field validation enforced
-
-### F.5 Approver Configuration
-
-- [ ] **CHK-F19** Approver list displays role, user, employee ID, brands
-- [ ] **CHK-F20** Brand multi-select shown for Initiator and Vertical Head
-- [ ] **CHK-F21** Brand hidden for MIS Coordinator and Consultant
-- [ ] **CHK-F22** One user can map to multiple brands
-- [ ] **CHK-F23** Create / Edit / Delete works
+- [x] **CHK-F10** Plant Master not in side nav or routes; plants loaded from ROCA `PlantMaster`
+- [x] **CHK-F16** Role not in side nav or routes; NPD roles loaded from ROCA `RoleMaster`
+- [x] **CHK-F19** Approver Configuration not in side nav or routes; approvers/brands loaded from ROCA `ApproversMaster`
 
 ### F.6 Brand Material Extension
 
@@ -365,15 +353,18 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### G.2 Initiator — New NPD Request Form
 
-- [ ] **CHK-G09** Brand (MG1) dropdown populated from Lookup Master
-- [ ] **CHK-G10** Material Type dropdown populated from Lookup Master
-- [ ] **CHK-G11** Plant/Source disabled until Material Type selected
+- [x] **CHK-G09** Brand (MG1) dropdown populated from ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users matched by `EMail` (+ `UsersId` site-user map fallback)
+- [x] **CHK-G10** Material Type dropdown populated from `Config.NpdMaterialTypes` (Finished Products, Traded Products)
+- [x] **CHK-G11** Plant/Source disabled until Material Type selected (Finished or Traded Products)
+- [x] **CHK-G12a** Plant/Source (Finished Products) from ROCA `PlantMaster` — `PlantType`=Factory, active plants, options=`PlantCode`
+- [x] **CHK-G12b** Plant/Source (Traded Products) shows `Imported` and `Domestic` from `Config.NpdTradedPlantSources`
+- [x] **CHK-G12c** ROCA cross-site URL resolves from SPFx context site URL (works on localhost workbench + deployed tenants)
 - [ ] **CHK-G12** Plant/Source filtered by Brand Material Extension for selected Brand
-- [ ] **CHK-G13** Roca Global Code shown and required for Roca, Laufen, Armani brands
-- [ ] **CHK-G14** Roca Global Code hidden for other brands
-- [ ] **CHK-G15** Item Details grid displays all required columns
-- [ ] **CHK-G16** Add row, Copy row, Delete row, Clear row work
-- [ ] **CHK-G17** + Add Another Item Line works
+- [x] **CHK-G13** Roca Global Code column shown for Roca, Laufen, Armani brands (UI)
+- [x] **CHK-G14** Roca Global Code column hidden for other brands
+- [x] **CHK-G15** Item Details grid displays all required BRD columns
+- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
+- [x] **CHK-G17** + Add Another Item Line works with small inline plus icon next to label
 - [ ] **CHK-G18** Import items from Excel works
 - [ ] **CHK-G19** Save Draft saves header + items without submitting
 - [ ] **CHK-G20** Submit Request validates and routes to Vertical Head
@@ -382,12 +373,12 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### G.3 Initiator — Validation
 
-- [ ] **CHK-G23** Submit blocked when Brand, Material Type, or Plant/Source missing
-- [ ] **CHK-G24** Material Code max 18 characters enforced
-- [ ] **CHK-G25** Material Description max 40 characters enforced
-- [ ] **CHK-G26** All mandatory item fields validated on submit
-- [ ] **CHK-G27** Roca Global Code validated when applicable
-- [ ] **CHK-G28** At least one item row required on submit
+- [x] **CHK-G23** Submit blocked when Brand, Material Type, or Plant/Source missing — validation Toast
+- [x] **CHK-G24** Material Code max 18 characters enforced — validation Toast on Submit
+- [x] **CHK-G25** Material Description max 40 characters enforced — validation Toast on Submit
+- [x] **CHK-G26** All mandatory item fields validated on submit — validation Toast (no inline errors)
+- [x] **CHK-G27** Roca Global Code validated when applicable — validation Toast on Submit
+- [x] **CHK-G28** At least one item row required on submit — validation Toast on Submit
 
 ### G.4 Vertical Head
 
@@ -404,8 +395,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-G36** Pending Approval shows VH-approved requests assigned to self
 - [ ] **CHK-G37** Item Details editable (edit rows, add line items)
 - [ ] **CHK-G38** Other Details section displays all SAP fields
-- [ ] **CHK-G39** Storage Location auto-populated from Plant Master
-- [ ] **CHK-G40** MRP Group and MRP Controller auto-populated from Plant Master
+- [ ] **CHK-G39** Storage Location auto-populated from ROCA `PlantMaster`
+- [ ] **CHK-G40** MRP Group and MRP Controller auto-populated from ROCA `PlantMaster`
 - [ ] **CHK-G41** Material Extension auto-populated from Brand Material Extension (editable)
 - [ ] **CHK-G42** Finished Products → Plant Code = Plant/Source, Valuation Class = 6000
 - [ ] **CHK-G43** Traded + Domestic → Plant Code = CCWH, Valuation Class = 5000
@@ -473,7 +464,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-I15** Rejection comments recorded and visible
 - [ ] **CHK-I16** Power Automate flows fire on correct triggers (if used)
 - [ ] **CHK-I17** Workflow Configuration Master drives stage sequence
-- [ ] **CHK-I18** Approver Configuration Master drives user routing
+- [ ] **CHK-I18** ROCA `ApproversMaster` drives user routing
 - [ ] **CHK-I19** Status transitions are valid (no invalid state jumps)
 - [ ] **CHK-I20** Concurrent approval attempts handled safely
 
@@ -538,7 +529,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-M04** Notification sent on Post to SAP / Completed
 - [ ] **CHK-M05** Notification sent on Material Group Submit / Complete / Rework
 - [ ] **CHK-M06** Email includes Request ID and key request details
-- [ ] **CHK-M07** Email recipients match Approver Configuration routing
+- [ ] **CHK-M07** Email recipients match ROCA `ApproversMaster` routing
 - [ ] **CHK-M08** Notifications tested in UAT before production enablement
 
 ---
@@ -680,6 +671,8 @@ Use this table to sign off each phase only when all related checklist items are 
 |---|---|---|
 | 10 Sep 2026 | Initial Checklist created | All |
 | 10 Sep 2026 | Marked foundation items verified (SP init, theme, docs) | CHK-A01–A05, CHK-B07–B11, CHK-E01–E03 |
+| 15 Sep 2026 | Overlay/nav UI consistency: filter padding, Poppins overlays, option selected teal, white selected nav | CHK-B39c2, CHK-B39f–h, CHK-E08, CHK-E17b |
+| 16 Sep 2026 | Removed Plant Master, Role, Approver Config from nav — consume ROCA site lists | CHK-C04–C06, CHK-C16–C17, CHK-E09a, CHK-F10/F16/F19 |
 
 ---
 

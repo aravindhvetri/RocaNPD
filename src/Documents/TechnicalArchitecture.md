@@ -35,7 +35,7 @@ A **SharePoint Framework (SPFx) client-side web part** branded **"NPD REQUESTS �
 
 - NPD request creation, multi-stage approval, SAP posting, and Material Master population
 - New Material Group request creation and Consultant completion
-- Administration of master data (Lookups, Plants, Roles, Approvers, Brand Extensions, Material Master)
+- Administration of master data (Lookups, Brand Extensions, Material Master, Workflow Configuration). Plant, Role, and Approver data are read from the ROCA site.
 - Role-based navigation, actions, and Analytics & Reports
 - Rework and permanent rejection handling at applicable workflow stages
 
@@ -200,11 +200,10 @@ This is a Google AI Studio single-page application prototype. Screens are naviga
 - Material Master
 - Lookup Type Master
 - Lookup Master
-- Plant Master
-- Role Master
-- Approver Configuration Master
 - Workflow Configuration
 - Brand Material Extension Master
+
+**Not in this app (ROCA site):** Plant Master, Role Master, Approver Configuration (`ApproversMaster`). Consumed via cross-site services.
 
 #### Analytics & Reports (all roles — scoped data)
 
@@ -214,11 +213,14 @@ This is a Google AI Studio single-page application prototype. Screens are naviga
 
 #### 4.4.1 Initiator — New NPD Request Form
 
+**Layout (implemented phase 1):** `/npd/new` — `NpdRequestForm` with **General Information** panel (teal header, no accordion) and **Item Details** `DataTable` panel below. Redux: `npdFormSlice` + `npdFormThunks`; services: `npdFormDataService.ts`.
+
 **General Information**
 
-- Brand (MG1) — required dropdown
-- Material Type — required dropdown
-- Plant / Source — required; **disabled until Material Type selected**; filtered by Brand Material Extension
+- Brand (MG1) — required dropdown; ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users email = logged-in user; Brand lookup Title values
+- Material Type — required dropdown; `Config.NpdMaterialTypes` (Finished Products, Traded Products)
+- Plant / Source — required when Material Type selected; **Finished Products** → ROCA `PlantMaster` (Factory, active, `PlantCode`); **Traded Products** → `Config.NpdTradedPlantSources` (Imported, Domestic); Brand Material Extension filter — pending
+- Cross-site ROCA URL: `requireRocaMasterSiteUrl()` uses context site URL + browser URL haystack (localhost workbench supported)
 - Roca Global Code — **conditional**: visible and mandatory when Brand = Roca, Laufen, or Armani
 
 **Item Details Grid**
@@ -280,13 +282,13 @@ Each master follows list + create/edit form pattern:
 | Module ID | Module Name | Primary Roles | SharePoint Lists |
 |---|---|---|---|
 | MOD-01 | Application Foundation | All | — |
-| MOD-02 | Security & Role Management | All | Role Master, Approver Configuration |
+| MOD-02 | Security & Role Management | All | ROCA `ApproversMaster`, ROCA `RoleMaster` |
 | MOD-03 | Lookup Administration | Admin | Lookup Type Master, Lookup Master |
-| MOD-04 | Plant & Brand Extension | Admin | Plant Master, Brand Material Extension |
+| MOD-04 | Brand Extension | Admin | Brand Material Extension (plants from ROCA `PlantMaster`) |
 | MOD-05 | Material Master | Admin | Material Master |
 | MOD-06 | NPD — Initiator | Initiator | NPD Request, NPD Item |
 | MOD-07 | NPD — Vertical Head | Vertical Head | NPD Request, NPD Item |
-| MOD-08 | NPD — MIS Coordinator | MIS Coordinator | NPD Request, NPD Item, Plant Master |
+| MOD-08 | NPD — MIS Coordinator | MIS Coordinator | NPD Request, NPD Item, ROCA `PlantMaster` |
 | MOD-09 | Material Group — Initiator | Initiator | Material Group Request, MG Item |
 | MOD-10 | Material Group — Consultant | Consultant | Material Group Request, MG Item |
 | MOD-11 | Workflow Automation | System | All request lists |
@@ -740,9 +742,6 @@ src/
     │   ├── MaterialMasterList.tsx
     │   ├── LookupTypeMaster.tsx
     │   ├── LookupMaster.tsx
-    │   ├── PlantMaster.tsx
-    │   ├── RoleMaster.tsx
-    │   ├── ApproverConfiguration.tsx
     │   ├── WorkflowConfiguration.tsx
     │   └── BrandMaterialExtension.tsx
     ├── reports/
@@ -759,12 +758,12 @@ src/
 
 | List Name | Type | Description |
 |---|---|---|
-| Lookup Type Master | Master | Categories for all dropdowns |
-| Lookup Master | Master | Lookup values scoped by type |
-| Brand Material Extension Master | Master | Brand → Plant/Warehouse mapping |
-| Plant Master | Master | Plant codes, storage, MRP defaults |
-| Role Master | Master | Application role names |
-| Approver Configuration Master | Master | User ↔ Role ↔ Brand mapping |
+| Lookup Type Master | Master (NPD site) | Categories for all dropdowns |
+| Lookup Master | Master (NPD site) | Lookup values scoped by type |
+| Brand Material Extension Master | Master (NPD site) | Brand → Plant/Warehouse mapping |
+| Plant Master | Master (**ROCA site**) | Plant codes, storage, MRP defaults — read only; no NPD admin screen |
+| Role Master | Master (**ROCA site**) | Application role names — read only; no NPD admin screen |
+| ApproversMaster | Master (**ROCA site**) | User ↔ Role ↔ Brand mapping — read only; no NPD admin screen |
 | Workflow Configuration Master | Master | Approval stage sequence |
 | Material Master | Master | Completed material catalog |
 | NPD Request | Transaction | NPD header records |
@@ -778,8 +777,9 @@ src/
 ```text
 Lookup Type Master ──1:N──► Lookup Master
 Lookup Master (Brand) ──1:N──► Brand Material Extension Master
-Plant Master ──sources──► Brand Material Extension (plant codes)
-Role Master ──used by──► Approver Configuration, Workflow Configuration
+ROCA PlantMaster ──sources──► Brand Material Extension (plant codes)
+ROCA RoleMaster ──used by──► Workflow Configuration (Next Role)
+ROCA ApproversMaster ──used by──► Role resolution, Brand (MG1) options
 NPD Request ──1:N──► NPD Item
 Material Group Request ──1:N──► Material Group Request Item
 NPD Request (Completed) ──► Material Master (auto-populate)
@@ -932,7 +932,9 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 | Code | Text | Optional for Initiator; mandatory for Consultant |
 | Description | Text | Mandatory |
 
-### 12.10 Plant Master
+### 12.10 Plant Master (ROCA site — no NPD admin module)
+
+Read from ROCA `PlantMaster` via `rocaMasterDataService` / `npdFormDataService`. Do not provision this list on the NPD site.
 
 | Field | Type | Required |
 |---|---|---|
@@ -945,7 +947,9 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 | MRP Controller | Text | |
 | Status | Choice | Active/Inactive |
 
-### 12.11 Approver Configuration Master
+### 12.11 Approver Configuration (ROCA `ApproversMaster` — no NPD admin module)
+
+Read from ROCA `ApproversMaster` via `npdFormDataService` / role resolution. Do not provision this list on the NPD site.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
@@ -1336,9 +1340,6 @@ setupSP(this._sp);
 | `/admin/material-master` | MaterialMasterList | Admin |
 | `/admin/lookup-type` | LookupTypeMaster | Admin |
 | `/admin/lookup` | LookupMaster | Admin |
-| `/admin/plant` | PlantMaster | Admin |
-| `/admin/role` | RoleMaster | Admin |
-| `/admin/approver-config` | ApproverConfiguration | Admin |
 | `/admin/workflow-config` | WorkflowConfiguration | Admin |
 | `/admin/brand-extension` | BrandMaterialExtension | Admin |
 | `/reports` | ReportsDashboard | All (scoped) |
@@ -1629,7 +1630,7 @@ Some admin screens load reference data from a **separate ROCA SharePoint site** 
 
 | Origin | Current site path contains | ROCA master site |
 |---|---|---|
-| `chandrudemo.sharepoint.com` | — | `/sites/Roca` |
+| `chandrudemo` (context or page URL) | — | `/sites/ROCA` |
 | `rocasanitario.sharepoint.com` | `rinanpdev` | `/sites/RINMASTERDEV` |
 | `rocasanitario.sharepoint.com` | `rinanp` | `/sites/RBPPLWOW` |
 

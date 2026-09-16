@@ -5,6 +5,11 @@
 @mixin roca-primereact-overrides {
   font-family: 'Poppins', sans-serif;
 
+  .p-component,
+  .p-inputtext {
+    font-family: 'Poppins', sans-serif !important;
+  }
+
   // Remove focus rings / box shadows on all PrimeReact components.
   .p-component:focus,
   .p-component:focus-visible,
@@ -307,4 +312,7 @@
     }
   }
 
+  [data-roca-npd-nav] a {
+    color: $roca-color-nav-text;
+  }
 }

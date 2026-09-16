@@ -3,6 +3,43 @@
 // Shared PrimeReact form-control overlay styles (Dropdown, MultiSelect, ComboBox panels).
 // Included from _primereact-overrides.scss and injectRocaPrimeOverrides.ts (hex literals).
 @mixin roca-form-control-overrides {
+  $roca-overlay-font: 'Poppins', sans-serif;
+
+  // ---- Overlay typography (Dropdown, MultiSelect, ComboBox, Toast, Dialog) ----
+  .p-dropdown,
+  .p-dropdown-label,
+  .p-dropdown-panel,
+  .p-dropdown-item,
+  .p-dropdown-empty-message,
+  .p-dropdown-filter,
+  .p-multiselect,
+  .p-multiselect-label,
+  .p-multiselect-panel,
+  .p-multiselect-item,
+  .p-multiselect-empty-message,
+  .p-multiselect-filter,
+  .p-autocomplete,
+  .p-autocomplete-input,
+  .p-autocomplete-panel,
+  .p-autocomplete-item,
+  .p-toast,
+  .p-toast-message,
+  .p-toast-summary,
+  .p-toast-detail,
+  .p-dialog,
+  .p-dialog-title,
+  .p-dialog-content,
+  .p-confirm-dialog,
+  .p-datepicker,
+  .p-datepicker-calendar,
+  .p-listbox,
+  .p-listbox-item,
+  .p-tooltip,
+  .p-tooltip-text,
+  .p-overlaypanel {
+    font-family: $roca-overlay-font !important;
+  }
+
   // ---- Focus / active: no PrimeReact blue ring --------------------------------
   .p-dropdown,
   .p-multiselect,
@@ -88,10 +125,19 @@
     }
   }
 
+  .p-multiselect-filter-container,
+  .p-dropdown-filter-container {
+    position: relative;
+    width: 100%;
+  }
+
   .p-multiselect-filter-container .p-inputtext,
-  .p-dropdown-filter-container .p-inputtext {
+  .p-dropdown-filter-container .p-inputtext,
+  .p-dropdown-filter,
+  .p-multiselect-filter {
+    font-family: $roca-overlay-font !important;
     font-size: 0.75rem;
-    padding: 0.3125rem 0.5rem 0.3125rem 1.75rem;
+    padding: 0.3125rem 1.75rem 0.3125rem 0.5rem !important;
     border-color: $roca-color-border-light;
     box-shadow: none !important;
 
@@ -102,6 +148,13 @@
       box-shadow: none !important;
       outline: none !important;
     }
+  }
+
+  .p-dropdown-filter-icon,
+  .p-multiselect-filter-icon {
+    left: auto !important;
+    right: 0.5rem !important;
+    color: $roca-color-text-muted;
   }
 
   .p-multiselect-items .p-multiselect-item {
@@ -119,13 +172,13 @@
     }
 
     &.p-highlight {
-      background: $roca-color-bg-selected !important;
+      background: $roca-color-option-selected-bg !important;
       color: $roca-color-text-primary !important;
       font-weight: 600;
     }
 
     &:not(.p-highlight):hover {
-      background: $roca-color-bg-hover !important;
+      background: $roca-color-option-hover-bg !important;
       color: $roca-color-text-primary !important;
     }
 
@@ -147,12 +200,12 @@
       font-size: 0.8125rem;
 
       &.p-highlight {
-        background: $roca-color-bg-selected !important;
+        background: $roca-color-option-selected-bg !important;
         color: $roca-color-text-primary !important;
       }
 
       &:not(.p-highlight):hover {
-        background: $roca-color-bg-hover !important;
+        background: $roca-color-option-hover-bg !important;
         color: $roca-color-text-primary !important;
       }
 
@@ -175,7 +228,12 @@
       font-size: 0.8125rem;
 
       &.p-highlight {
-        background: $roca-color-bg-selected !important;
+        background: $roca-color-option-selected-bg !important;
+        color: $roca-color-text-primary !important;
+      }
+
+      &:not(.p-highlight):hover {
+        background: $roca-color-option-hover-bg !important;
         color: $roca-color-text-primary !important;
       }
 
@@ -189,5 +247,29 @@
 
   .p-autocomplete-dropdown {
     border-left: 1px solid $roca-color-border-light !important;
+  }
+
+  // ---- Listbox / Calendar selected states ------------------------------------
+  .p-listbox .p-listbox-item {
+    font-family: $roca-overlay-font !important;
+
+    &.p-highlight {
+      background: $roca-color-option-selected-bg !important;
+      color: $roca-color-text-primary !important;
+    }
+
+    &:not(.p-highlight):hover {
+      background: $roca-color-option-hover-bg !important;
+      color: $roca-color-text-primary !important;
+    }
+  }
+
+  .p-datepicker {
+    font-family: $roca-overlay-font !important;
+
+    td > span.p-highlight {
+      background: $roca-color-option-selected-bg !important;
+      color: $roca-color-text-primary !important;
+    }
   }
 }

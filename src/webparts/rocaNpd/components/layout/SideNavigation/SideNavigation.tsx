@@ -30,6 +30,7 @@ const SideNavigation: React.FC = () => {
   return (
     <aside
       className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""}`}
+      data-roca-npd-nav="true"
       aria-label="Application navigation"
     >
       <SidebarBrand

@@ -1,7 +1,16 @@
 @import '../../../../styles/_theme-import.scss';
 
 .rocaToast {
+  font-family: 'Poppins', sans-serif !important;
+
   :global {
+    .p-toast,
+    .p-toast-message,
+    .p-toast-summary,
+    .p-toast-detail {
+      font-family: 'Poppins', sans-serif !important;
+    }
+
     .p-toast {
       width: 22rem;
       opacity: 1;

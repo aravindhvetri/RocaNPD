@@ -1,9 +1,17 @@
 @import "../../../../styles/_theme-import.scss";
 @import "../../../../styles/_datatable-pagination.scss";
+@import "../../../../styles/_roca-scrollbar.scss";
 
 .dataTable {
   :global {
     @include roca-datatable-pagination;
+
+    .p-datatable-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      @include roca-surface-scrollbar;
+    }
+
     .p-datatable-table {
       border-collapse: separate;
       border-spacing: 0;

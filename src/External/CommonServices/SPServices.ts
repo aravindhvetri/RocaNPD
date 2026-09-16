@@ -347,6 +347,31 @@ const AnotherformatInputs = (data: IAnotherListItems): IAnotherListItems => {
   return data;
 };
 
+const getAnotherSPSiteUserEmailMap = async (
+  siteUrl: string,
+): Promise<Map<number, string>> => {
+  const web = Web([getSP().web, siteUrl]);
+  const rows = (await web.siteUsers.select("Id,Email")()) as Array<{
+    Id?: number;
+    Email?: string;
+  }>;
+
+  const emailById = new Map<number, string>();
+
+  rows.forEach((user) => {
+    const id = Number(user.Id);
+    const email = String(user.Email ?? "")
+      .trim()
+      .toLowerCase();
+
+    if (id > 0 && email) {
+      emailById.set(id, email);
+    }
+  });
+
+  return emailById;
+};
+
 const getAnotherSPReadItems = async (
   params: IAnotherListItems,
 ): Promise<[]> => {
@@ -358,16 +383,25 @@ const getAnotherSPReadItems = async (
     params.FilterCondition ? params.FilterCondition : "",
   );
 
-  let query = web.lists
-    .getByTitle(params.Listname)
-    .items.select(params.Select || "*");
+  let query = web.lists.getByTitle(params.Listname).items.select(
+    ...String(params.Select || "*")
+      .split(",")
+      .map((field) => field.trim())
+      .filter(Boolean),
+  );
 
   if (filterValue) {
     query = query.filter(filterValue);
   }
 
   if (params.Expand) {
-    query = query.expand(params.Expand);
+    const expandFields = params.Expand.split(",")
+      .map((field) => field.trim())
+      .filter(Boolean);
+
+    if (expandFields.length) {
+      query = query.expand(...expandFields);
+    }
   }
 
   const orderAscending =
@@ -675,6 +709,7 @@ export default {
   SPDeleteDocumentItem,
   getSPGroupMember,
   getAnotherSPReadItems,
+  getAnotherSPSiteUserEmailMap,
   AnotherSPAddItem,
   AnotherSPUpdateItem,
   AnotherSPDeleteItem,

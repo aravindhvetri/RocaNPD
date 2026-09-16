@@ -1,0 +1,43 @@
+@import '../../../styles/_theme-import.scss';
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid $roca-color-border-light;
+}
+
+.primaryActions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.cancelButton,
+.saveButton,
+.submitButton {
+  min-width: 5.5rem;
+  font-weight: 600;
+}
+
+.cancelButton,
+.saveButton {
+  :global(.p-button) {
+    background: $roca-color-bg-surface;
+    border-color: $roca-color-border-light;
+    color: $roca-color-text-primary;
+  }
+}
+
+.submitButton {
+  :global(.p-button) {
+    background: $roca-color-btn-primary-bg;
+    border-color: $roca-color-btn-primary-bg;
+    color: $roca-color-btn-primary-text;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+}

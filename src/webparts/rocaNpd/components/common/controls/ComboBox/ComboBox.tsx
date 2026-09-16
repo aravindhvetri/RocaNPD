@@ -43,6 +43,7 @@ const ComboBox: React.FC<IComboBoxProps> = ({
       forceSelection={forceSelection}
       disabled={disabled || readOnly}
       appendTo={getAppRootElement()}
+      panelClassName={styles.panel}
       className={error ? "p-invalid" : undefined}
       inputClassName="w-full"
       data-testid={testId}

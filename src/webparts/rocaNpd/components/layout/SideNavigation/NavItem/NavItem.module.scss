@@ -7,7 +7,7 @@
   gap: 0.625rem;
   margin: 0.125rem 0.625rem;
   padding: 0.5rem 0.75rem 0.5rem 1.125rem;
-  color: $roca-color-nav-text;
+  color: $roca-color-nav-text !important;
   text-decoration: none;
   font-size: 0.8125rem;
   line-height: 1.35;
@@ -17,14 +17,14 @@
 
   &:hover {
     background-color: $roca-color-nav-item-hover-bg;
-    color: $roca-color-nav-text;
+    color: $roca-color-nav-text !important;
     text-decoration: none;
   }
 }
 
 .itemActive {
   background-color: $roca-color-nav-item-selected-bg;
-  color: $roca-color-nav-text;
+  color: $roca-color-nav-item-selected-text !important;
   font-weight: 700;
 
   &::before {
@@ -38,8 +38,14 @@
     background-color: var(--nav-selected-bar-color, $roca-color-nav-item-selected-bar);
   }
 
+  .iconDefault,
+  .label {
+    color: $roca-color-nav-item-selected-text !important;
+  }
+
   &:hover {
     background-color: $roca-color-nav-item-selected-bg;
+    color: $roca-color-nav-item-selected-text !important;
   }
 }
 
@@ -52,7 +58,7 @@
 }
 
 .iconDefault {
-  color: $roca-color-nav-icon-default;
+  color: $roca-color-nav-icon-default !important;
 }
 
 .iconPending {
@@ -69,4 +75,5 @@
 
 .label {
   flex: 1;
+  color: inherit;
 }

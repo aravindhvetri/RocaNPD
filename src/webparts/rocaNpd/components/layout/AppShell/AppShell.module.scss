@@ -1,4 +1,5 @@
 @import '../../../styles/theme-import';
+@import '../../../styles/roca-scrollbar';
 
 .appShell {
   position: relative;
@@ -64,6 +65,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   background-color: $roca-color-bg-page;
+  @include roca-surface-scrollbar;
 }
 
 @media (max-width: 992px) {

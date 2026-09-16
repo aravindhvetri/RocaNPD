@@ -1,6 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 import adminReducer from "./slices/adminSlice";
 import appReducer from "./slices/appSlice";
+import npdFormReducer from "./slices/npdFormSlice";
 import uiReducer from "./slices/uiSlice";
 
 export const store = configureStore({
@@ -8,6 +9,7 @@ export const store = configureStore({
     app: appReducer,
     ui: uiReducer,
     admin: adminReducer,
+    npdForm: npdFormReducer,
   },
 });
 

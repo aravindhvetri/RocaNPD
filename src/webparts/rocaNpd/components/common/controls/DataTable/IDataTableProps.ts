@@ -2,9 +2,9 @@ import * as React from "react";
 
 export interface IDataTableColumn<T> {
   field: keyof T & string;
-  header: string;
+  header: React.ReactNode;
   sortable?: boolean;
-  body?: (row: T) => React.ReactNode;
+  body?: (row: T, rowIndex: number) => React.ReactNode;
   style?: React.CSSProperties;
   headerStyle?: React.CSSProperties;
 }

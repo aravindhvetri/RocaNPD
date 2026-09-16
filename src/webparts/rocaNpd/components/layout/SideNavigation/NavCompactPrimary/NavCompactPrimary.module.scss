@@ -21,13 +21,19 @@
 
 .linkActive {
   background-color: $roca-color-nav-item-selected-bg;
+  color: $roca-color-nav-item-selected-text !important;
+
+  .icon {
+    color: $roca-color-nav-item-selected-text !important;
+  }
 
   &:hover {
     background-color: $roca-color-nav-item-selected-bg;
+    color: $roca-color-nav-item-selected-text !important;
   }
 }
 
 .icon {
   font-size: 1rem;
-  color: $roca-color-nav-icon-default;
+  color: $roca-color-nav-icon-default !important;
 }

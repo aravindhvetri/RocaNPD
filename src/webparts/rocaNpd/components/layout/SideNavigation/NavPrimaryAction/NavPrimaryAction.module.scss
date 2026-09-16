@@ -9,7 +9,7 @@
   padding: 0.625rem 1rem;
   border-radius: 6px;
   background-color: $roca-color-nav-primary-action-bg;
-  color: $roca-color-nav-text;
+  color: $roca-color-nav-text !important;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -20,21 +20,33 @@
 
   &:hover {
     background-color: $roca-color-nav-primary-action-hover-bg;
-    color: $roca-color-nav-text;
+    color: $roca-color-nav-text !important;
     text-decoration: none;
+  }
+
+  .icon,
+  span {
+    color: $roca-color-nav-text !important;
   }
 }
 
 .actionActive {
   background-color: $roca-color-nav-item-selected-bg;
+  color: $roca-color-nav-item-selected-text !important;
   font-weight: 700;
+
+  .icon,
+  span {
+    color: $roca-color-nav-item-selected-text !important;
+  }
 
   &:hover {
     background-color: $roca-color-nav-item-selected-bg;
+    color: $roca-color-nav-item-selected-text !important;
   }
 }
 
 .icon {
   font-size: 0.75rem;
-  color: $roca-color-nav-icon-default;
+  color: $roca-color-nav-icon-default !important;
 }

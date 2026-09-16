@@ -24,6 +24,8 @@ const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
       setUserContext({
         displayName: pageContext.user.displayName,
         email: pageContext.user.email,
+        loginName: pageContext.user.loginName,
+        userId: Number(pageContext.legacyPageContext.userId) || 0,
         siteUrl: resolveCurrentSiteUrl(pageContext.web.absoluteUrl),
       }),
     );

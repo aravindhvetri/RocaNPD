@@ -132,3 +132,19 @@ export interface IWorkflowConfigSavePayload {
   steps: IWorkflowFormStep[];
   existingStepIds?: number[];
 }
+
+/** NPD Request form — General Information (header) fields. */
+export interface INpdGeneralInfo {
+  brand: string | null;
+  materialType: string | null;
+  plantSource: string | null;
+}
+
+/** ROCA ApproversMaster row (subset used for initiator brand resolution). */
+export interface IApproversMasterRecord {
+  Id: number;
+  BrandTitle: string;
+  RoleTitle: string;
+  SystemTitle: string;
+  UserEmails: string[];
+}
