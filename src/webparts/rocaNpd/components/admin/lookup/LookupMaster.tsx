@@ -1,10 +1,16 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
 import type {
+  ILookupImportParseResult,
   ILookupRow,
   ITemplateDocument,
 } from "../../../../../External/CommonServices/Interface";
+import {
+  buildImportValidationRows,
+  ImportValidationMessages,
+  type IImportValidationRow,
+} from "../../../../../External/CommonServices/importService";
 import { exportLookupsToExcel } from "../../../../../External/CommonServices/lookupService";
 import {
   downloadTemplateFile,
@@ -16,14 +22,15 @@ import {
   clearLookupTypeError,
 } from "../../../../../store/slices/adminSlice";
 import {
+  commitImportLookups,
   createLookup,
   fetchLookups,
-  importLookups,
+  previewImportLookups,
   softDeleteLookup,
   updateLookup,
 } from "../../../../../store/thunks/lookupThunks";
 import { fetchLookupTypes } from "../../../../../store/thunks/lookupTypeThunks";
-import { ImportDialog } from "../../common/importExport";
+import { ImportDialog, ImportValidationDialog } from "../../common/importExport";
 import {
   DeleteConfirmDialog,
   LoaderOverlay,
@@ -70,6 +77,13 @@ const LookupMaster: React.FC = () => {
   const [templateDocument, setTemplateDocument] =
     React.useState<ITemplateDocument | null>(null);
   const [templateLoading, setTemplateLoading] = React.useState(false);
+  const [importValidationRows, setImportValidationRows] = React.useState<
+    IImportValidationRow[]
+  >([]);
+  const [importValidationVisible, setImportValidationVisible] =
+    React.useState(false);
+  const [importPreview, setImportPreview] =
+    React.useState<ILookupImportParseResult | null>(null);
 
   const isLoading = status === "loading" || lookupTypeStatus === "loading";
   const isSaving = status === "saving";
@@ -176,11 +190,24 @@ const LookupMaster: React.FC = () => {
     setSelectedItem(null);
   };
 
+  const clearImportValidation = (): void => {
+    setImportValidationRows([]);
+    setImportPreview(null);
+    setImportValidationVisible(false);
+  };
+
   const closeImportDialog = (): void => {
     if (isSaving) {
       return;
     }
     setImportVisible(false);
+  };
+
+  const closeImportValidationDialog = (): void => {
+    if (isSaving) {
+      return;
+    }
+    clearImportValidation();
   };
 
   const handleValidationWarning = (message: string): void => {
@@ -269,23 +296,47 @@ const LookupMaster: React.FC = () => {
 
   const handleImportFile = async (file: File): Promise<void> => {
     try {
-      const result = await dispatch(importLookups(file)).unwrap();
+      const result = await dispatch(previewImportLookups(file)).unwrap();
+      const validationRows = buildImportValidationRows(
+        result.duplicates,
+        ImportValidationMessages.duplicateLookupName,
+        result.errors,
+      );
 
-      result.errors.forEach((message) => {
-        showWarningToast(toastRef, message);
-      });
-
-      result.duplicates.forEach((name) => {
-        showWarningToast(toastRef, `"${name}" already exists.`);
-      });
-
-      if (result.toCreate.length) {
-        showSuccessToast(
-          toastRef,
-          `${result.toCreate.length} lookup record(s) imported successfully.`,
-        );
+      if (validationRows.length) {
+        setImportValidationRows(validationRows);
+        setImportPreview(result);
         setImportVisible(false);
+        setImportValidationVisible(true);
+        return;
       }
+
+      const count = await dispatch(commitImportLookups(result.toCreate)).unwrap();
+      showSuccessToast(
+        toastRef,
+        `${count} lookup record(s) imported successfully.`,
+      );
+      closeImportDialog();
+      clearImportValidation();
+    } catch {
+      // Error toast handled via slice error effect.
+    }
+  };
+
+  const handleImportProceed = async (): Promise<void> => {
+    if (!importPreview?.toCreate.length) {
+      return;
+    }
+
+    try {
+      const count = await dispatch(
+        commitImportLookups(importPreview.toCreate),
+      ).unwrap();
+      showSuccessToast(
+        toastRef,
+        `${count} lookup record(s) imported successfully.`,
+      );
+      clearImportValidation();
     } catch {
       // Error toast handled via slice error effect.
     }
@@ -350,6 +401,17 @@ const LookupMaster: React.FC = () => {
         onDownloadTemplate={handleDownloadTemplate}
         onFileRejected={(message) => showWarningToast(toastRef, message)}
         onImport={handleImportFile}
+      />
+
+      <ImportValidationDialog
+        visible={importValidationVisible}
+        sectionTitle="Import Lookup Master"
+        recordColumnHeader={FieldLabels.LookupName}
+        validationRows={importValidationRows}
+        canProceed={Boolean(importPreview?.toCreate.length)}
+        proceeding={isSaving}
+        onHide={closeImportValidationDialog}
+        onProceed={handleImportProceed}
       />
 
       <LookupFormDialog

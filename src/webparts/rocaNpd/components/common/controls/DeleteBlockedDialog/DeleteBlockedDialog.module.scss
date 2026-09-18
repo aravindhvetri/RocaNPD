@@ -1,0 +1,36 @@
+@import '../../../../styles/_form-dialog-standard.scss';
+
+.blockedDialog {
+  @include roca-form-dialog-shell;
+
+  :global {
+    .p-dialog-content {
+      text-align: center;
+      padding-top: 0.25rem;
+    }
+
+    .p-dialog-footer {
+      justify-content: center;
+      border-top: none;
+      padding-top: 0.5rem;
+    }
+  }
+}
+
+.message {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: $roca-color-text-secondary;
+  line-height: 1.5;
+  font-family: 'Poppins', sans-serif;
+}
+
+.footer {
+  @include roca-form-dialog-footer;
+  justify-content: center;
+  width: 100%;
+}
+
+.closeButton {
+  min-width: 5.5rem;
+}

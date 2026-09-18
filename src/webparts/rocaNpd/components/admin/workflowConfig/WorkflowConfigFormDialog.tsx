@@ -161,7 +161,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
   };
 
   const handleNextRoleChange = (stepIndex: number, value: string | null): void => {
-    if (!isWorkflowStepNextRoleEditable(stepIndex, steps.length)) {
+    if (!isWorkflowStepNextRoleEditable(stepIndex, steps.length, { mode })) {
       return;
     }
 
@@ -169,7 +169,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
     const updatedSteps = steps.map((step, index) =>
       index === stepIndex ? { ...step, nextRole } : step,
     );
-    setSteps(updatedSteps);
+    setSteps(rebuildFormStepsAfterChange(updatedSteps));
   };
 
   const handleAddStep = (): void => {
@@ -288,6 +288,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
                 const isNextRoleEditable = isWorkflowStepNextRoleEditable(
                   index,
                   steps.length,
+                  { mode },
                 );
 
                 return (
@@ -302,7 +303,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
                         className={styles.stepField}
                         onChange={() => undefined}
                       />
-                      {isNextRoleEditable ? (
+                      {isNextRoleEditable && !(isMgRequest && index > 0) ? (
                         <Dropdown
                           id={`workflowNextRole-${index}`}
                           label={FieldLabels.NextRole}
@@ -313,8 +314,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
                           disabled={
                             controlsDisabled ||
                             !requestTypeSelected ||
-                            (isNpdRequest && npdRolesLoading) ||
-                            (isMgRequest && index > 0)
+                            (isNpdRequest && npdRolesLoading)
                           }
                           className={styles.stepField}
                           onChange={(value) =>

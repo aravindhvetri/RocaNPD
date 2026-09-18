@@ -11,24 +11,24 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 45 | 31 | 14 |
+| B — Technical Foundation | 49 | 38 | 11 |
 | C — SharePoint Data | 24 | 5 | 19 |
-| D — Security & Roles | 22 | 0 | 22 |
-| E — UI / UX / Theme | 28 | 8 | 20 |
+| D — Security & Roles | 22 | 12 | 10 |
+| E — UI / UX / Theme | 28 | 9 | 19 |
 | F — Admin Module | 39 | 24 | 15 |
-| G — NPD Module | 42 | 0 | 42 |
+| G — NPD Module | 44 | 39 | 5 |
 | H — Material Group Module | 24 | 0 | 24 |
 | I — Workflow & Automation | 20 | 0 | 20 |
 | J — SAP Integration | 16 | 0 | 16 |
 | K — Material Master | 10 | 0 | 10 |
 | L — Reports | 10 | 0 | 10 |
-| M — Email Notifications | 8 | 0 | 8 |
+| M — Email Notifications | 8 | 3 | 5 |
 | N — Testing | 24 | 0 | 24 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **343** | **70** | **273** |
+| **TOTAL** | **349** | **132** | **217** |
 
-**Last Updated:** 16 September 2026
+**Last Updated:** 18 September 2026
 
 ---
 
@@ -86,11 +86,11 @@
 ### B.4 Routing & App Shell
 
 - [x] **CHK-B20** react-router-dom routes configured for all modules (HashRouter + placeholder pages)
-- [ ] **CHK-B21** Route guards block unauthorized role access — deferred to next phase
+- [x] **CHK-B21** Route guards block unauthorized role access (`ProtectedRoute` + `permissionService`)
 - [x] **CHK-B22** App shell matches wireframe layout (header, left nav, content)
-- [ ] **CHK-B23** Navigation items show/hide correctly per role — all items visible for now; role filtering deferred
-- [x] **CHK-B24** Active Login Role indicator displays correct role (static default; dynamic role resolution deferred)
-- [ ] **CHK-B25** Unauthorized URL redirects to access-denied page
+- [x] **CHK-B23** Navigation items show/hide correctly per role (`filterNavigationByRoles`, union of assigned roles)
+- [x] **CHK-B24** Active Login Role indicator removed from side navigation per design requirement
+- [x] **CHK-B25** Unauthorized URL redirects to access-denied page (`/unauthorized`)
 
 ### B.5 Common Components — Composites
 
@@ -123,6 +123,10 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-B39f** Dropdown/MultiSelect search filter has compact left padding (icon on the right)
 - [x] **CHK-B39g** Selected option background uses `$roca-color-option-selected-bg` (theme teal, not mint)
 - [x] **CHK-B39h** Selected navigation item uses white background + dark teal text
+- [x] **CHK-B39i** Master reset button has visible white background + border on all master toolbars
+- [x] **CHK-B39j** Export filename uses `{Name}_Export_{DD-MM-YYYY}` with themed Excel header row
+- [x] **CHK-B39k** Master toolbar controls (Search/Import/Export/Add New) use compact shared height
+- [x] **CHK-B39l** Form dialog footer buttons use taller min-height via `_form-dialog-standard.scss`
 - [ ] **CHK-B40** Toast wrapper connected to Redux notification queue
 - [x] **CHK-B41** `common/controls/index.ts` barrel export — feature modules import from here only
 - [ ] **CHK-B42** No feature module file imports directly from `primereact/*`
@@ -180,46 +184,46 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### D.1 Role Resolution
 
-- [ ] **CHK-D01** Logged-in user identified correctly via `currentUser`
+- [x] **CHK-D01** Logged-in user identified correctly via `currentUser`
 - [ ] **CHK-D02** Employee ID retrieved correctly
-- [ ] **CHK-D03** Admin role assigned when user is in Admin SharePoint group
-- [ ] **CHK-D04** Non-admin role resolved from ROCA `ApproversMaster`
-- [ ] **CHK-D05** Brand mapping loaded for Initiator and Vertical Head
-- [ ] **CHK-D06** Role cached for session (no repeated SP calls on every navigation)
+- [x] **CHK-D03** Admin role assigned when user is in Admin SharePoint group (`Admins`)
+- [x] **CHK-D04** Non-admin roles resolved from ROCA `ApproversMaster` (multi-role union with Admin)
+- [x] **CHK-D05** Brand mapping loaded for Initiator and Vertical Head
+- [x] **CHK-D06** Role cached for session (no repeated SP calls on every navigation)
 
 ### D.2 Access Control — Initiator
 
 - [ ] **CHK-D07** Initiator sees only own NPD requests
 - [ ] **CHK-D08** Initiator sees only own Material Group requests
-- [ ] **CHK-D09** Initiator cannot Approve, Rework, or Reject
-- [ ] **CHK-D10** Initiator cannot edit Pending or Approved requests
-- [ ] **CHK-D11** Initiator can edit and resubmit Draft / Rework requests
+- [x] **CHK-D09** Initiator cannot Approve, Rework, or Reject (`hasPermission` / action matrix)
+- [x] **CHK-D10** Initiator cannot edit Pending or Approved requests (View is read-only; Edit only for own Draft/Rework)
+- [x] **CHK-D11** Initiator can edit and resubmit Draft / Rework requests
 
 ### D.2 Access Control — Vertical Head
 
 - [ ] **CHK-D12** Vertical Head sees only brand-scoped NPD requests
-- [ ] **CHK-D13** Vertical Head can Approve, Rework, Reject on pending requests
-- [ ] **CHK-D14** Vertical Head cannot access Material Group module
-- [ ] **CHK-D15** Vertical Head cannot perform MIS Coordinator actions
+- [x] **CHK-D13** Vertical Head can Approve, Rework, Reject on pending requests (Edit on current VH step; View is read-only)
+- [x] **CHK-D14** Vertical Head cannot access Material Group, New NPD Request, Draft/ReWork, or Reports — side nav is All / Pending / Approved only
+- [x] **CHK-D15** Vertical Head cannot perform MIS Coordinator actions
 
 ### D.3 Access Control — MIS Coordinator
 
 - [ ] **CHK-D16** MIS Coordinator sees requests approved by VH and assigned to self
 - [ ] **CHK-D17** MIS Coordinator can edit Item Details and Other Details
 - [ ] **CHK-D18** MIS Coordinator can Post to SAP, Rework, Reject
-- [ ] **CHK-D19** MIS Coordinator cannot access Material Group module
+- [x] **CHK-D19** MIS Coordinator cannot access Material Group module
 
 ### D.4 Access Control — Consultant
 
 - [ ] **CHK-D20** Consultant sees assigned Material Group pending requests
 - [ ] **CHK-D21** Consultant can Complete, Rework, Reject Material Group requests
-- [ ] **CHK-D22** Consultant cannot access NPD module
+- [x] **CHK-D22** Consultant cannot access NPD module
 
 ### D.5 Access Control — Admin
 
 - [ ] **CHK-D23** Admin sees all NPD and Material Group requests
-- [ ] **CHK-D24** Admin has full Administration module access
-- [ ] **CHK-D25** Admin cannot perform workflow actions (approve/post) unless by design
+- [x] **CHK-D24** Admin has full Administration module access
+- [x] **CHK-D25** Admin cannot perform workflow actions (approve/post) unless by design
 
 ---
 
@@ -243,6 +247,10 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-E06** Primary/accent colors match wireframe (#40919D accent, #162C34 sidebar, semantic nav icons)
 - [x] **CHK-E17b** Nav hover = subtle translucent bg; selected = **white** bg + dark teal text + colored left bar; icons keep semantic colors
 - [x] **CHK-E17c** Sidebar shrink/expand toggle matches shrink.png; content area adjusts; primary actions hover + selected only on click
+- [x] **CHK-E17d** Side navigation bottom border below Reports section removed (`.section:last-child { border-bottom: none; }`); other section separators preserved
+- [x] **CHK-E17e** Master toolbar Search input and Reset button match dashboard action button height (`2rem`); Reset button has permanent theme background with white icon
+- [x] **CHK-E17f** DataTables Actions column compact width (`5.5rem`), left-aligned under "Action" header with `0.5rem` button gap, no excess right whitespace
+- [x] **CHK-E17g** Form dialog footer buttons aligned flush with input fields (PrimeReact button default right margins removed, content/footer horizontal padding aligned)
 - [x] **CHK-E17a** Static header matches `headerSample` wireframe with ROCA Group logo from assets
 - [ ] **CHK-E10** Page headings match wireframe / requirement document
 - [ ] **CHK-E11** Table columns match wireframe for each list view
@@ -250,15 +258,15 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-E13** Material Group form matches wireframe (Select Masters + Master Details)
 - [ ] **CHK-E14** Admin master screens match wireframe list + form pattern
 - [ ] **CHK-E15** Confirmation dialogs match wireframe action pattern
-- [ ] **CHK-E16** Summary cards on NPD All Requests dashboard match wireframe
+- [x] **CHK-E16** Summary cards on NPD All Requests dashboard match wireframe
 
 ### E.3 UX Behavior
 
 - [ ] **CHK-E17** Loading spinner/skeleton shown during data operations
-- [ ] **CHK-E18** Empty state shown when lists have no records
+- [x] **CHK-E18** Empty state shown when lists have no records
 - [ ] **CHK-E19** Success toast shown after Save, Submit, Approve, Complete, etc.
 - [ ] **CHK-E20** Error toast shown on validation failure or SP errors
-- [x] **CHK-E21** Cancel / Back navigates to All Requests (`/npd/all`) — confirm dialog pending
+- [x] **CHK-E21** Cancel / Back returns to the source list (`from` query: All, Pending, Approved, Draft/Rework); New Request without `from` goes to All Requests — confirm dialog pending
 - [ ] **CHK-E22** Read-only screens cannot be edited (form controls disabled)
 - [ ] **CHK-E23** Editable screens show only permitted actions for current role
 - [x] **CHK-E24** Horizontal scroll works on wide Item Details grid (shared surface scrollbar)
@@ -279,24 +287,24 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F04b** Search filters lookup types in DataTable
 - [x] **CHK-F04c** Import popup matches wireframe (upload zone, template panel, Cancel/Import)
 - [x] **CHK-F04f** Import downloads template from `NPD_Templates` where `TemplateType = "Lookup Type"`
-- [x] **CHK-F04g** Import duplicate names show warning Toast: `"<Name>" already exists.`
+- [x] **CHK-F04g** Import duplicates shown in Import popup validation table (not duplicate-only Toasts); Proceed imports valid rows only
 - [x] **CHK-F04h** Import inserts only new records; list refreshes after success
 - [x] **CHK-F04i** Export downloads Excel for currently displayed (filtered) lookup types
 - [x] **CHK-F04d** Bottom pagination with entry count matches new design
 - [x] **CHK-F04e** Delete confirmation uses common `DeleteConfirmDialog` design
-- [x] **CHK-F04j** LookupType delete blocked when used by Lookup records (dependency Toast)
+- [x] **CHK-F04j** Lookup Type delete blocked when used by Lookup records (`DeleteBlockedDialog`, not delete confirm + Toast)
 
 ### F.2 Lookup Master
 
-- [x] **CHK-F05** List displays lookups with Lookup Type and Lookup Name columns
-- [x] **CHK-F06** Add Lookup popup matches wireframe (Lookup Type dropdown, Lookup Name field)
+- [x] **CHK-F05** List displays lookups with Lookup Type, Lookup Code, then Lookup Name columns
+- [x] **CHK-F06** Add Lookup popup: Lookup Type, Lookup Code, then Lookup Name field order
 - [x] **CHK-F07** Edit lookup works
 - [x] **CHK-F08** Soft delete lookup works when no dependency exists
 - [x] **CHK-F09** Lookup correctly linked to Lookup Type Master (`NPD_Lookup.LookupType`)
 - [x] **CHK-F09a** Import uses `NPD_Templates` where `TemplateType = "Lookup"`
-- [x] **CHK-F09b** Import duplicate names show warning Toast
+- [x] **CHK-F09b** Import duplicates shown in Import popup validation table with record name + error pill
 - [x] **CHK-F09c** Export downloads Excel for filtered grid data
-- [x] **CHK-F09d** LookupType delete blocked when referenced by Lookup records (Toast)
+- [x] **CHK-F09d** Lookup Type delete dependency check runs before delete confirm dialog
 - [x] **CHK-F09e** Lookup delete blocked when referenced in Brand Material Extension (Toast)
 
 ### F.3 Plant / Role / Approver — ROCA site (no local admin screens)
@@ -318,11 +326,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 - [x] **CHK-F27** Workflow stages display as grouped Approval Chain (e.g. Initiator → VH → MIS)
 - [x] **CHK-F28** Configure Workflow modal saves correctly (NPD multi-step + MG Consultant step)
-- [x] **CHK-F28a** NPD Next Role from ROCA RoleMaster (`System/Title eq NPD`); Initiator, Consultant, and used roles excluded
+- [x] **CHK-F28a** NPD Next Role from ROCA RoleMaster (`System/Title eq "New Product Development"`); Initiator, Consultant, and used roles excluded
 - [x] **CHK-F28b** Edit replaces existing steps; Delete soft-deletes all steps for request type
 - [x] **CHK-F28c** Duplicate request type blocked; validation via Toast only
 - [x] **CHK-F28d** Add Step hidden when no valid Next Role options remain for a new step
-- [x] **CHK-F28e** Only latest step Next Role editable; earlier steps locked after next step added
+- [x] **CHK-F28e** All applicable steps have editable Next Role; changing Next Role cascades Current Role to following step
 - [x] **CHK-F28f** Form dialog font size and button/icon sizing consistent with master popup standards
 
 ### F.8 Material Master
@@ -342,14 +350,17 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### G.1 Initiator — List Views
 
-- [ ] **CHK-G01** All Requests shows only own requests with correct columns
-- [ ] **CHK-G02** Summary cards show correct counts (Total, Pending, Rework, Approved)
-- [ ] **CHK-G03** Pending Approval shows own requests in pipeline (view-only)
-- [ ] **CHK-G04** Approved Requests shows own completed/approved requests (view-only)
-- [ ] **CHK-G05** Draft / ReWork shows editable own requests
-- [ ] **CHK-G06** Search by Request ID, Title, Brand, Code, Material works
-- [ ] **CHK-G07** Status and Brand filters work
-- [ ] **CHK-G08** Export CSV produces valid file
+- [x] **CHK-G01** All Requests shows role-scoped requests with columns Request ID, Brand (MG1), Material Type, Plant, Products, Status, Current Approver, Created Date, Workflow, Actions
+- [x] **CHK-G02** Summary cards show correct counts (Total, Pending, Rework, Approved)
+- [x] **CHK-G03** Pending Approval shows own requests in pipeline (view-only for Initiator; Edit only if the user can act as the pending VH/MIS role)
+- [x] **CHK-G04** Approved Requests shows fully approved requests in the user's scope (view-only)
+- [x] **CHK-G05** Draft / ReWork shows editable own requests
+- [x] **CHK-G06** Search by Request ID, Plant, Brand, Code, Material works ('Search here' on Pending/Draft; 'Search by Request ID, Plant, Brand, Code, or Material...' on All/Approved)
+- [x] **CHK-G06a** DataTable layout consistently aligned across all NPD components (Request ID, Brand, Material Type, Plant, Products, Status, Current Approver, Created Date, Workflow, Actions) with unified column widths and alignment
+- [x] **CHK-G07** Status and Brand filters work
+- [x] **CHK-G08** Export downloads Excel (.xlsx) for currently displayed All / Approved request rows
+- [x] **CHK-G08a** Dedicated Workflow column opens a read-only Workflow Status dialog from `WorkFlowJSON`; Draft rows hide the icon; only the current pending role is highlighted; empty approver status shows Pending
+- [x] **CHK-G08b** Same request opened in two tabs: View/Edit/Save Draft/Submit/workflow action in one tab locks the other with Editing Restricted on the next navigation/interaction (BroadcastChannel); Go to Dashboard / Reload Page
 
 ### G.2 Initiator — New NPD Request Form
 
@@ -362,14 +373,14 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-G12** Plant/Source filtered by Brand Material Extension for selected Brand
 - [x] **CHK-G13** Roca Global Code column shown for Roca, Laufen, Armani brands (UI)
 - [x] **CHK-G14** Roca Global Code column hidden for other brands
-- [x] **CHK-G15** Item Details grid displays all required BRD columns
+- [x] **CHK-G15** Item Details grid displays all required BRD columns; MultiSelect options from Lookup list by Lookup Type (`trim` + lowercase, compact / parenthetical-stripped title match); DataTable paginates at 7 rows when there are more than 7 items
 - [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
 - [x] **CHK-G17** + Add Another Item Line works with small inline plus icon next to label
-- [ ] **CHK-G18** Import items from Excel works
-- [ ] **CHK-G19** Save Draft saves header + items without submitting
-- [ ] **CHK-G20** Submit Request validates and routes to Vertical Head
-- [ ] **CHK-G21** Draft Request ID remains blank until submitted
-- [ ] **CHK-G22** Request ID generated as `NPD-YYYY-####` on submit
+- [x] **CHK-G18** Import items from Excel works — Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
+- [x] **CHK-G19** Save Draft saves header + items without submitting
+- [x] **CHK-G20** Submit Request validates and routes to Vertical Head
+- [x] **CHK-G21** Draft Request ID remains blank until submitted
+- [x] **CHK-G22** Request ID generated as `NPD-YYYY-###` on submit
 
 ### G.3 Initiator — Validation
 
@@ -382,17 +393,17 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### G.4 Vertical Head
 
-- [ ] **CHK-G29** All Requests scoped to mapped brand(s) only
+- [x] **CHK-G29** All Requests scoped to mapped brand(s) only
 - [ ] **CHK-G30** Pending Approval shows assigned requests with counter
-- [ ] **CHK-G31** Request detail is read-only (header + items)
-- [ ] **CHK-G32** Approve routes to MIS Coordinator and updates status
-- [ ] **CHK-G33** Rework routes to Initiator with comments
-- [ ] **CHK-G34** Reject permanently closes request
-- [ ] **CHK-G35** Approved Requests supports search, brand filter, Export CSV
+- [x] **CHK-G31** Request detail is read-only (header + items)
+- [x] **CHK-G32** Approve routes to MIS Coordinator and updates status
+- [x] **CHK-G33** Rework routes to Initiator with comments
+- [x] **CHK-G34** Reject permanently closes request
+- [x] **CHK-G35** Approved Requests supports search, brand filter, Export (Excel)
 
 ### G.5 MIS Coordinator
 
-- [ ] **CHK-G36** Pending Approval shows VH-approved requests assigned to self
+- [x] **CHK-G36** Pending Approval shows VH-approved requests for any user in the MIS Coordinator role
 - [ ] **CHK-G37** Item Details editable (edit rows, add line items)
 - [ ] **CHK-G38** Other Details section displays all SAP fields
 - [ ] **CHK-G39** Storage Location auto-populated from ROCA `PlantMaster`
@@ -524,11 +535,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 ## M — Email Notifications (Blocked — BLK-001)
 
 - [ ] **CHK-M01** Email content received and approved by ROCA
-- [ ] **CHK-M02** Notification sent on NPD Submit
-- [ ] **CHK-M03** Notification sent on Approve / Rework / Reject (VH and MIS)
+- [x] **CHK-M02** Notification sent on NPD Submit
+- [x] **CHK-M03** Notification sent on Approve / Rework / Reject (VH and MIS)
 - [ ] **CHK-M04** Notification sent on Post to SAP / Completed
 - [ ] **CHK-M05** Notification sent on Material Group Submit / Complete / Rework
-- [ ] **CHK-M06** Email includes Request ID and key request details
+- [x] **CHK-M06** Email includes Request ID and key request details
 - [ ] **CHK-M07** Email recipients match ROCA `ApproversMaster` routing
 - [ ] **CHK-M08** Notifications tested in UAT before production enablement
 
@@ -673,6 +684,10 @@ Use this table to sign off each phase only when all related checklist items are 
 | 10 Sep 2026 | Marked foundation items verified (SP init, theme, docs) | CHK-A01–A05, CHK-B07–B11, CHK-E01–E03 |
 | 15 Sep 2026 | Overlay/nav UI consistency: filter padding, Poppins overlays, option selected teal, white selected nav | CHK-B39c2, CHK-B39f–h, CHK-E08, CHK-E17b |
 | 16 Sep 2026 | Removed Plant Master, Role, Approver Config from nav — consume ROCA site lists | CHK-C04–C06, CHK-C16–C17, CHK-E09a, CHK-F10/F16/F19 |
+| 16 Sep 2026 | Master UX: reset/export/import/toolbar/dialog buttons; workflow step edit + RoleMaster filter | CHK-B39i–l, CHK-F04g, CHK-F09b, CHK-F28a/e |
+| 18 Sep 2026 | Workflow Status dialog on request list Actions; current Pending step highlighted from WorkFlowJSON | CHK-G08a |
+| 18 Sep 2026 | Workflow Status highlights logged-in user/role; Pending default; BroadcastChannel Editing Restricted popup | CHK-G08a, CHK-G08b |
+| 18 Sep 2026 | Centered DataTable empty states; Pending status shows current role (Pending with VH / MIS Coordinator); Current Approver column; Item Details cell memoization | CHK-E18, CHK-G01, CHK-G06a |
 
 ---
 

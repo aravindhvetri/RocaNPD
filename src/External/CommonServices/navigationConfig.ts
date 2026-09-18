@@ -29,7 +29,7 @@ export interface INavSectionConfig {
   items: INavItemConfig[];
 }
 
-/** Full side navigation — NavSelectDesign.png (role filtering in a later phase). */
+/** Role-filtered side navigation — visibility is the union of ApproversMaster roles. */
 export const NAV_SECTIONS: INavSectionConfig[] = [
   {
     id: "npd-request",

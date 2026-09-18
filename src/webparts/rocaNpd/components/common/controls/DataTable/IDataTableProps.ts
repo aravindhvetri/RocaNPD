@@ -25,4 +25,6 @@ export interface IDataTableProps<T extends Record<string, unknown>> {
   paginatorPosition?: "top" | "bottom" | "both";
   paginatorTemplate?: string;
   currentPageReportTemplate?: string;
+  first?: number;
+  onPage?: (event: { first: number; rows: number }) => void;
 }

@@ -41,6 +41,16 @@ const InputNumber: React.FC<IInputNumberProps> = ({
       readOnly={readOnly}
       className={error ? "p-invalid" : undefined}
       inputClassName="w-full"
+      pt={{
+        input: {
+          root: {
+            name: id,
+            autoComplete: "off",
+            autoCorrect: "off",
+            spellCheck: false,
+          },
+        },
+      }}
       data-testid={testId}
       onValueChange={(e) => onChange(e.value ?? null)}
     />

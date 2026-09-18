@@ -180,9 +180,9 @@ This is a Google AI Studio single-page application prototype. Screens are naviga
 | Screen | Initiator | Vertical Head | MIS Coordinator | Admin |
 |---|---|---|---|---|
 | New NPD Request | Create/Edit | — | — | View all |
-| All Requests | Own | Brand-scoped | Assigned + self-posted | All |
-| Pending Approval | View-only (own) | Approve/Rework/Reject | Edit + SAP actions | View all |
-| Approved Requests | View-only (own) | View + Export | View (self-posted) | View all |
+| All Requests | Mapped brands from ApproversMaster | Mapped VH brands | All NPD requests | All |
+| Pending Approval | View-only (own) | Approve/Rework/Reject (pending VH step, brand-scoped) | Approve/Rework/Reject (pending MIS step, any user in role) | View all |
+| Approved Requests | Fully approved, mapped brands | Fully approved, mapped brands | All fully approved | View all |
 | Draft / ReWork | Edit + Resubmit | — | — | View all |
 
 #### New Material Group
@@ -227,13 +227,14 @@ This is a Google AI Studio single-page application prototype. Screens are naviga
 
 - Columns: Material Code (max 18), Material Description (max 40), MG2–MG5, Color, Range, Sub Category, Material Group, Ext. Material Group, Product Segment, Tax Classification, Class Number (PCS Name), HSN Code, Weight, UOM, Min. Qty/Box Qty (optional)
 - Actions: + Add, Import, Delete row, Copy row, Clear row, + Add Another Item Line
+- Item Details DataTable paginates at 7 rows; paginator shows only when there are more than 7 lines
 - Footer: Cancel/Back, Save Draft, Submit Request
 
 #### 4.4.2 NPD List / Dashboard Views
 
 - Summary cards: Total Requests, Pending Approvals, In ReWork/Drafts, Approved Products
-- DataTable with search, Status filter, Brand filter, Export CSV
-- Row actions: View, Edit (Draft/Rework only), Delete (where applicable)
+- DataTable with search, Status filter, Brand filter, Export (Excel .xlsx)
+- Row actions: Edit (when the user can act), **Workflow** (own column, hidden for Draft; read-only status dialog from `WorkFlowJSON`), View (always read-only). No Delete on request tables. Status for Pending requests shows **Pending with VH** / **Pending with MIS Coordinator** (current pending role). **Current Approver** shows the pending person's name. Workflow Status highlights **only the current pending role** (subtle row background). Empty DataTables show a centered No Requests Found / No Records Found message. Approver steps with empty JSON status display as Pending until they act. View/Edit/Save Draft/Submit/workflow action on the same request in a second tab shows the Editing Restricted popup (BroadcastChannel) when that tab next interacts.
 
 #### 4.4.3 Vertical Head — Request Detail
 
@@ -320,10 +321,10 @@ Each master follows list + create/edit form pattern:
 
 | Navigation Section | Initiator | Vertical Head | MIS Coordinator | Consultant | Admin |
 |---|---|---|---|---|---|
-| NPD Request | ✅ | ✅ | ✅ | ❌ | ✅ (view all) |
+| NPD Request | ✅ (incl. New + Draft) | ✅ All / Pending / Approved only | ✅ All / Pending / Approved | ❌ | ✅ (view all) |
 | New Material Group | ✅ | ❌ | ❌ | ✅ | ✅ (view all) |
 | Administration | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Analytics & Reports | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Analytics & Reports | ✅ | ❌ | ✅ | ✅ | ✅ |
 
 ### 6.3 Action Access Matrix (NPD)
 
@@ -346,24 +347,25 @@ App Load
    ↓
 sp.web.currentUser() + Employee ID from profile/list
    ↓
-Check Admin SharePoint group membership → Admin role
+Check Admin SharePoint group membership → **add** Admin role (does not replace other roles)
    ↓
-Else: resolve from Approver Configuration Master by Employee ID
+Resolve **all** matching rows from ROCA `ApproversMaster` by Users (Person or Group)
    ↓
-Map to role: Initiator | Vertical Head | MIS Coordinator | Consultant
+Collect roles: Initiator | Vertical Head | MIS Coordinator | Consultant (union)
    ↓
-Store in Redux appSlice.userRole + appSlice.mappedBrands
+Store in Redux `appSlice.assignedRoles` + per-role `mappedBrands`
    ↓
-Filter navigation, routes, and data queries by role
+Filter navigation, routes, and data queries by the **union** of roles + brand scope
 ```
 
 **Implementation requirements:**
 
-1. Centralize in `roleService.ts` + Redux `appSlice`
-2. Cache role resolution per session
-3. Enforce SharePoint list item-level permissions (not UI-only)
-4. Prevent unauthorized URL access via route guards
-5. Brand multi-select scope for Initiator and Vertical Head from Approver Configuration
+1. Centralize in `roleService.ts` + `permissionService.ts` + Redux `appSlice`
+2. Cache role resolution per session (`initializeApp` once on mount)
+3. Enforce SharePoint list item-level permissions (not UI-only) using `canViewRequest` / view-scope helpers when querying lists
+4. Prevent unauthorized URL access via `ProtectedRoute`
+5. Brand multi-select scope for Initiator and Vertical Head from ROCA `ApproversMaster`
+6. Multi-role users keep every assigned role — Admin does **not** override Initiator / Vertical Head / other roles
 
 ---
 
@@ -845,7 +847,7 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 **NPD Request rules:**
 
 - Start role: Initiator (read-only Current Role on step 1)
-- Next Role options: ROCA `RoleMaster` where `System/Title eq NPD` (expand `System` lookup); Initiator and `Config.WorkflowNpdExcludedNextRoles` (e.g. Consultant) excluded
+- Next Role options: ROCA `RoleMaster` where `System/Title eq "New Product Development"` (expand `System` lookup); Initiator and `Config.WorkflowNpdExcludedNextRoles` (e.g. Consultant) excluded
 - Multi-step chains supported; used roles excluded from subsequent Next Role dropdowns
 - **Add Step** shown only when valid roles remain (`canAddWorkflowStep()`)
 - Only the **last step's Next Role** is editable; earlier steps lock once the next step is added
@@ -865,7 +867,7 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| Request ID | Text | Auto | NPD-YYYY-####; blank for Draft |
+| Request ID | Text | Auto | NPD-YYYY-###; blank for Draft |
 | Title / Project Name | Text | | |
 | Brand (MG1) | Lookup | ✅ | Lookup Master (Brand) |
 | Material Type | Lookup | ✅ | Lookup Master |
@@ -888,29 +890,53 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 | Class Type | Text | | MIS — default 001 |
 | Material Extension | Text | | MIS — auto from Brand Extension |
 
+**SharePoint list (current phase):** `NPD_Request` (`Config.ListNames.NpdRequest`)
+
+| Field | Type | Notes |
+|---|---|---|
+| Title | Single line of text | Stores Brand on Save Draft; Request ID `NPD-YYYY-###` on Submit |
+| Brand | Single line of text | Brand (MG1) |
+| MaterialType | Single line of text | Finished Products / Traded Products |
+| Plant | Single line of text | Plant / Source |
+| Status | Choice | `Draft` on Save; `Pending` on Submit; keep existing Rework / In ReWork on draft update |
+| IsDeleted | Yes/No | Soft delete |
+| WorkFlowJSON | Multiple lines of text | `[{ "Role", "UserEmail", "Status" }, ...]` — sequence from `NPD_WorkflowConfig`; users from ROCA `ApproversMaster` (Vertical Head by Brand; MIS Coordinator all brands; Initiator = current user with Status `""`) |
+
+Request ID (`NPD-YYYY-###`, pad 3) remains blank until Submit. Ignore `IsDeleted = true` when sequencing. Item Details persist in `NPD_ItemDetails` via batch insert/update/delete; `RequestGeneralInfoId` looks up `NPD_Request`.
+
+**Services:** `npdRequestGeneralInfoService.ts`, `npdItemDetailsService.ts`, `npdItemDetailsImportService.ts`, `npdRequestIdService.ts`, `npdWorkflowJsonService.ts`, `npdApproverAssignmentService.ts`, `npdApproverCommentsService.ts`, `npdNotificationService.ts`
+
+**UI:** Save Draft on `/npd/new` (same line-item progress overlay as Submit); list + Edit on `/npd/draft-rework`; Pending Approval reuses the same DataTable on `/npd/pending`. View/Edit links pass `from` so Cancel/Back returns to the opening list (All, Pending, Approved, or Draft/Rework), not a hardcoded Draft/Rework route. Form inputs disable browser autocomplete. All request tables expose a dedicated **Workflow** column (hidden for Draft) opening a read-only **Workflow Status** dialog from `WorkFlowJSON` (`npdWorkflowStatusView.ts` + `NpdWorkflowStatusDialog`); only the current pending role is highlighted; empty approver statuses display as Pending. Same-request View/Edit/Save Draft/Submit/workflow action in a second tab is blocked by `BroadcastChannel` (`npdRequestTabSync.ts`) with the Editing Restricted popup on the other tab's next interaction.
+
 ### 12.7 NPD Item (Child)
+
+**SharePoint list:** `NPD_ItemDetails` (`Config.ListNames.NpdItemDetails`)
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| ParentRequest | Lookup → NPD Request | ✅ | Linking field |
-| Material Code | Text (max 18) | ✅ | |
-| Material Description | Text (max 40) | ✅ | |
-| Product Group (MG2) | Lookup | ✅ | |
-| Product Category (MG3) | Lookup | ✅ | |
-| Product Type (MG4) | Lookup | ✅ | |
-| Product Source (MG5) | Lookup | ✅ | |
-| Color (MGP1A) | Lookup | ✅ | |
-| Product Range (MGP2A) | Lookup | ✅ | |
-| Product Sub Category (MGP3A) | Lookup | ✅ | |
-| Material Group | Lookup | ✅ | |
-| Ext. Material Group | Lookup | ✅ | |
-| Product Segment | Lookup | ✅ | |
-| Tax Classification | Lookup | ✅ | |
-| Class Number (PCS Name) | Lookup | Optional | |
-| HSN Code | Text | ✅ | |
-| Weight (Kg) | Number | ✅ | |
-| UOM | Lookup | ✅ | |
-| Min Qty / Box Qty | Number | Optional | |
+| Title | Text | | Left empty — do not store Material Code or other data |
+| RequestGeneralInfo | Lookup → `NPD_Request` | ✅ | Written as `RequestGeneralInfoId` |
+| RocaGlobalCode | Text | Conditional | Required for Roca, Laufen, Armani |
+| MaterialCode | Text (max 18) | ✅ | |
+| MaterialDescription | Note | ✅ | max 40 |
+| ProductGroupMG2 … UOM | Note (multi-value text) | ✅ | Values from `NPD_Lookup` Title by Lookup Type; Excel import accepts only configured options |
+| ClassNumberPCS Name | Note | ✅ | Internal `ClassNumberPCS_x0020_Name` |
+| HSNCode | Text | ✅ | |
+| Weight | Number | ✅ | |
+| MinQty | Text | Optional | Min. Qty/Box Qty |
+| Import | Excel | | TemplateType `NPDItemDetails`; max 200 rows; duplicates use Lookup import validation popup |
+
+### 12.7a NPD Approver Comments
+
+**SharePoint list:** `NPD_ApproverComments` (`Config.ListNames.NpdApproverComments`)
+
+| Field | Type | Notes |
+|---|---|---|
+| Title | Text | `{RequestId} - {Action}` |
+| Comments | Note | Required; captured in comment dialog for Rework/Reject |
+| User | Person or Group (multi) | Acting approver(s); persist as `UserId: number[]` |
+| Role | Text | Vertical Head / MIS Coordinator |
+| NPDRequest | Lookup → `NPD_Request` | Written as `NPDRequestId` |
 
 ### 12.8 Material Group Request (Header)
 
@@ -1296,7 +1322,8 @@ setupSP(this._sp);
 
 | Service | File | Responsibility |
 |---|---|---|
-| roleService | `roleService.ts` | Resolve role, brands, permissions |
+| roleService | `roleService.ts` | Resolve all roles, brands, Admin group membership |
+| permissionService | `permissionService.ts` | Nav/route/action matrix, brand view scope, request access |
 | lookupService | `lookupService.ts` | Lookup queries with caching helpers |
 | npdService | `npdService.ts` | NPD header + items CRUD, submit, actions |
 | materialGroupService | `materialGroupService.ts` | MG header + items CRUD, consultant actions |
@@ -1348,9 +1375,10 @@ setupSP(this._sp);
 ### 15.2 Route Guard
 
 ```typescript
-const ProtectedRoute = ({ allowedRoles, children }) => {
-  const userRole = useAppSelector(state => state.app.userRole);
-  if (!allowedRoles.includes(userRole)) return <Navigate to="/unauthorized" />;
+const ProtectedRoute = ({ children }) => {
+  const access = useAppSelector(selectResolvedAccess);
+  if (!access.assignedRoles.length) return <Navigate to="/unauthorized" />;
+  if (!canAccessRoute(access, pathname)) return <Navigate to="/unauthorized" />;
   return children;
 };
 ```
@@ -1583,6 +1611,7 @@ Query pattern: filter library **list items** where `TemplateType eq '{choice}'`,
 | Component | Path | Purpose |
 |---|---|---|
 | `ImportDialog` | `common/importExport/ImportDialog/` | Wireframe Import popup — upload zone + template panel + Cancel/Import |
+| `ImportValidationDialog` | `common/importExport/ImportValidationDialog/` | Separate validation popup — duplicate/error table + Cancel/Proceed |
 
 Feature modules pass titles and wire callbacks; they do **not** reimplement the popup layout.
 

@@ -248,15 +248,23 @@ Common UI:
 - Feature screen passes module-specific titles only (e.g. `"Import Lookup Type Master"`).
 - Do **not** duplicate Import popup markup in feature folders.
 
+#### 5.8.4a Import validation popup UI (`ImportValidationDialog`)
+
+- Reusable component: `common/importExport/ImportValidationDialog/`.
+- Shown **only after** preview finds duplicate/validation issues — **`ImportDialog` closes first**.
+- Match wireframe: centered **Import** title, module subtitle (e.g. `"Import Lookup Master"`), validation table only, footer **Cancel** + **Proceed**.
+- Table columns: **S.NO**, optional record name (Lookup uses Lookup Name / Lookup Type Name), **Validation Error** (red error pill with left border). **NPD Item Details import omits the record-name column** — show S.NO and Validation Error only.
+- **Proceed** disabled (grey) when no valid rows remain; imports valid rows only when enabled.
+
 #### 5.8.5 Import processing rules
 
 | Rule | Description |
 |---|---|
 | **R-IE01** | Parse `.xlsx` / `.xls` via `importService.ts` + `xlsx` library |
 | **R-IE02** | Validate file type and max size (`Config.ImportExport`) before parse |
-| **R-IE03** | Require expected header column from `Config.FieldLabels` (case/space insensitive match) |
+| **R-IE03** | Require expected header column from `Config.FieldLabels`. Match Excel headers to form field names with `trim()`, lowercase, and whitespace-insensitive comparison (also compact punctuation so `Product Group (MG2)` matches `Product Group MG2` / `ProductGroupMG2`). Do not mark a column missing when it is present under a spacing/case variant |
 | **R-IE04** | Duplicate detection: compare case-insensitively against existing SharePoint records **and** within the uploaded file |
-| **R-IE05** | Duplicate feedback: Toast warning per duplicate — `"<Name>" already exists.` (show the actual name) |
+| **R-IE05** | Duplicate feedback: close **`ImportDialog`** and open separate **`ImportValidationDialog`** (S.NO, record name, error pill with red left border). **Proceed** imports valid rows only; disabled when none remain. Do not use duplicate-only Toasts |
 | **R-IE06** | Skip duplicates; import only new valid rows (batch insert via `SPServices.batchInsert`) |
 | **R-IE07** | After successful import, refresh list data from server (Redux thunk → `fetch*`) |
 | **R-IE08** | Import errors (invalid file, missing column, empty data) → error Toast via slice/thunk |
@@ -268,7 +276,8 @@ Common UI:
 |---|---|
 | **R-IE10** | Export uses **`exportService.exportToExcel()`** with column config from domain service |
 | **R-IE11** | Export **currently displayed** table data (respect active search/filter on the screen) |
-| **R-IE12** | File name pattern: `{MasterName}_Export_{YYYY-MM-DD}.xlsx` unless wireframe specifies otherwise |
+| **R-IE12** | File name pattern: `{MasterName}_Export_{DD-MM-YYYY}.xlsx` via `buildExportFileName()` |
+| **R-IE12a** | Excel header row uses theme master-table color (`#5793A0`) with white bold text via `xlsx-js-style` in `exportService.ts` |
 | **R-IE13** | Warn via Toast when there are zero rows to export |
 | **R-IE14** | Success Toast after download starts |
 
@@ -277,7 +286,13 @@ Common UI:
 ```text
 User selects file → ImportDialog.onImport(file)
         ↓
-Feature dispatches importXxx thunk
+Feature dispatches previewImportXxx thunk
+        ↓
+If validation rows → close ImportDialog, open ImportValidationDialog
+        ↓
+Proceed → commitImportXxx thunk (valid rows only)
+        ↓
+Feature dispatches importXxx thunk (no validation issues path)
         ↓
 Domain service: parse file → partition duplicates → batchInsert new rows
         ↓
@@ -362,12 +377,12 @@ Workflow Configuration defines **who approves next and in what order** for each 
 | **R-WF02** | `Title` = Request Type; `CurrentRole` / `NextRole` = sequential handoff; `IsDeleted` = soft delete |
 | **R-WF03** | Request types from `Config.WorkflowRequestTypes` — never hardcode `"NPD Request"` / `"MG Request"` in components |
 | **R-WF04** | Default start role from `Config.WorkflowDefaults` (`NpdStartRole` / `MgStartRole` = Initiator) |
-| **R-WF05** | **NPD Request:** Next Role options from ROCA `RoleMaster` where `System/Title eq NPD` (expand `System` lookup); exclude Initiator and roles in `Config.WorkflowNpdExcludedNextRoles` (e.g. Consultant) |
+| **R-WF05** | **NPD Request:** Next Role options from ROCA `RoleMaster` where `System/Title eq "New Product Development"` (expand `System` lookup); exclude Initiator and roles in `Config.WorkflowNpdExcludedNextRoles` (e.g. Consultant) |
 | **R-WF06** | **MG Request:** exactly one step; Next Role = `Config.WorkflowDefaults.MgNextRole` (Consultant); Add Step hidden |
 | **R-WF07** | Step builder: after selecting Next Role + Add Step, next step Current Role = previous Next Role |
 | **R-WF08** | Exclude Initiator, request-type excluded roles, and all already-used roles from Next Role dropdown (no duplicates, no cycles) |
 | **R-WF08a** | **Add Step** visible only when the last step has a Next Role selected **and** at least one valid role remains for a new step (`canAddWorkflowStep()`) |
-| **R-WF08b** | Only the **latest step's Next Role** is editable; earlier steps display Next Role as read-only once a subsequent step exists (`isWorkflowStepNextRoleEditable()`) |
+| **R-WF08b** | Every applicable step's **Next Role** is editable; **Current Role** is always derived from the previous step's Next Role (`rebuildFormStepsAfterChange()`) when Next Role changes |
 | **R-WF08c** | Remove step allowed **only on the latest step**; removing it re-enables editing on the new last step |
 | **R-WF08d** | Form dialog uses consistent control font size (`0.8125rem`) and standard button/icon sizing per master popup pattern |
 | **R-WF09** | Dashboard groups steps by Request Type; display **Approval Chain** as `Initiator → Role → Role` via `buildApprovalChainLabel()` |
@@ -400,7 +415,7 @@ All master list screens use the shared **`DataTable`** wrapper with styles from 
 | **R-DT02** | **Sort icons** — small and subtle (`0.5625rem`, muted white on header) |
 | **R-DT03** | **Pagination report** — `"Showing X to Y of Z entries"` displays as plain text only (no box/border/background on `.p-paginator-current`) |
 | **R-DT04** | Striped rows and hover states use ROCA theme tokens |
-| **R-DT05** | Row action icons (edit/delete) reuse `.actionCell`, `.editAction`, `.deleteAction` from `DataTable.module.scss` |
+| **R-DT05** | Row action icons (edit/delete) reuse `.actionCell`, `.editAction`, `.deleteAction` from `DataTable.module.scss` (start-aligned under "Action" header, compact column `5.5rem` to avoid blank space on right) |
 | **R-DT06** | Do not duplicate table/pagination SCSS in feature `*Table.module.scss` files |
 | **R-DT07** | Pagination controls use shared **`styles/_datatable-pagination.scss`** — `2.25rem` circular nav arrows (`#f5f7f9` bg), `0.75rem` arrow icons, active page teal circle, inactive pages as plain text (`0.8125rem`), `0.625rem` gap between controls |
 
@@ -413,7 +428,7 @@ All Add/Edit popups use shared mixins from **`styles/_form-dialog-standard.scss`
 | **R-FD01** | **Dialog title:** `1.125rem`, weight 600, centered — visually larger than field labels |
 | **R-FD02** | **Field labels:** `0.75rem`, weight 500, secondary text color |
 | **R-FD03** | **Control values:** `0.8125rem` (inputs, dropdowns, multiselects) |
-| **R-FD04** | **Footer buttons:** Cancel = outlined secondary (white bg, gray border); primary action = teal solid fill; min-width `5.5rem`, weight 600, gap `0.625rem` |
+| **R-FD04** | **Footer buttons:** Cancel = outlined secondary (white bg, gray border); primary action = teal solid fill; min-width `5.5rem`, min-height `2rem`, weight 600, gap `0.625rem`; `margin: 0 !important` and aligned padding (`1.25rem` horizontal) so buttons are flush with form input fields on the right edge |
 | **R-FD05** | Footer has top border separator; use `@include roca-form-dialog-shell`, `roca-form-dialog-footer`, `roca-form-dialog-field` |
 | **R-FD06** | Feature dialogs import shared SCSS — do not redefine title/label/footer sizing per module |
 
@@ -430,18 +445,53 @@ All Add/Edit popups use shared mixins from **`styles/_form-dialog-standard.scss`
 | **R-NPD05b** | `requireRocaMasterSiteUrl()` maps using SPFx `siteUrl` + page URL haystack (not `window.origin` alone) |
 | **R-NPD06** | Cross-site fetch via `npdFormDataService.ts` + `resolveRocaMasterSiteUrl`; Redux in `npdFormSlice` / `npdFormThunks` |
 | **R-NPD07** | Components ≤ 200 lines; split General Info, Item Details, section shell |
+| **R-NPD08** | **Save Draft** writes General Information and Item Details to `NPD_Request` + `NPD_ItemDetails`. Status = `Config.RequestStatus.Draft` on create; existing Draft / Rework status is preserved on update. `Title` stores Brand unless it is already a Request ID. Request ID stays blank until Submit. Item Details persist with one `SPServices.batchMutate` call (insert/update/delete in a single `$batch`, not per-row PATCH). While saving, the overlay shows the same line-item progress bar as Submit (`{current} / {total} Line Items Added`); the bar starts immediately and animates independently of item count |
+| **R-NPD09** | `WorkFlowJSON` is rebuilt on every save from `NPD_WorkflowConfig` (approval sequence) + ROCA `ApproversMaster` (users). Shape: `[{ Role, UserEmail, Status }, ...]`. **Initiator Status is always `""`** (Initiator does not approve). Approvers stay `""` on Draft; Submit sets the first approver role to `Pending`. Vertical Head is brand-scoped; MIS Coordinator includes all assigned emails; Initiator is the logged-in user |
+| **R-NPD10** | Draft / ReWork (`/npd/draft-rework`) lists the current user's own Draft and Rework rows, with search plus Status and Brand filters. **Edit** opens `/npd/new?id={Id}&mode=edit&from=draft-rework` and hydrates General Information without using `setNpdMaterialType` (that action clears Plant / Source) |
+| **R-NPD11** | Item Details MultiSelect options come from `NPD_Lookup` via `fetchActiveLookups()` + `lookupOptionUtils`. Match the field header (and field key) to expanded **`LookupType/Title`** using trim + lowercase, punctuation-insensitive compact keys, and parenthetical-stripped titles (so `Product Group (MG2)` matches `Product Group MG2`). Option label/value is list **`Title`** (UI “Lookup Name”). Never query a `LookupName` column. Item Details DataTable paginates at `Config.NpdItemDetailsPageSize` (7) and shows paginator controls only when there are more than 7 rows |
+| **R-NPD12** | MultiSelect empty state (`No available options`) is **12px** on the common `MultiSelect` control and overlay styles — do not restyle per screen |
+| **R-NPD13** | Item Details Import reuses `ImportDialog` + `ImportValidationDialog` (same as Lookup). Template from `NPD_Templates` where `TemplateType = Config.TemplateTypes.NpdItemDetails` (`NPDItemDetails`). Max 200 rows per import. Excel columns are mapped to Item Details fields with `trim()` + lowercase + whitespace-insensitive (and punctuation-compact) matching so template headers are not reported missing. Excel lookup values must match configured Lookup options (e.g. UOM `No`/`PC` only). Duplicates use the Lookup duplicate popup; invalid values are errors. NPD validation popup columns are **S.NO** and **Validation Error** only (no Material Code column) |
+| **R-NPD14** | **Submit Request** generates Request ID in `NPD_Request.Title` as `NPD-YYYY-###` (`Config.NpdRequestIdFormat`, pad 3). Skip `IsDeleted = true`. No records → `NPD-2026-001`; existing `NPD-2026-005` → `NPD-2026-006`. Status = Pending. `NPD_ItemDetails.RequestGeneralInfoId` is patched to the request ID. While submitting, the overlay shows a line-item progress bar (`{current} / {total} Line Items Added`) |
+| **R-NPD15** | Pending Approval (`/npd/pending`) reuses the Draft/ReWork DataTable. **Vertical Head** sees requests whose pending `WorkFlowJSON` role is Vertical Head and whose Brand is in that user's ApproversMaster VH brands. **MIS Coordinator** sees every request whose pending role is MIS Coordinator (any user in that role, not only the email stored in JSON). **Initiator** also sees their own Pending requests. Multi-role users get the union of those rules. **View** always opens `/npd/new?id=&mode=view` read-only (no Approve/Reject/Rework). **Edit** (shown first when allowed) opens `mode=edit` for the acting role: initiator Draft/Rework, or the current pending VH/MIS step. No Delete icon on request tables. View/Edit URLs include `from` so Cancel/Back returns to this list |
+| **R-NPD16** | Approve / Reject / Rework are **role-based and user-independent**. The current pending `WorkFlowJSON` role must match an assigned role; Vertical Head is still brand-scoped, MIS Coordinator is not. Multi-role users act as the pending role (VH pending → VH action, MIS pending → MIS action) so one role never overrides another. **View never shows approval actions.** **Edit** for Vertical Head shows Approve / Rework / Reject; **Edit** for MIS Coordinator shows Rework / Reject / Post to SAP (completes the MIS workflow step). **Rework/Reject from the page** capture comments in `NpdApproverCommentDialog`; **Approve** does not require comments. Email action links (`#/npd/new?id=&action=`) use the same `applyNpdWorkflowAction` path. Comments are stored in `NPD_ApproverComments` with `NPDRequestId` and multi-value Person `UserId: number[]`. Header stays Pending until the last approver (MIS Coordinator) completes the step. **Only Vertical Head emails include Approve / Re-work / Reject buttons**. MIS Coordinator can add/edit Item Details while their step is Pending. `NPD_ItemDetails.Title` is stored empty. Approval email keeps the current body/actions; the header uses `Config.ThemeColors.Primary` (`$roca-color-primary`) with the ROCA logo from `assets/RocaNewLogo.jpg` as an inline Graph CID attachment (title left, logo on a white plate at the right) |
+| **R-NPD17** | All Requests (`/npd/all`) uses summary cards (Total, Pending, In Rework/Drafts, Approved), search, Status filter, Brand filter, and **Export** (Excel `.xlsx` via `exportToExcel`). Columns: Request ID, Brand (MG1), Material Type, Plant, Products (line count), Status, Current Approver, Created Date, **Workflow**, Actions. **Pending** status displays as **Pending with VH** / **Pending with MIS Coordinator** (or the current pending role). Current Approver shows the pending workflow person's name. Empty DataTables show a centered **No Requests Found** / **No Records Found** message. **Initiator** and **Vertical Head** see requests for brands mapped to that role in ROCA `ApproversMaster`. **MIS Coordinator** sees all NPD requests. Multi-role visibility is the union (MIS “see all” is a superset, not an override). **Edit** only when the user can act (own Draft/Rework, or current pending VH/MIS step). **View** is always read-only. No Delete on request tables |
+| **R-NPD18** | Approved Requests (`/npd/approved`) lists fully approved requests using the same search, Brand filter, and **Export** (Excel `.xlsx`). The heading sits above the search/filter row. Scope matches R-NPD17. View-only |
+| **R-NPD19** | **Cancel/Back** returns to the page that opened the form via `from` (`all` / `pending` / `approved` / `draft-rework`). Do not infer Cancel from Status or `editId`. Missing/invalid `from` (including New Request from the nav) returns to All Requests. Email links use `from=pending`. NPD Form inputs set `autoComplete="off"` (password fields `new-password`) so browser suggestions do not appear while typing |
+| **R-NPD20** | NPD Form validation toasts show **one message at a time** (first unfilled/invalid field). After that field is completed, the next toast appears on the following Save Draft / Submit. Do not join all line-item errors into one paragraph |
+| **R-NPD21** | Request lists have a dedicated **Workflow** column (`pi pi-sitemap`) — not inside Actions — on All / Pending / Approved / Draft-Rework. **Draft** rows hide the Workflow icon. It opens a read-only **Workflow Status** dialog of `WorkFlowJSON` (Role, Name, Workflow Role, Status). Highlight **only the current pending role/person** (VH pending → Vertical Head; after VH acts → MIS Coordinator). Rework highlights Initiator. Draft has no highlight. Empty approver statuses still display as **Pending** until that person acts, but are not highlighted unless that step is the current JSON `Pending`. Highlight is a light row background only (no italic/colored role text). Names resolve from Author Title, then site users, then email local-part. The dialog does not mutate workflow |
+| **R-NPD22** | Same NPD request in two browser tabs uses `BroadcastChannel` (`npdRequestTabSync.ts`, initialized in AppShell). **View, Edit, Save Draft, Submit, Approve, Reject, Rework** in Tab 1 notify Tab 2. Opening View or Edit claims the request. When Tab 2 next navigates or interacts with that request, it shows **Editing Restricted** immediately (list click or returning to an open form). Save Draft / Submit / workflow action notify Draft Saved / Submitted. Popup actions: **Go to Dashboard** (`/npd/all`) or **Reload Page**. Do not persist extra SharePoint fields for this lock |
+
+### 5.14 NPD_Lookup data model (mandatory)
+
+`NPD_Lookup` (`Config.ListNames.Lookup`) is the source of dropdown/MultiSelect values across the app. The Admin Lookup screen already implements this model — **reuse it**. Do not invent extra columns.
+
+| UI label | SharePoint field | How to read |
+|---|---|---|
+| Lookup Name | **`Title`** | `item.Title` — **there is no `LookupName` column** |
+| Lookup Type | **`LookupType`** (lookup → `NPD_LookupType`) | `Select: LookupType/Title` + `Expand: LookupType`, then `getLookupTitles(item.LookupType)` (also `LookupTypeId` object / `NPD_LookupType.Title` by Id when expand Title is empty) |
+| Lookup Code | **`LookupCode`** | `item.LookupCode` |
+| Soft delete | **`IsDeleted`** | `getActiveRecordFilters()` |
+
+| Rule | Description |
+|---|---|
+| **R-LK01** | Never select, filter, or write a field named `LookupName`. Persist and read the display name as **`Title`**. Domain property `ILookup.LookupName` is mapped from `Title` in `lookupService.mapLookup` only |
+| **R-LK02** | Lookup Type value **requires Expand**. Always `Select` `LookupType/Id,LookupType/Title` and `Expand` `LookupType`. Read the type name with `getLookupTitles()` from `LookupType` and `LookupTypeId`. If Title is still empty, resolve `NPD_LookupType.Title` by Id. Do not assume a flat string on `LookupType` |
+| **R-LK03** | UI copy uses `Config.FieldLabels.LookupName` / `LookupType`. Internal names stay in `Config.FieldNames.Lookup` |
+| **R-LK04** | All Lookup dropdown/MultiSelect options must go through `lookupService.fetchActiveLookups()` (or `lookupOptionUtils` built on top of it). Do not add a second PnP query that redefines the schema |
+| **R-LK05** | Compare Lookup Type to a field name with `lookupOptionUtils.lookupValuesMatch` / `getLookupMatchKeys` — trim + lowercase, compact alphanumeric, and titles with/without parenthetical codes |
 
 ### 5.17 Master Toolbar & Reset Filters
 
 | Rule | Description |
 |---|---|
 | **R-MT01** | Master toolbars use shared **`MasterToolbar.module.scss`** + **`MasterToolbarSearch`** (`common/master/MasterToolbar/`) |
-| **R-MT02** | Reset filter icon (`pi-filter-slash`) sits **immediately next to the Search box** in the toolbar — not inside the DataTable |
+| **R-MT02** | Reset filter icon (`pi-refresh`) sits **immediately next to the Search box** in the toolbar — not inside the DataTable |
 | **R-MT03** | Clicking reset clears all active filters/search (`globalFilter`, column filters when added) and restores full dataset |
-| **R-MT04** | Reset button disabled when no filters are active (`filtersActive={Boolean(globalFilter.trim())}` minimum) |
-| **R-MT05** | **Import / Export** use `.actionButton` (primary teal); **Add New** uses `.addNewButton` (darker teal) — shared sizing, icons, typography |
+| **R-MT04** | Reset button uses project theme-color background (`$roca-color-btn-primary-bg` / `#40919d`), white icon, **permanent** style on hover/focus/active/disabled — no color change after click. Shared class `roca-master-reset-button` plus `master-toolbar-reset-button`; height `2rem` on all master toolbars |
+| **R-MT05** | Search input, Reset button, and action buttons (`Import`, `Export`, `Add New`) share consistent height (`2rem`) via `_master-toolbar.scss` |
 | **R-MT06** | DataTable wrapped in **`MasterTablePanel`** for consistent panel layout (no filter controls inside the table) |
 | **R-MT07** | Pagination styling defined in `_datatable-pagination.scss` (also synced in `injectRocaPrimeOverrides.ts`) |
+| **R-NAV03** | Side navigation sections use border separator lines between sections; bottom line below Reports (the last section) is removed (`.section:last-child { border-bottom: none; }`) |
 
 ### 5.18 User-Facing Label Spelling
 
@@ -449,6 +499,19 @@ All Add/Edit popups use shared mixins from **`styles/_form-dialog-standard.scss`
 |---|---|
 | **R-LB01** | User-facing text uses **"Lookup Type"** (two words) — not `LookupType`, `LookUp Type`, or `LookUp` |
 | **R-LB02** | Code identifiers (folders, interfaces, list keys) may remain camelCase; UI labels, nav, headings, breadcrumbs, and dialog titles use spaced spelling from `Config.FieldLabels` |
+
+### 5.20 Role & Permission Standard
+
+| Rule | Description |
+|---|---|
+| **R-SEC01** | Resolve **all** roles for the logged-in user. Admin comes from the SharePoint group `Config.SharePointGroups.Admins`. Other roles come from ROCA `ApproversMaster` (`Role/Title` + `Users`). A user may hold multiple roles at once — permissions are a **union**, never a single-role override |
+| **R-SEC02** | Role resolution lives in `roleService.ts`; navigation, routes, and actions live in `permissionService.ts`. Store the result in `appSlice` (`assignedRoles`, per-role brand arrays) once per session via `initializeApp` |
+| **R-SEC03** | Side navigation and compact nav use `filterNavigationByRoles(access)` from ApproversMaster assignments + System. **Vertical Head** sees only All Requests, Pending Approval, and Approved Requests. **MIS Coordinator** sees those NPD lists plus Reports. New Request, Draft/ReWork, Material Group, and Administration stay hidden unless the user actually has Initiator / Consultant / Admin for that system. Multi-role users see the union — one role must not override another |
+| **R-SEC04** | `ProtectedRoute` blocks unauthorized URLs and redirects to `/unauthorized`. Home (`/`) redirects to `getDefaultRoute(access)` |
+| **R-SEC05** | Brand scope is mandatory for Initiator and Vertical Head. List/query screens must use `getNpdViewScope()` / `getMgViewScope()` / `canViewRequest()` — users see only requests for brands assigned to them (Initiator also limited to **own** requests). Admin sees all. MIS Coordinator / Consultant with no brands are treated as globally assigned for their module |
+| **R-SEC06** | Workflow actions (Approve, Rework, Reject, Post to SAP, Consultant Complete) are granted **only** by the matching ApproversMaster role. Admin-only users cannot perform those actions |
+| **R-SEC07** | New NPD Request Brand (MG1) options are the user's `npdInitiatorBrands` from session access — do not show brands from other people's ApproversMaster rows |
+| **R-SEC08** | ApproversMaster user match is **email only** (`Users/EMail` or ROCA site-user map by `UsersId`). Never match NPD-site user IDs, display names, WorkflowJSON, or a previously selected role |
 
 ---
 

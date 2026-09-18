@@ -1,3 +1,6 @@
+import * as React from "react";
+import { Persona, PersonaSize } from "@fluentui/react";
+
 /** Normalizes an email/login string for comparison. */
 export function normalizeIdentity(value: string): string {
   return value.trim().toLowerCase();
@@ -167,6 +170,22 @@ export function extractPersonIdentityVariants(
   return variants;
 }
 
+/** Collects unique email addresses from a SharePoint person/group field. */
+export function extractPersonEmails(value: unknown): string[] {
+  const emails = new Set<string>();
+
+  flattenPersonField(value).forEach((person) => {
+    const email = normalizeEmail(
+      String(person.EMail ?? person.Email ?? person.UserPrincipalName ?? ""),
+    );
+    if (email.includes("@")) {
+      emails.add(email);
+    }
+  });
+
+  return Array.from(emails);
+}
+
 /** Parses SharePoint `UsersId` / `UserId` scalar values into numeric ids. */
 export function parseSharePointUserIds(value: unknown): number[] {
   if (value === null || value === undefined) {
@@ -254,16 +273,11 @@ export function personFieldMatchesEmail(
   loginEmail: string,
 ): boolean {
   const normalizedLogin = normalizeEmail(loginEmail);
-  if (!normalizedLogin) {
+  if (!normalizedLogin.includes("@")) {
     return false;
   }
 
-  return flattenPersonField(users).some((person) => {
-    const personEmail = normalizeEmail(
-      String(person.EMail ?? person.Email ?? ""),
-    );
-    return Boolean(personEmail) && personEmail === normalizedLogin;
-  });
+  return extractPersonEmails(users).includes(normalizedLogin);
 }
 
 /** True when Users (expanded EMail) or UsersId + site-user map matches login email. */
@@ -281,11 +295,49 @@ export function approversRowMatchesEmail(
     return false;
   }
 
-  const normalizedLogin = normalizeIdentity(loginEmail);
+  const normalizedLogin = normalizeEmail(loginEmail);
   const userIds = [
     ...parseSharePointUserIds(row.UsersId),
     ...parseSharePointUserIds(row.UserId),
   ];
 
-  return userIds.some((id) => userEmailById.get(id) === normalizedLogin);
+  return userIds.some(
+    (id) => normalizeEmail(userEmailById.get(id) ?? "") === normalizedLogin,
+  );
+}
+
+export function getSharePointUserPhotoUrl(email: string): string {
+  return "/_layouts/15/userphoto.aspx?size=S&username=" + email.trim();
+}
+
+export function renderSharePointUserPersona(
+  email: string,
+  name?: string,
+): React.ReactElement | null {
+  const username = email.trim();
+  if (!username) {
+    return null;
+  }
+
+  return React.createElement(Persona, {
+    styles: {
+      root: {
+        margin: "0 !important;",
+        width: 24,
+        minWidth: 24,
+        height: 24,
+        ".ms-Persona-details": {
+          display: "none",
+        },
+        ".ms-Persona-imageArea, .ms-Persona-coin, .ms-Persona-image, .ms-Persona-initials": {
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+        },
+      },
+    },
+    imageUrl: getSharePointUserPhotoUrl(username),
+    title: name,
+    size: PersonaSize.size24,
+  });
 }

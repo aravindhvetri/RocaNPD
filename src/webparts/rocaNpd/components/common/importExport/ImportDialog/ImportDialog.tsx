@@ -90,8 +90,8 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
     assignFile(event.dataTransfer.files?.[0]);
   };
 
-  const handleImportClick = (): void => {
-    if (!selectedFile || importing) {
+  const handleImport = (): void => {
+    if (importing || !selectedFile) {
       return;
     }
 
@@ -122,7 +122,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
             size="sm"
             loading={importing}
             disabled={!selectedFile || importing}
-            onClick={handleImportClick}
+            onClick={handleImport}
           />
         </div>
       }

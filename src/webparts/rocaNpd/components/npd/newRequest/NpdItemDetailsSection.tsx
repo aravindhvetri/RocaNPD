@@ -1,4 +1,6 @@
 import * as React from "react";
+import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button, DataTable } from "../../common/controls";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
 import {
@@ -8,6 +10,7 @@ import {
 import type {
   INpdItemDetailRow,
   NpdItemDetailFieldKey,
+  NpdItemDetailFieldValue,
 } from "./npdItemDetails.types";
 import styles from "./NpdItemDetailsSection.module.scss";
 import { useNpdItemDetailsColumns } from "./useNpdItemDetailsColumns";
@@ -15,53 +18,90 @@ import { useNpdItemDetailsColumns } from "./useNpdItemDetailsColumns";
 export interface INpdItemDetailsSectionProps {
   brand: string | null;
   rows: INpdItemDetailRow[];
+  lookupOptionsByType: Record<string, ISelectOption[]>;
+  readOnly?: boolean;
   onRowsChange: React.Dispatch<React.SetStateAction<INpdItemDetailRow[]>>;
+  onImportClick?: () => void;
 }
 
 const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   brand,
   rows,
+  lookupOptionsByType,
+  readOnly = false,
   onRowsChange,
+  onImportClick,
 }) => {
   const visibleFields = React.useMemo(
     () => getVisibleNpdItemDetailFields(brand),
     [brand],
   );
   const latestRowId = rows.length ? rows[rows.length - 1].id : null;
+  const pageSize = Config.NpdItemDetailsPageSize;
+  const [first, setFirst] = React.useState(0);
+  const showPaginator = rows.length > pageSize;
+
+  React.useEffect(() => {
+    const maxFirst =
+      rows.length === 0
+        ? 0
+        : Math.floor((rows.length - 1) / pageSize) * pageSize;
+    setFirst((current) => (current > maxFirst ? maxFirst : current));
+  }, [pageSize, rows.length]);
 
   const handleAddItem = React.useCallback(() => {
-    onRowsChange((currentRows) => [...currentRows, createEmptyNpdItemDetailRow()]);
-  }, [onRowsChange]);
+    if (readOnly) {
+      return;
+    }
+    onRowsChange((currentRows) => [
+      ...currentRows,
+      createEmptyNpdItemDetailRow(),
+    ]);
+    setFirst(Math.floor(rows.length / pageSize) * pageSize);
+  }, [onRowsChange, pageSize, readOnly, rows.length]);
 
   const handleFieldChange = React.useCallback(
-    (rowId: string, field: NpdItemDetailFieldKey, value: string | string[]) => {
+    (
+      rowId: string,
+      field: NpdItemDetailFieldKey,
+      value: NpdItemDetailFieldValue,
+    ) => {
+      if (readOnly) {
+        return;
+      }
       onRowsChange((currentRows) =>
         currentRows.map((row) =>
           row.id === rowId ? { ...row, [field]: value } : row,
         ),
       );
     },
-    [onRowsChange],
+    [onRowsChange, readOnly],
   );
 
   const handleDeleteRow = React.useCallback(
     (rowId: string) => {
+      if (readOnly) {
+        return;
+      }
       onRowsChange((currentRows) =>
         currentRows.filter((row) => row.id !== rowId),
       );
     },
-    [onRowsChange],
+    [onRowsChange, readOnly],
   );
 
   const columns = useNpdItemDetailsColumns({
     visibleFields,
     latestRowId,
+    first,
+    lookupOptionsByType,
+    readOnly,
     onFieldChange: handleFieldChange,
     onAddLatestRow: handleAddItem,
     onDeleteRow: handleDeleteRow,
   });
 
-  const headerActions = (
+  const headerActions = readOnly ? null : (
     <>
       <Button
         label="Add"
@@ -74,36 +114,39 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         label="Import"
         icon="pi pi-download"
         size="xs"
-        variant="secondary"
         className={styles.headerImportButton}
-        disabled
-        title="Import will be configured in a later phase"
+        onClick={onImportClick}
       />
     </>
   );
 
   return (
-    <NpdFormSectionPanel title="Item Details" actions={headerActions}>
+    <NpdFormSectionPanel
+      title="Item Details"
+      actions={headerActions}
+      className={styles.sectionPanel}
+      bodyClassName={styles.sectionBody}
+    >
       <DataTable<INpdItemDetailRow>
         value={rows}
         columns={columns}
         loading={false}
         dataKey="id"
-        paginator={false}
+        paginator={showPaginator}
+        rows={pageSize}
+        rowsPerPageOptions={[pageSize]}
+        first={first}
+        onPage={(event) => setFirst(event.first)}
+        paginatorPosition="bottom"
+        paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
         className={styles.itemDetailsTable}
-        emptyMessage="Click Add to create your first item line."
+        emptyMessage={Config.FieldLabels.NoItemsFound}
       />
 
       <div className={styles.footer}>
-        <span className={styles.footerCount}>Total Item Lines: {rows.length}</span>
-        <button
-          type="button"
-          className={styles.addLineButton}
-          onClick={handleAddItem}
-        >
-          <i className={`pi pi-plus ${styles.addLineIcon}`} aria-hidden="true" />
-          <span>Add Another Item Line</span>
-        </button>
+        <span className={styles.footerCount}>
+          Total Item Lines: {rows.length}
+        </span>
       </div>
     </NpdFormSectionPanel>
   );

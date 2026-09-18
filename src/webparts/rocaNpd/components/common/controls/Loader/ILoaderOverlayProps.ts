@@ -3,4 +3,8 @@ export interface ILoaderOverlayProps {
   visible: boolean;
   /** Optional message below the spinner. */
   label?: string;
+  progressCurrent?: number;
+  progressTotal?: number;
+  progressPercent?: number;
+  progressCaption?: string;
 }

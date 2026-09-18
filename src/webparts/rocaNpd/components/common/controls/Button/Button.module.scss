@@ -28,19 +28,34 @@
 
 .sizeSm {
   font-size: 0.75rem;
-  padding: 0.3125rem 0.75rem;
+  padding: 0.25rem 0.75rem;
+  line-height: 1.2;
 }
 
 .sizeMd {
   font-size: 0.8125rem;
-  padding: 0.4375rem 0.875rem;
+  padding: 0.3125rem 0.875rem;
+  line-height: 1.2;
 }
 
 .iconOnly {
-  width: 1.75rem;
-  height: 1.75rem;
-  min-width: 1.75rem;
+  width: 1.625rem;
+  height: 1.625rem;
+  min-width: 1.625rem;
   padding: 0;
+
+  &:global(.p-button-text) {
+    &:enabled:focus,
+    &:enabled:active,
+    &:global(.p-focus),
+    &:global(.p-button:focus),
+    &:global(.p-button:active) {
+      box-shadow: none !important;
+      outline: none !important;
+      background: transparent !important;
+      border-color: transparent !important;
+    }
+  }
 
   &:enabled:focus,
   &:enabled:active,
@@ -49,7 +64,5 @@
   &:global(.p-button:active) {
     box-shadow: none !important;
     outline: none !important;
-    background: transparent !important;
-    border-color: transparent !important;
   }
 }

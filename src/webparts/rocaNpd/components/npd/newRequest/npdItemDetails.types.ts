@@ -1,5 +1,6 @@
 export type INpdItemDetailRow = {
   id: string;
+  sharePointId: number;
   rocaGlobalCode: string;
   materialCode: string;
   materialDescription: string;
@@ -16,11 +17,16 @@ export type INpdItemDetailRow = {
   taxClassification: string[];
   classNumberPcsName: string[];
   hsnCode: string;
-  weightKg: string[];
+  weightKg: number | null;
   uom: string[];
   minQtyBoxQty: string;
 } & Record<string, unknown>;
 
-export type NpdItemDetailFieldKey = Exclude<keyof INpdItemDetailRow, "id">;
+export type NpdItemDetailFieldKey = Exclude<
+  keyof INpdItemDetailRow,
+  "id" | "sharePointId"
+>;
 
-export type NpdItemDetailsControlType = "multiselect" | "text";
+export type NpdItemDetailFieldValue = string | string[] | number | null;
+
+export type NpdItemDetailsControlType = "multiselect" | "text" | "number";

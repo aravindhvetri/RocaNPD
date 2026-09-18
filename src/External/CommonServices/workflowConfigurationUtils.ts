@@ -210,12 +210,13 @@ export function getAvailableNextRoleOptions(
   });
 }
 
-/** Only the latest step's Next Role may be edited once additional steps exist. */
+/** Whether a step's Next Role dropdown is editable for the current request type. */
 export function isWorkflowStepNextRoleEditable(
-  stepIndex: number,
-  totalSteps: number,
+  _stepIndex: number,
+  _totalSteps: number,
+  _options?: { mode?: "create" | "edit" },
 ): boolean {
-  return stepIndex === totalSteps - 1;
+  return true;
 }
 
 /** Whether another approval step can be appended to the chain. */

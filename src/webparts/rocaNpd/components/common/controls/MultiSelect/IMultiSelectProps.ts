@@ -9,4 +9,5 @@ export interface IMultiSelectProps extends IBaseControlProps {
   filter?: boolean;
   display?: "comma" | "chip";
   selectAll?: boolean;
+  emptyMessage?: string;
 }

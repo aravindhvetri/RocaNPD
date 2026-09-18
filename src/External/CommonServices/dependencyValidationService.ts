@@ -40,8 +40,15 @@ async function evaluateDependencyRule(
   return false;
 }
 
+/** User-facing message when a Lookup Type is referenced by Lookup records. */
+export function buildLookupTypeDeleteBlockedMessage(
+  lookupTypeName: string,
+): string {
+  return `'${lookupTypeName}' Lookuptype is configured with lookup values`;
+}
+
 /**
- * Returns a user-facing Toast message when deletion is blocked, otherwise null.
+ * Returns a user-facing blocked-delete message when deletion is not allowed, otherwise null.
  */
 export async function validateLookupTypeDeleteAllowed(
   lookupTypeId: number,
@@ -54,7 +61,7 @@ export async function validateLookupTypeDeleteAllowed(
   );
 
   if (hasLookups) {
-    return `Cannot delete "${lookupTypeName}" because it is configured in one or more Lookup records.`;
+    return buildLookupTypeDeleteBlockedMessage(lookupTypeName);
   }
 
   return null;

@@ -12,7 +12,11 @@ export interface ILookupTypeFormValues {
   title: string;
 }
 
-/** SharePoint list item — NPD_Lookup */
+/**
+ * Domain row for NPD_Lookup.
+ * LookupName is the list Title column (there is no LookupName field).
+ * LookupTypeTitle is LookupType/Title after Expand.
+ */
 export interface ILookup {
   Id: number;
   LookupName: string;
@@ -140,6 +144,92 @@ export interface INpdGeneralInfo {
   plantSource: string | null;
 }
 
+/** One step stored in NPD_Request.WorkFlowJSON. */
+export interface INpdWorkflowStepJson {
+  Role: string;
+  UserEmail: string;
+  Status: string;
+}
+
+/** SharePoint list item — NPD_Request (General Information) */
+export interface INpdRequestGeneralInfo {
+  Id: number;
+  Title: string;
+  Brand: string;
+  MaterialType: string;
+  Plant: string;
+  Status: string;
+  IsDeleted: boolean;
+  WorkFlowJSON: string;
+  WorkflowSteps: INpdWorkflowStepJson[];
+  AuthorEmail: string;
+  AuthorTitle: string;
+  Created: string;
+}
+
+export interface INpdRequestGeneralInfoRow
+  extends INpdRequestGeneralInfo,
+    Record<string, unknown> {}
+
+/** All / Approved dashboard row with item-line summary. */
+export interface INpdRequestListItem extends INpdRequestGeneralInfo {
+  ProjectName: string;
+  ProductCount: number;
+}
+
+export interface INpdRequestListItemRow
+  extends INpdRequestListItem,
+    Record<string, unknown> {}
+
+export interface INpdDraftSavePayload {
+  id?: number | null;
+  brand: string;
+  materialType: string;
+  plantSource: string;
+  existingStatus?: string | null;
+  existingTitle?: string | null;
+}
+
+export interface INpdItemDetailRecord {
+  sharePointId: number;
+  rocaGlobalCode: string;
+  materialCode: string;
+  materialDescription: string;
+  productGroupMg2: string[];
+  productCategoryMg3: string[];
+  productTypeMg4: string[];
+  productSourceMg5: string[];
+  colorMgp1a: string[];
+  productRangeMgp2a: string[];
+  productSubCategoryMgp3a: string[];
+  materialGroup: string[];
+  extMaterialGroup: string[];
+  productSegment: string[];
+  taxClassification: string[];
+  classNumberPcsName: string[];
+  hsnCode: string;
+  weightKg: number | null;
+  uom: string[];
+  minQtyBoxQty: string;
+}
+
+export interface INpdItemDetailsImportParseResult {
+  toCreate: INpdItemDetailRecord[];
+  duplicates: string[];
+  errors: string[];
+}
+
+export interface INpdApproverCommentPayload {
+  requestId: number;
+  requestTitle: string;
+  comments: string;
+  role: string;
+  userIds: number[];
+  action: string;
+}
+
+export type NpdWorkflowAction = "Approve" | "Reject" | "Rework";
+
 /** ROCA ApproversMaster row (subset used for initiator brand resolution). */
 export interface IApproversMasterRecord {
   Id: number;
@@ -147,4 +237,39 @@ export interface IApproversMasterRecord {
   RoleTitle: string;
   SystemTitle: string;
   UserEmails: string[];
+}
+
+/** One ApproversMaster assignment that matches the logged-in user. */
+export interface IRoleBrandAssignment {
+  role: string;
+  system: string;
+  brands: string[];
+}
+
+/**
+ * Session access context. A user can hold multiple roles at once
+ * (e.g. Admin + Initiator + Vertical Head). Permissions are a union.
+ */
+export interface IResolvedUserAccess {
+  assignedRoles: string[];
+  mappedBrands: string[];
+  npdInitiatorBrands: string[];
+  npdVerticalHeadBrands: string[];
+  npdMisCoordinatorBrands: string[];
+  mgInitiatorBrands: string[];
+  mgConsultantBrands: string[];
+  assignments: IRoleBrandAssignment[];
+}
+
+/** Brand/ownership scope used by list queries and request-level checks. */
+export interface IRequestViewScope {
+  includeOwn: boolean;
+  /** `null` = no brand restriction (Admin or MIS Coordinator). */
+  brandFilter: string[] | null;
+}
+
+export interface IRequestAccessInput {
+  createdByEmail?: string;
+  brand?: string;
+  module: "npd" | "mg";
 }

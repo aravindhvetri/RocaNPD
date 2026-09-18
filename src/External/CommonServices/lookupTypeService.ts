@@ -1,5 +1,5 @@
 import { Config, FieldLabels } from "./Config";
-import { exportToExcel } from "./exportService";
+import { buildExportFileName, exportToExcel } from "./exportService";
 import type {
   IImportParseResult,
   ILookupType,
@@ -12,6 +12,7 @@ import {
   readSpreadsheetRows,
 } from "./importService";
 import { validateLookupTypeDeleteAllowed } from "./dependencyValidationService";
+import { isDeletedYesFlag } from "./lookupFieldUtils";
 import {
   getActiveRecordCreatePayload,
   getActiveRecordFilters,
@@ -28,8 +29,8 @@ const SELECT_FIELDS = "Id,Title,IsDeleted";
 function mapLookupType(item: Record<string, unknown>): ILookupType {
   return {
     Id: Number(item.Id),
-    Title: String(item.Title ?? ""),
-    IsDeleted: Boolean(item[SOFT_DELETE_FIELD]),
+    Title: String(item.Title ?? "").trim(),
+    IsDeleted: isDeletedYesFlag(item[SOFT_DELETE_FIELD]),
   };
 }
 
@@ -136,24 +137,33 @@ export async function parseLookupTypeImportFile(
   return { toCreate, duplicates, errors };
 }
 
+export async function previewLookupTypeImportFile(
+  file: File,
+  existingItems: ILookupType[],
+): Promise<IImportParseResult> {
+  return parseLookupTypeImportFile(file, existingItems);
+}
+
+export async function commitLookupTypeImport(
+  toCreate: string[],
+): Promise<void> {
+  if (toCreate.length) {
+    await bulkCreateLookupTypes(toCreate);
+  }
+}
+
 export async function importLookupTypesFromFile(
   file: File,
   existingItems: ILookupType[],
 ): Promise<IImportParseResult> {
-  const result = await parseLookupTypeImportFile(file, existingItems);
-
-  if (result.toCreate.length) {
-    await bulkCreateLookupTypes(result.toCreate);
-  }
-
+  const result = await previewLookupTypeImportFile(file, existingItems);
+  await commitLookupTypeImport(result.toCreate);
   return result;
 }
 
 export function exportLookupTypesToExcel(rows: ILookupTypeRow[]): void {
-  const dateStamp = new Date().toISOString().slice(0, 10);
-
   exportToExcel({
-    fileName: `LookupType_Master_Export_${dateStamp}`,
+    fileName: buildExportFileName("LookupType"),
     sheetName: "LookupType",
     columns: [
       {

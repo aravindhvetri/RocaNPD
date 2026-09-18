@@ -18,8 +18,12 @@ import {
   fetchRocaBrandOptions,
   fetchRocaPlantOptions,
   fetchWorkflowConfigurations,
+  commitImportLookups,
+  commitImportLookupTypes,
   importLookupTypes,
   importLookups,
+  previewImportLookups,
+  previewImportLookupTypes,
   saveWorkflowConfiguration,
   softDeleteBrandMaterialExtension,
   softDeleteLookup,
@@ -156,6 +160,30 @@ const adminSlice = createSlice({
         state.lookupType.error =
           (action.payload as string) ?? "Failed to delete lookup type.";
       })
+      .addCase(previewImportLookupTypes.pending, (state) => {
+        state.lookupType.status = "saving";
+        state.lookupType.error = null;
+      })
+      .addCase(previewImportLookupTypes.fulfilled, (state) => {
+        state.lookupType.status = "idle";
+      })
+      .addCase(previewImportLookupTypes.rejected, (state, action) => {
+        state.lookupType.status = "error";
+        state.lookupType.error =
+          (action.payload as string) ?? "Failed to validate import file.";
+      })
+      .addCase(commitImportLookupTypes.pending, (state) => {
+        state.lookupType.status = "saving";
+        state.lookupType.error = null;
+      })
+      .addCase(commitImportLookupTypes.fulfilled, (state) => {
+        state.lookupType.status = "idle";
+      })
+      .addCase(commitImportLookupTypes.rejected, (state, action) => {
+        state.lookupType.status = "error";
+        state.lookupType.error =
+          (action.payload as string) ?? "Failed to import lookup types.";
+      })
       .addCase(importLookupTypes.pending, (state) => {
         state.lookupType.status = "saving";
         state.lookupType.error = null;
@@ -219,6 +247,30 @@ const adminSlice = createSlice({
         state.lookup.status = "error";
         state.lookup.error =
           (action.payload as string) ?? "Failed to delete lookup.";
+      })
+      .addCase(previewImportLookups.pending, (state) => {
+        state.lookup.status = "saving";
+        state.lookup.error = null;
+      })
+      .addCase(previewImportLookups.fulfilled, (state) => {
+        state.lookup.status = "idle";
+      })
+      .addCase(previewImportLookups.rejected, (state, action) => {
+        state.lookup.status = "error";
+        state.lookup.error =
+          (action.payload as string) ?? "Failed to validate import file.";
+      })
+      .addCase(commitImportLookups.pending, (state) => {
+        state.lookup.status = "saving";
+        state.lookup.error = null;
+      })
+      .addCase(commitImportLookups.fulfilled, (state) => {
+        state.lookup.status = "idle";
+      })
+      .addCase(commitImportLookups.rejected, (state, action) => {
+        state.lookup.status = "error";
+        state.lookup.error =
+          (action.payload as string) ?? "Failed to import lookups.";
       })
       .addCase(importLookups.pending, (state) => {
         state.lookup.status = "saving";

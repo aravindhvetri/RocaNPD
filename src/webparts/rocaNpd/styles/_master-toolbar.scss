@@ -1,4 +1,4 @@
-@import '../../../External/CommonServices/theme.scss';
+@import "../../../External/CommonServices/theme.scss";
 
 @mixin master-toolbar-shell {
   display: flex;
@@ -10,11 +10,11 @@
 
 @mixin master-toolbar-title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: $roca-color-master-page-title;
   white-space: nowrap;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 @mixin master-toolbar-actions {
@@ -63,12 +63,17 @@
 
   :global(.p-inputtext) {
     width: 100%;
-    padding: 0.4375rem 0.75rem 0.4375rem 1.875rem;
+    height: 2rem;
+    min-height: 2rem;
+    box-sizing: border-box;
+    padding: 0 0.75rem 0 1.875rem;
     font-size: 0.8125rem;
-    font-family: 'Poppins', sans-serif;
+    font-family: "Poppins", sans-serif;
     border-color: $roca-color-input-border;
     border-radius: $roca-radius-sm;
     background: $roca-color-input-bg;
+    display: flex;
+    align-items: center;
 
     &:enabled:hover,
     &:enabled:focus,
@@ -84,44 +89,75 @@
   width: 2rem;
   height: 2rem;
   min-width: 2rem;
+  min-height: 2rem;
+  box-sizing: border-box;
   padding: 0;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1 !important;
+  background: $roca-color-btn-primary-bg !important;
+  background-color: $roca-color-btn-primary-bg !important;
+  border: 1px solid $roca-color-btn-primary-bg !important;
+  border-radius: $roca-radius-sm;
+  color: $roca-color-text-inverse !important;
+  cursor: pointer !important;
 
   :global(.p-button-icon) {
-    font-size: 0.875rem;
-    color: $roca-color-text-muted;
+    font-size: 0.8125rem;
+    color: $roca-color-text-inverse !important;
+    opacity: 1 !important;
   }
 
-  &:enabled:hover {
-    :global(.p-button-icon) {
-      color: $roca-color-text-secondary;
-    }
-  }
-
-  &:disabled {
-    :global(.p-button-icon) {
-      opacity: 0.35;
-    }
-  }
-
+  &:hover,
+  &:focus,
+  &:focus-visible,
+  &:active,
+  &:enabled,
+  &:enabled:hover,
   &:enabled:focus,
   &:enabled:focus-visible,
   &:enabled:active,
-  &:global(.p-focus) {
+  &:disabled,
+  &:global(.p-disabled),
+  &:global(.p-focus),
+  &:global(.p-button:hover),
+  &:global(.p-button:focus),
+  &:global(.p-button:active),
+  &:global(.p-button:not(:disabled):hover),
+  &:global(.p-button:not(:disabled):active) {
     box-shadow: none !important;
     outline: none !important;
-    background: transparent !important;
+    opacity: 1 !important;
+    background: $roca-color-btn-primary-bg !important;
+    background-color: $roca-color-btn-primary-bg !important;
+    border-color: $roca-color-btn-primary-bg !important;
+    color: $roca-color-text-inverse !important;
+    cursor: pointer !important;
+
+    :global(.p-button-icon) {
+      color: $roca-color-text-inverse !important;
+      opacity: 1 !important;
+    }
   }
 }
 
 @mixin master-toolbar-action-button {
-  font-family: 'Poppins', sans-serif;
+  height: 2rem;
+  min-height: 2rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Poppins", sans-serif;
   font-size: 0.8125rem;
   font-weight: 500;
-  padding: 0.4375rem 0.875rem;
+  padding: 0 0.875rem;
+  line-height: 1.2;
   border-radius: $roca-radius-sm;
   background: $roca-color-btn-primary-bg;
-  border-color: $roca-color-btn-primary-bg;
+  border: 1px solid $roca-color-btn-primary-bg;
   color: $roca-color-text-inverse;
   white-space: nowrap;
 

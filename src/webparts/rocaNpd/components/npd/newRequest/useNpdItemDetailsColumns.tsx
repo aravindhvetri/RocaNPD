@@ -1,12 +1,14 @@
 import * as React from "react";
+import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
+import { getLookupOptionsByFieldName } from "../../../../../External/CommonServices/lookupOptionUtils";
 import { Button } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
-import dataTableStyles from "../../common/controls/DataTable/DataTable.module.scss";
 import NpdItemDetailsTableCell from "./NpdItemDetailsTableCell";
 import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
   NpdItemDetailFieldKey,
+  NpdItemDetailFieldValue,
 } from "./npdItemDetails.types";
 import styles from "./NpdItemDetailsSection.module.scss";
 
@@ -26,87 +28,136 @@ function renderColumnHeader(fieldDef: INpdItemDetailsFieldDef): React.ReactNode 
 export interface IUseNpdItemDetailsColumnsParams {
   visibleFields: INpdItemDetailsFieldDef[];
   latestRowId: string | null;
+  first?: number;
+  lookupOptionsByType: Record<string, ISelectOption[]>;
+  readOnly?: boolean;
   onFieldChange: (
     rowId: string,
     field: NpdItemDetailFieldKey,
-    value: string | string[],
+    value: NpdItemDetailFieldValue,
   ) => void;
   onAddLatestRow: () => void;
   onDeleteRow: (rowId: string) => void;
 }
 
+const CENTER_ALIGN: React.CSSProperties["textAlign"] = "center";
+const EMPTY_LOOKUP_OPTIONS: ISelectOption[] = [];
+
 export function useNpdItemDetailsColumns({
   visibleFields,
   latestRowId,
+  first = 0,
+  lookupOptionsByType,
   onFieldChange,
   onAddLatestRow,
   onDeleteRow,
+  readOnly = false,
 }: IUseNpdItemDetailsColumnsParams): IDataTableColumn<INpdItemDetailRow>[] {
   return React.useMemo(() => {
+    const optionsByField: Partial<Record<NpdItemDetailFieldKey, ISelectOption[]>> =
+      {};
+    visibleFields.forEach((fieldDef) => {
+      if (fieldDef.controlType === "multiselect") {
+        optionsByField[fieldDef.field] = getLookupOptionsByFieldName(
+          lookupOptionsByType,
+          fieldDef.header,
+          fieldDef.field,
+        );
+      }
+    });
+
     const fieldColumns: IDataTableColumn<INpdItemDetailRow>[] =
       visibleFields.map((fieldDef) => ({
         field: fieldDef.field,
         header: renderColumnHeader(fieldDef),
-        style: { minWidth: fieldDef.minWidth },
-        headerStyle: { minWidth: fieldDef.minWidth },
+        style: { minWidth: fieldDef.minWidth, width: fieldDef.minWidth },
+        headerStyle: { minWidth: fieldDef.minWidth, width: fieldDef.minWidth },
         body: (row) => (
           <NpdItemDetailsTableCell
             id={`${row.id}-${fieldDef.field}`}
             fieldDef={fieldDef}
             row={row}
+            lookupOptions={optionsByField[fieldDef.field] ?? EMPTY_LOOKUP_OPTIONS}
             onFieldChange={onFieldChange}
+            readOnly={readOnly}
           />
         ),
       }));
 
-    return [
-      {
-        field: "id",
-        header: "#",
-        style: { width: "3rem", textAlign: "center" },
-        headerStyle: { width: "3rem", textAlign: "center" },
-        body: (_row, rowIndex) => (
-          <span className={styles.rowIndex}>{rowIndex + 1}</span>
-        ),
+    const serialColumn: IDataTableColumn<INpdItemDetailRow> = {
+      field: "id",
+      header: "S.No",
+      style: { width: "3.25rem", minWidth: "3.25rem", textAlign: CENTER_ALIGN },
+      headerStyle: {
+        width: "3.25rem",
+        minWidth: "3.25rem",
+        textAlign: CENTER_ALIGN,
       },
-      ...fieldColumns,
-      {
-        field: "id",
-        header: "Actions",
-        style: { minWidth: "5.5rem", textAlign: "right" },
-        headerStyle: { minWidth: "5.5rem", textAlign: "right" },
-        body: (row) => {
-          const isLatestRow = row.id === latestRowId;
+      body: (_row, rowIndex) => (
+        <span className={styles.rowIndex}>{first + rowIndex + 1}</span>
+      ),
+    };
 
-          return (
-            <div className={dataTableStyles.actionCell}>
-              {isLatestRow ? (
-                <Button
-                  variant="text"
-                  icon="pi pi-plus"
-                  iconOnly
-                  size="xs"
-                  title="Add item line"
-                  aria-label="Add item line"
-                  className={styles.addRowAction}
-                  onClick={onAddLatestRow}
-                />
-              ) : (
-                <span className={styles.actionPlaceholder} aria-hidden="true" />
-              )}
+    const actionColumn: IDataTableColumn<INpdItemDetailRow> = {
+      field: "id",
+      header: "Actions",
+      style: { width: "4.5rem", minWidth: "4.5rem", textAlign: CENTER_ALIGN },
+      headerStyle: {
+        width: "4.5rem",
+        minWidth: "4.5rem",
+        textAlign: CENTER_ALIGN,
+      },
+      body: (row) => {
+        const isLatestRow = row.id === latestRowId;
+
+        return (
+          <div className={styles.actionCell}>
+            {isLatestRow ? (
               <Button
                 variant="text"
-                icon="pi pi-trash"
+                icon="pi pi-plus"
                 iconOnly
-                title="Delete row"
-                aria-label="Delete row"
-                className={dataTableStyles.deleteAction}
-                onClick={() => onDeleteRow(row.id)}
+                size="xs"
+                title="Add item line"
+                aria-label="Add item line"
+                className={styles.addRowAction}
+                onClick={onAddLatestRow}
               />
-            </div>
-          );
-        },
+            ) : (
+              <span className={styles.actionPlaceholder} aria-hidden="true" />
+            )}
+            <Button
+              variant="text"
+              icon="pi pi-trash"
+              iconOnly
+              size="xs"
+              title="Delete row"
+              aria-label="Delete row"
+              className={styles.deleteRowAction}
+              onClick={() => onDeleteRow(row.id)}
+            />
+          </div>
+        );
       },
+    };
+
+    const columns: IDataTableColumn<INpdItemDetailRow>[] = [
+      serialColumn,
+      ...fieldColumns,
     ];
-  }, [latestRowId, onAddLatestRow, onDeleteRow, onFieldChange, visibleFields]);
+    if (!readOnly) {
+      columns.push(actionColumn);
+    }
+
+    return columns;
+  }, [
+    latestRowId,
+    first,
+    lookupOptionsByType,
+    onAddLatestRow,
+    onDeleteRow,
+    onFieldChange,
+    readOnly,
+    visibleFields,
+  ]);
 }

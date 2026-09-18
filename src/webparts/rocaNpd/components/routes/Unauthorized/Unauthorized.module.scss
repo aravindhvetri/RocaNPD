@@ -1,0 +1,31 @@
+@import '../../../styles/theme-import';
+
+.page {
+  padding: 1.25rem 1.5rem;
+  background-color: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  box-shadow: $roca-shadow-sm;
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.75rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: $roca-color-text-primary;
+  border-bottom: 2px solid $roca-color-accent;
+}
+
+.message {
+  margin: 0 0 0.75rem;
+  color: $roca-color-text-secondary;
+  line-height: 1.5;
+}
+
+.detail {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $roca-color-text-muted;
+  line-height: 1.5;
+}

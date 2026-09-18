@@ -1,4 +1,4 @@
-import { Config, WorkflowSystems } from "./Config";
+import { Config, NpdApproverSystems } from "./Config";
 import type { ISelectOption } from "./Interface";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import { getActiveRecordFilters } from "./softDelete";
@@ -65,7 +65,7 @@ export async function fetchRocaNpdRoleOptions(
     Filter: [
       {
         FilterKey: "System/Title",
-        FilterValue: WorkflowSystems.Npd,
+        FilterValue: NpdApproverSystems.NewProductDevelopment,
         Operator: "eq",
       },
     ],

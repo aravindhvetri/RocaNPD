@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Config } from "../../../../../External/CommonServices/Config";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
   setActiveNavItem,
@@ -9,11 +8,13 @@ import {
 import NavSection from "./NavSection/NavSection";
 import SidebarBrand from "./SidebarBrand/SidebarBrand";
 import SideNavigationCompact from "./SideNavigationCompact/SideNavigationCompact";
+import { useFilteredNavigation } from "./useFilteredNavigation";
 import styles from "./SideNavigation.module.scss";
 
 const SideNavigation: React.FC = () => {
   const dispatch = useAppDispatch();
   const { expandedSections, sidebarCollapsed } = useAppSelector((state) => state.ui);
+  const navigation = useFilteredNavigation();
 
   const handleToggleSection = (sectionId: string): void => {
     dispatch(toggleNavSection(sectionId));
@@ -41,7 +42,7 @@ const SideNavigation: React.FC = () => {
         <SideNavigationCompact onNavigate={handleNavigate} />
       ) : (
         <div className={styles.navScroll}>
-          {Config.Navigation.map((section) => (
+          {navigation.map((section) => (
             <NavSection
               key={section.id}
               section={section}

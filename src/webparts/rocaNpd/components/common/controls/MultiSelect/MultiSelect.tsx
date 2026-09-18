@@ -21,6 +21,7 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
   filter = true,
   display = "comma",
   selectAll = false,
+  emptyMessage = "No available options",
   "data-testid": testId,
 }) => (
   <ControlField
@@ -45,6 +46,18 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
       appendTo={getAppRootElement()}
       panelClassName={styles.panel}
       className={`w-full ${error ? "p-invalid" : ""}`}
+      emptyMessage={emptyMessage}
+      pt={{
+        input: {
+          autoComplete: "off",
+        },
+        filterInput: {
+          name: `${id ?? "multiselect"}-filter`,
+          autoComplete: "off",
+          autoCorrect: "off",
+          spellCheck: false,
+        },
+      }}
       data-testid={testId}
       onChange={(event) => onChange(event.value ?? [])}
     />

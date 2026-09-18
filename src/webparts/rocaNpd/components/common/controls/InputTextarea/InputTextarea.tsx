@@ -30,6 +30,7 @@ const InputTextarea: React.FC<IInputTextareaProps> = ({
   >
     <PrimeInputTextarea
       id={id}
+      name={id}
       value={value}
       rows={rows}
       placeholder={placeholder}
@@ -37,6 +38,9 @@ const InputTextarea: React.FC<IInputTextareaProps> = ({
       autoResize={autoResize}
       disabled={disabled}
       readOnly={readOnly}
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
       className={`w-full ${error ? "p-invalid" : ""}`}
       data-testid={testId}
       onChange={(e) => onChange(e.target.value)}

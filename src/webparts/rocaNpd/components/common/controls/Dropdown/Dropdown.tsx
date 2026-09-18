@@ -32,6 +32,7 @@ const Dropdown: React.FC<IDropdownProps> = ({
   >
     <PrimeDropdown
       inputId={id}
+      name={id}
       value={value}
       options={options}
       optionLabel="label"
@@ -43,6 +44,17 @@ const Dropdown: React.FC<IDropdownProps> = ({
       appendTo={getAppRootElement()}
       panelClassName={styles.panel}
       className={`w-full ${error ? "p-invalid" : ""}`}
+      pt={{
+        input: {
+          autoComplete: "off",
+        },
+        filterInput: {
+          name: `${id ?? "dropdown"}-filter`,
+          autoComplete: "off",
+          autoCorrect: "off",
+          spellCheck: false,
+        },
+      }}
       data-testid={testId}
       onChange={(e) => onChange(e.value ?? null)}
     />

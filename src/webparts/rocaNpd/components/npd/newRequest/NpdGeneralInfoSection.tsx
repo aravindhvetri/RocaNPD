@@ -18,6 +18,7 @@ export interface INpdGeneralInfoSectionProps {
   plantSourceOptions: ISelectOption[];
   brandLoading: boolean;
   plantSourceLoading: boolean;
+  readOnly?: boolean;
   onBrandChange: (value: string | null) => void;
   onMaterialTypeChange: (value: string | null) => void;
   onPlantSourceChange: (value: string | null) => void;
@@ -31,6 +32,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
   plantSourceOptions,
   brandLoading,
   plantSourceLoading,
+  readOnly = false,
   onBrandChange,
   onMaterialTypeChange,
   onPlantSourceChange,
@@ -39,14 +41,21 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
   const isFinishedProducts = selectIsFinishedProductsMaterialType(materialType);
   const hasPlantSourceMaterialType = selectHasPlantSourceMaterialType(materialType);
   const plantDisabled =
-    !hasPlantSourceMaterialType || plantSourceLoading || !materialType;
+    readOnly ||
+    !hasPlantSourceMaterialType ||
+    plantSourceLoading ||
+    !materialType;
 
   const plantHelperText = !materialType
     ? "Select Material Type above to view applicable Plant / Source"
     : undefined;
 
   return (
-    <NpdFormSectionPanel title="General Information">
+    <NpdFormSectionPanel
+      title="General Information"
+      className={styles.generalInfoPanel}
+      bodyClassName={styles.generalInfoBody}
+    >
       <div className={styles.fieldGrid}>
         <Dropdown
           id="npdBrand"
@@ -55,7 +64,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           value={brand}
           options={brandOptions}
           placeholder="Select Brand"
-          disabled={brandLoading}
+          disabled={brandLoading || readOnly}
           filter
           onChange={(value) =>
             onBrandChange(typeof value === "string" ? value : null)
@@ -68,6 +77,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           value={materialType}
           options={materialTypeOptions}
           placeholder="Select Material Type"
+          disabled={readOnly}
           onChange={(value) =>
             onMaterialTypeChange(typeof value === "string" ? value : null)
           }

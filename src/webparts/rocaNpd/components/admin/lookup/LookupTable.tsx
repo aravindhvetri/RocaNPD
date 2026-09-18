@@ -26,22 +26,35 @@ const LookupTable: React.FC<ILookupTableProps> = ({
         field: "LookupTypeTitle",
         header: FieldLabels.LookupType,
         sortable: true,
-      },
-      {
-        field: "LookupName",
-        header: FieldLabels.LookupName,
-        sortable: true,
+        style: { width: "30%" },
       },
       {
         field: "LookupCode",
         header: FieldLabels.LookupCode,
         sortable: true,
+        style: { width: "30%" },
+      },
+      {
+        field: "LookupName",
+        header: FieldLabels.LookupName,
+        sortable: true,
+        style: { width: "40%" },
       },
       {
         field: "Id",
         header: "Action",
-        style: { width: "6rem", textAlign: "right" },
-        headerStyle: { width: "6rem", textAlign: "right" },
+        style: {
+          width: "5.5rem",
+          minWidth: "5.5rem",
+          maxWidth: "6rem",
+          textAlign: "left",
+        },
+        headerStyle: {
+          width: "5.5rem",
+          minWidth: "5.5rem",
+          maxWidth: "6rem",
+          textAlign: "left",
+        },
         body: (row) => (
           <div className={styles.actionCell}>
             <Button

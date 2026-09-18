@@ -8,6 +8,8 @@ export interface IMasterToolbarSearchProps {
   onSearchChange: (value: string) => void;
   onResetFilters: () => void;
   filtersActive?: boolean;
+  placeholder?: string;
+  wide?: boolean;
 }
 
 const MasterToolbarSearch: React.FC<IMasterToolbarSearchProps> = ({
@@ -15,30 +17,39 @@ const MasterToolbarSearch: React.FC<IMasterToolbarSearchProps> = ({
   searchValue,
   onSearchChange,
   onResetFilters,
-  filtersActive = false,
-}) => (
-  <div className={styles.filterGroup}>
-    <div className={styles.searchWrap}>
-      <InputText
-        id={id}
-        value={searchValue}
-        placeholder="Search..."
-        className={styles.searchInput}
-        onChange={onSearchChange}
+  placeholder = "Search...",
+  wide = false,
+}) => {
+  const handleResetFilters = (): void => {
+    onResetFilters();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  return (
+    <div className={wide ? styles.filterGroupWide : styles.filterGroup}>
+      <div className={wide ? styles.searchWrapWide : styles.searchWrap}>
+        <InputText
+          id={id}
+          value={searchValue}
+          placeholder={placeholder}
+          className={styles.searchInput}
+          onChange={onSearchChange}
+        />
+        <i className={`pi pi-search ${styles.searchIcon}`} aria-hidden="true" />
+      </div>
+      <Button
+        variant="primary"
+        icon="pi pi-refresh"
+        iconOnly
+        className={`${styles.resetButton} roca-master-reset-button`}
+        aria-label="Reset filters"
+        title="Reset filters"
+        onClick={handleResetFilters}
       />
-      <i className={`pi pi-search ${styles.searchIcon}`} aria-hidden="true" />
     </div>
-    <Button
-      variant="text"
-      icon="pi pi-refresh"
-      iconOnly
-      className={styles.resetButton}
-      disabled={!filtersActive}
-      aria-label="Refresh"
-      title="Refresh"
-      onClick={onResetFilters}
-    />
-  </div>
-);
+  );
+};
 
 export default MasterToolbarSearch;

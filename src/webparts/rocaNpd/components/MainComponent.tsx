@@ -6,30 +6,22 @@ import {
 } from "../../../External/CommonServices/hideSharePointChrome";
 import { injectRocaPrimeOverrides } from "../../../External/CommonServices/injectRocaPrimeOverrides";
 import themeStyles from "../styles/theme.module.scss";
-import { resolveCurrentSiteUrl } from "../../../External/CommonServices/rocaSiteUrlResolver";
-import { useAppDispatch } from "../../../store/hooks";
-import { setInitialized, setUserContext } from "../../../store/slices/appSlice";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
+import { initializeApp } from "../../../store/thunks/appThunks";
 import type { IMainComponentProps } from "./IMainComponentProps";
+import { LoaderOverlay } from "./common/controls";
 import AppShell from "./layout/AppShell/AppShell";
 import AppRoutes from "./routes/AppRoutes";
 
 const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
   const dispatch = useAppDispatch();
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const initialized = useAppSelector((state) => state.app.initialized);
+  const roleStatus = useAppSelector((state) => state.app.roleStatus);
+  const isResolvingAccess = !initialized || roleStatus === "loading";
 
   React.useEffect(() => {
-    const { pageContext } = spfxContext;
-
-    dispatch(
-      setUserContext({
-        displayName: pageContext.user.displayName,
-        email: pageContext.user.email,
-        loginName: pageContext.user.loginName,
-        userId: Number(pageContext.legacyPageContext.userId) || 0,
-        siteUrl: resolveCurrentSiteUrl(pageContext.web.absoluteUrl),
-      }),
-    );
-    dispatch(setInitialized(true));
+    dispatch(initializeApp(spfxContext)).catch(() => undefined);
   }, [dispatch, spfxContext]);
 
   React.useEffect(() => {
@@ -51,6 +43,7 @@ const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
 
   return (
     <div ref={rootRef} className={themeStyles.appRoot} data-roca-npd-root>
+      <LoaderOverlay visible={isResolvingAccess} label="Loading..." />
       <HashRouter>
         <AppShell>
           <AppRoutes />

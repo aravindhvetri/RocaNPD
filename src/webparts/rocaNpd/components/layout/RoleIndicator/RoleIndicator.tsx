@@ -3,12 +3,13 @@ import { useAppSelector } from "../../../../../store/hooks";
 import styles from "./RoleIndicator.module.scss";
 
 const RoleIndicator: React.FC = () => {
-  const activeRole = useAppSelector((state) => state.app.activeRole);
+  const assignedRoles = useAppSelector((state) => state.app.assignedRoles);
+  const roleLabel = assignedRoles.length ? assignedRoles.join(", ") : "Unassigned";
 
   return (
-    <div className={styles.roleBar} aria-label="Active login role">
-      <span className={styles.label}>Active Login Role</span>
-      <span className={styles.badge}>{activeRole}</span>
+    <div className={styles.roleBar} aria-label="Assigned roles">
+      <span className={styles.label}>Assigned Roles</span>
+      <span className={styles.badge}>{roleLabel}</span>
     </div>
   );
 };
