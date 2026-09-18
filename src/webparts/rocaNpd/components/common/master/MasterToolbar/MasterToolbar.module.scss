@@ -16,8 +16,19 @@
   @include master-toolbar-filter-group;
 }
 
+.filterGroupWide {
+  @include master-toolbar-filter-group;
+  flex: 1;
+}
+
 .searchWrap {
   @include master-toolbar-search-wrap;
+}
+
+.searchWrapWide {
+  @include master-toolbar-search-wrap;
+  max-width: none;
+  min-width: 16rem;
 }
 
 .searchIcon {

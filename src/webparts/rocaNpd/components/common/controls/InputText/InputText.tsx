@@ -29,12 +29,16 @@ const InputText: React.FC<IInputTextProps> = ({
   >
     <PrimeInputText
       id={id}
+      name={id}
       value={value}
       type={type}
       placeholder={placeholder}
       maxLength={maxLength}
       disabled={disabled}
       readOnly={readOnly}
+      autoComplete={type === "password" ? "new-password" : "off"}
+      autoCorrect="off"
+      spellCheck={false}
       className={error ? "p-invalid" : undefined}
       data-testid={testId}
       onChange={(e) => onChange(e.target.value)}

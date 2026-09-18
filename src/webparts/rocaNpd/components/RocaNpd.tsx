@@ -12,7 +12,7 @@ import "@pnp/sp/site-users/web";
 import "@pnp/sp/site-groups/web";
 import { Provider } from "react-redux";
 import type { IRocaNpdProps } from "./IRocaNpdProps";
-import { setupSP } from "../../../External/CommonServices/SPServices";
+import { setupSP, setupSpfxContext } from "../../../External/CommonServices/SPServices";
 import { store } from "../../../store";
 import MainComponent from "./MainComponent";
 
@@ -23,6 +23,7 @@ export default class RocaNpd extends React.Component<IRocaNpdProps> {
     super(props);
     this._sp = spfi().using(SPFx(props.context));
     setupSP(this._sp);
+    setupSpfxContext(props.context);
   }
 
   public render(): React.ReactElement<IRocaNpdProps> {

@@ -23,6 +23,7 @@ import "@pnp/sp/folders";
 import "@pnp/sp/site-users/web";
 import "@pnp/sp/site-groups/web";
 import { Web } from "@pnp/sp/webs";
+import type { WebPartContext } from "@microsoft/sp-webpart-base";
 import {
   IFilter,
   IListItems,
@@ -55,9 +56,14 @@ import { MSGraphClient } from "@microsoft/sp-http";
 import * as moment from "moment";
 
 let _sp: SPFI;
+let _spfxContext: WebPartContext | undefined;
 
 export const setupSP = (sp: SPFI): void => {
   _sp = sp;
+};
+
+export const setupSpfxContext = (context: WebPartContext): void => {
+  _spfxContext = context;
 };
 
 const getSP = (): SPFI => {
@@ -71,6 +77,19 @@ const getSP = (): SPFI => {
 
 const getAllUsers = async (): Promise<[]> => {
   return (await getSP().web.siteUsers()) as [];
+};
+
+const ensureSiteUserId = async (loginNameOrEmail: string): Promise<number> => {
+  const trimmed = loginNameOrEmail.trim();
+  if (!trimmed) {
+    return 0;
+  }
+
+  const result = (await getSP().web.ensureUser(trimmed)) as {
+    Id?: number;
+    data?: { Id?: number };
+  };
+  return Number(result.Id ?? result.data?.Id) || 0;
 };
 
 const SPAddItem = async (params: IAddList): Promise<any> => {
@@ -210,7 +229,12 @@ const batchUpdate = async (params: {
   const list = batchedWeb.lists.getByTitle(params.ListName);
 
   for (const data of params.responseData) {
-    list.items.getById(data.ID).update(data);
+    const itemId = Number(data.ID ?? data.Id ?? data.id);
+    const rest = { ...data };
+    delete rest.ID;
+    delete rest.Id;
+    delete rest.id;
+    list.items.getById(itemId).update(rest);
   }
 
   await execute();
@@ -226,6 +250,41 @@ const batchDelete = async (params: {
   for (const data of params.responseData) {
     list.items.getById(data.ID).recycle();
   }
+
+  await execute();
+};
+
+const batchMutate = async (params: {
+  ListName: string;
+  insert?: any[];
+  update?: any[];
+  remove?: { ID: number }[];
+}): Promise<void> => {
+  const toDelete = params.remove ?? [];
+  const toUpdate = params.update ?? [];
+  const toInsert = params.insert ?? [];
+
+  if (!toDelete.length && !toUpdate.length && !toInsert.length) {
+    return;
+  }
+
+  const [batchedWeb, execute] = getSP().web.batched();
+  const list = batchedWeb.lists.getByTitle(params.ListName);
+
+  toDelete.forEach((row) => {
+    list.items.getById(Number(row.ID)).recycle();
+  });
+  toUpdate.forEach((row) => {
+    const id = Number(row.ID ?? row.Id ?? row.id);
+    const rest = { ...row };
+    delete rest.ID;
+    delete rest.Id;
+    delete rest.id;
+    list.items.getById(id).update(rest);
+  });
+  toInsert.forEach((data) => {
+    list.items.add(data);
+  });
 
   await execute();
 };
@@ -634,6 +693,66 @@ const fileRemove = (params: IRemoveFiles) => {
   return removefiles;
 };
 
+type MSGraphClientFactoryLike = {
+  getClient: (version?: string) => Promise<MSGraphClient>;
+};
+
+const SendOutlookMail = async (params: {
+  to: string[];
+  subject: string;
+  body: string;
+  inlineAttachments?: Array<{
+    name: string;
+    contentType: string;
+    contentBytes: string;
+    contentId: string;
+  }>;
+}): Promise<void> => {
+  if (!_spfxContext) {
+    throw new Error("SPFx context is not initialized for email.");
+  }
+
+  const recipients = params.to
+    .map((email) => email.trim())
+    .filter((email) => email.includes("@"));
+
+  if (!recipients.length) {
+    return;
+  }
+
+  const factory =
+    _spfxContext.msGraphClientFactory ||
+    (_spfxContext as unknown as { _msGraphClientFactory: MSGraphClientFactoryLike })
+      ._msGraphClientFactory;
+
+  const client = await factory.getClient("3");
+  const attachments = (params.inlineAttachments ?? [])
+    .filter((attachment) => attachment.contentBytes)
+    .map((attachment) => ({
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: attachment.name,
+      contentType: attachment.contentType,
+      contentBytes: attachment.contentBytes,
+      contentId: attachment.contentId,
+      isInline: true,
+    }));
+
+  await client.api("/me/sendMail").post({
+    message: {
+      subject: params.subject,
+      body: {
+        contentType: "HTML",
+        content: params.body,
+      },
+      toRecipients: recipients.map((address) => ({
+        emailAddress: { address },
+      })),
+      ...(attachments.length ? { attachments } : {}),
+    },
+    saveToSentItems: true,
+  });
+};
+
 const GetAzureUsers = async (params: IAzureUsers): Promise<any[]> => {
   return await params.Context._msGraphClientFactory
     .getClient()
@@ -688,9 +807,11 @@ const GenerateFormatId = (
 
 export default {
   getAllUsers,
+  ensureSiteUserId,
   SPAddItem,
   GetDateFormat,
   GenerateFormatId,
+  SendOutlookMail,
   SPUpdateItem,
   SPDeleteItem,
   SPReadItems,
@@ -703,6 +824,7 @@ export default {
   batchInsert,
   batchUpdate,
   batchDelete,
+  batchMutate,
   SPReadDocumentItems,
   SPAddDocumentItem,
   SPUpdateDocumentItem,

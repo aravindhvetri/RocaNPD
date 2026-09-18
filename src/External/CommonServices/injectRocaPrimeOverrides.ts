@@ -64,6 +64,18 @@ export function injectRocaPrimeOverrides(): void {
       font-family: 'Poppins', sans-serif !important;
     }
 
+    [data-roca-npd-root] .p-dialog-content {
+      padding: 0.5rem 1.25rem 1rem !important;
+    }
+
+    [data-roca-npd-root] .p-dialog-footer {
+      padding: 0.875rem 1.25rem 1.25rem !important;
+    }
+
+    [data-roca-npd-root] .p-dialog-footer .p-button {
+      margin: 0 !important;
+    }
+
     [data-roca-npd-root] [data-roca-npd-nav] a {
       color: #ffffff;
     }
@@ -77,6 +89,46 @@ export function injectRocaPrimeOverrides(): void {
     [data-roca-npd-root] .p-button:enabled:active {
       box-shadow: none !important;
       outline: none !important;
+    }
+
+    [data-roca-npd-root] .roca-master-reset-button.p-button,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:hover,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:focus,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:focus-visible,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:active,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-focus,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:enabled:hover,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:enabled:focus,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:enabled:focus-visible,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:enabled:active,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:not(:disabled):hover,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:not(:disabled):active {
+      background: #40919d !important;
+      background-color: #40919d !important;
+      border-color: #40919d !important;
+      color: #ffffff !important;
+      box-shadow: none !important;
+      outline: none !important;
+      opacity: 1 !important;
+    }
+
+    [data-roca-npd-root] .roca-master-reset-button.p-button .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:hover .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:focus .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button:active .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-focus .p-button-icon {
+      color: #ffffff !important;
+      opacity: 1 !important;
+    }
+
+    [data-roca-npd-root] .roca-master-reset-button.p-button .p-ink {
+      display: none !important;
+    }
+
+    [data-roca-npd-root] .p-multiselect-empty-message {
+      font-size: 12px !important;
+      line-height: 1.4 !important;
+      padding: 0.75rem 0.875rem !important;
     }
 
     [data-roca-npd-root] .p-link:focus,
@@ -237,7 +289,7 @@ export function injectRocaPrimeOverrides(): void {
       flex-wrap: wrap !important;
       align-items: center !important;
       justify-content: flex-end !important;
-      gap: 0.625rem !important;
+      gap: 0rem !important;
       padding: 10px 10px 10px !important;
       border-top: 1px solid #e2e8f070 !important;
       background: #ffffff !important;

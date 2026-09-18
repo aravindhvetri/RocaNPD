@@ -104,6 +104,12 @@
     font-size: 0.8125rem;
   }
 
+  .p-multiselect-empty-message {
+    font-size: 12px !important;
+    line-height: 1.4;
+    padding: 0.75rem 0.875rem !important;
+  }
+
   .p-multiselect-header {
     display: flex;
     align-items: center;

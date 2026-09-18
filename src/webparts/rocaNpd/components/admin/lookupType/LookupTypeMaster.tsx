@@ -1,10 +1,17 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
 import type {
+  IImportParseResult,
   ILookupTypeRow,
   ITemplateDocument,
 } from "../../../../../External/CommonServices/Interface";
+import {
+  buildImportValidationRows,
+  ImportValidationMessages,
+  type IImportValidationRow,
+} from "../../../../../External/CommonServices/importService";
+import { validateLookupTypeDeleteAllowed } from "../../../../../External/CommonServices/dependencyValidationService";
 import { exportLookupTypesToExcel } from "../../../../../External/CommonServices/lookupTypeService";
 import {
   downloadTemplateFile,
@@ -13,14 +20,16 @@ import {
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import { clearLookupTypeError } from "../../../../../store/slices/adminSlice";
 import {
+  commitImportLookupTypes,
   createLookupType,
   fetchLookupTypes,
-  importLookupTypes,
+  previewImportLookupTypes,
   softDeleteLookupType,
   updateLookupType,
 } from "../../../../../store/thunks/lookupTypeThunks";
-import { ImportDialog } from "../../common/importExport";
+import { ImportDialog, ImportValidationDialog } from "../../common/importExport";
 import {
+  DeleteBlockedDialog,
   DeleteConfirmDialog,
   LoaderOverlay,
   MasterTablePanel,
@@ -59,9 +68,18 @@ const LookupTypeMaster: React.FC = () => {
   const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
   const [deleteConfirmSnapshot, setDeleteConfirmSnapshot] =
     React.useState<IDeleteConfirmSnapshot | null>(null);
+  const [deleteBlockedVisible, setDeleteBlockedVisible] = React.useState(false);
+  const [deleteBlockedMessage, setDeleteBlockedMessage] = React.useState("");
   const [templateDocument, setTemplateDocument] =
     React.useState<ITemplateDocument | null>(null);
   const [templateLoading, setTemplateLoading] = React.useState(false);
+  const [importValidationRows, setImportValidationRows] = React.useState<
+    IImportValidationRow[]
+  >([]);
+  const [importValidationVisible, setImportValidationVisible] =
+    React.useState(false);
+  const [importPreview, setImportPreview] =
+    React.useState<IImportParseResult | null>(null);
 
   const isLoading = status === "loading";
   const isSaving = status === "saving";
@@ -157,11 +175,24 @@ const LookupTypeMaster: React.FC = () => {
     setSelectedItem(null);
   };
 
+  const clearImportValidation = (): void => {
+    setImportValidationRows([]);
+    setImportPreview(null);
+    setImportValidationVisible(false);
+  };
+
   const closeImportDialog = (): void => {
     if (isSaving) {
       return;
     }
     setImportVisible(false);
+  };
+
+  const closeImportValidationDialog = (): void => {
+    if (isSaving) {
+      return;
+    }
+    clearImportValidation();
   };
 
   const handleValidationWarning = (message: string): void => {
@@ -187,8 +218,30 @@ const LookupTypeMaster: React.FC = () => {
   };
 
   const requestDelete = (row: ILookupTypeRow): void => {
-    setDeleteConfirmSnapshot({ id: row.Id, title: row.Title });
-    setDeleteConfirmVisible(true);
+    void (async () => {
+      try {
+        const blockedMessage = await validateLookupTypeDeleteAllowed(
+          row.Id,
+          row.Title,
+        );
+
+        if (blockedMessage) {
+          setDeleteBlockedMessage(blockedMessage);
+          setDeleteBlockedVisible(true);
+          return;
+        }
+
+        setDeleteConfirmSnapshot({ id: row.Id, title: row.Title });
+        setDeleteConfirmVisible(true);
+      } catch {
+        showErrorToast(toastRef, "Unable to verify whether this lookup type can be deleted.");
+      }
+    })();
+  };
+
+  const closeDeleteBlockedDialog = (): void => {
+    setDeleteBlockedVisible(false);
+    setDeleteBlockedMessage("");
   };
 
   const closeDeleteConfirm = (): void => {
@@ -236,23 +289,49 @@ const LookupTypeMaster: React.FC = () => {
 
   const handleImportFile = async (file: File): Promise<void> => {
     try {
-      const result = await dispatch(importLookupTypes(file)).unwrap();
+      const result = await dispatch(previewImportLookupTypes(file)).unwrap();
+      const validationRows = buildImportValidationRows(
+        result.duplicates,
+        ImportValidationMessages.duplicateLookupType,
+        result.errors,
+      );
 
-      result.errors.forEach((message) => {
-        showWarningToast(toastRef, message);
-      });
-
-      result.duplicates.forEach((name) => {
-        showWarningToast(toastRef, `"${name}" already exists.`);
-      });
-
-      if (result.toCreate.length) {
-        showSuccessToast(
-          toastRef,
-          `${result.toCreate.length} lookup type(s) imported successfully.`,
-        );
+      if (validationRows.length) {
+        setImportValidationRows(validationRows);
+        setImportPreview(result);
         setImportVisible(false);
+        setImportValidationVisible(true);
+        return;
       }
+
+      const count = await dispatch(
+        commitImportLookupTypes(result.toCreate),
+      ).unwrap();
+      showSuccessToast(
+        toastRef,
+        `${count} lookup type(s) imported successfully.`,
+      );
+      closeImportDialog();
+      clearImportValidation();
+    } catch {
+      // Error toast handled via slice error effect.
+    }
+  };
+
+  const handleImportProceed = async (): Promise<void> => {
+    if (!importPreview?.toCreate.length) {
+      return;
+    }
+
+    try {
+      const count = await dispatch(
+        commitImportLookupTypes(importPreview.toCreate),
+      ).unwrap();
+      showSuccessToast(
+        toastRef,
+        `${count} lookup type(s) imported successfully.`,
+      );
+      clearImportValidation();
     } catch {
       // Error toast handled via slice error effect.
     }
@@ -319,6 +398,17 @@ const LookupTypeMaster: React.FC = () => {
         onImport={handleImportFile}
       />
 
+      <ImportValidationDialog
+        visible={importValidationVisible}
+        sectionTitle="Import Lookup Type Master"
+        recordColumnHeader={FieldLabels.LookupTypeName}
+        validationRows={importValidationRows}
+        canProceed={Boolean(importPreview?.toCreate.length)}
+        proceeding={isSaving}
+        onHide={closeImportValidationDialog}
+        onProceed={handleImportProceed}
+      />
+
       <LookupTypeFormDialog
         visible={dialogVisible}
         mode={dialogMode}
@@ -336,6 +426,12 @@ const LookupTypeMaster: React.FC = () => {
         itemName={deleteConfirmSnapshot?.title ?? ""}
         onCancel={closeDeleteConfirm}
         onConfirm={confirmDelete}
+      />
+
+      <DeleteBlockedDialog
+        visible={deleteBlockedVisible}
+        message={deleteBlockedMessage}
+        onClose={closeDeleteBlockedDialog}
       />
     </section>
   );

@@ -77,6 +77,42 @@
   animation: loader-pulse 2s infinite ease-in-out;
 }
 
+.progressBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(18.5rem, 86vw);
+}
+
+.progressCaption {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: $roca-color-primary;
+}
+
+.progressTrack {
+  width: 100%;
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: $roca-color-option-hover-bg;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    $roca-color-accent 0%,
+    $roca-color-nav-bar-teal 100%
+  );
+  transition: width 0.18s linear;
+}
+
 @keyframes loader-pulse {
   0%,
   100% {

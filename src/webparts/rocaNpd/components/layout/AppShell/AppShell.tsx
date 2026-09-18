@@ -1,11 +1,15 @@
 import * as React from "react";
 import { Config } from "../../../../../External/CommonServices/Config";
+import { initNpdTabSync } from "../../../../../External/CommonServices/npdRequestTabSync";
 import { useAppSelector } from "../../../../../store/hooks";
 import Header from "../Header/Header";
-import RoleIndicator from "../RoleIndicator/RoleIndicator";
 import SideNavigation from "../SideNavigation/SideNavigation";
 import NavRouteSync from "./NavRouteSync";
 import styles from "./AppShell.module.scss";
+
+if (typeof window !== "undefined") {
+  initNpdTabSync();
+}
 
 export interface IAppShellProps {
   children: React.ReactNode;
@@ -13,6 +17,10 @@ export interface IAppShellProps {
 
 const AppShell: React.FC<IAppShellProps> = ({ children }) => {
   const sidebarCollapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
+
+  React.useEffect(() => {
+    initNpdTabSync();
+  }, []);
 
   return (
     <div
@@ -25,7 +33,6 @@ const AppShell: React.FC<IAppShellProps> = ({ children }) => {
       <div className={styles.body}>
         <div className={styles.sidebarColumn}>
           <SideNavigation />
-          {!sidebarCollapsed && <RoleIndicator />}
         </div>
         <main className={styles.content}>{children}</main>
       </div>

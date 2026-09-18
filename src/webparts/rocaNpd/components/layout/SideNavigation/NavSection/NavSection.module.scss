@@ -2,6 +2,10 @@
 
 .section {
   border-bottom: 1px solid $roca-color-nav-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .sectionHeader {

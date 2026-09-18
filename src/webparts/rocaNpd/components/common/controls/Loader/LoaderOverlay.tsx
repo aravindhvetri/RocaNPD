@@ -11,12 +11,25 @@ import type { ILoaderOverlayProps } from "./ILoaderOverlayProps";
 const LoaderOverlay: React.FC<ILoaderOverlayProps> = ({
   visible,
   label = "Loading...",
+  progressCurrent,
+  progressTotal,
+  progressPercent,
+  progressCaption,
 }) => {
   if (!visible) {
     return null;
   }
 
-  const loader = <Loader label={label} fullScreen />;
+  const loader = (
+    <Loader
+      label={label}
+      fullScreen
+      progressCurrent={progressCurrent}
+      progressTotal={progressTotal}
+      progressPercent={progressPercent}
+      progressCaption={progressCaption}
+    />
+  );
   const appRoot = getAppRootElement();
 
   return appRoot ? createPortal(loader, appRoot) : loader;

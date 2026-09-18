@@ -129,17 +129,6 @@ const LookupFormDialog: React.FC<ILookupFormDialogProps> = ({
           }
         />
         <InputText
-          id="lookupName"
-          label={FieldLabels.LookupName}
-          required
-          value={lookupName}
-          placeholder="Enter here"
-          disabled={saving}
-          maxLength={255}
-          className={styles.formField}
-          onChange={setLookupName}
-        />
-        <InputText
           id="lookupCode"
           label={FieldLabels.LookupCode}
           required
@@ -149,6 +138,17 @@ const LookupFormDialog: React.FC<ILookupFormDialogProps> = ({
           maxLength={255}
           className={styles.formField}
           onChange={setLookupCode}
+        />
+        <InputText
+          id="lookupName"
+          label={FieldLabels.LookupName}
+          required
+          value={lookupName}
+          placeholder="Enter here"
+          disabled={saving}
+          maxLength={255}
+          className={styles.formField}
+          onChange={setLookupName}
         />
       </div>
     </Dialog>

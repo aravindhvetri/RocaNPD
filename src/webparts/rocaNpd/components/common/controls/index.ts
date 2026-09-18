@@ -47,6 +47,9 @@ export type { IToastMessage, ToastSeverity } from "./Toast";
 export { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 export type { IDeleteConfirmDialogProps } from "./DeleteConfirmDialog";
 
+export { DeleteBlockedDialog } from "./DeleteBlockedDialog";
+export type { IDeleteBlockedDialogProps } from "./DeleteBlockedDialog";
+
 export { FileUpload } from "./FileUpload";
 export type { IFileUploadProps } from "./FileUpload";
 

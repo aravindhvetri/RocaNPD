@@ -1,0 +1,54 @@
+@import "../../../styles/_theme-import.scss";
+
+.page {
+  padding: 0rem 1.25rem 1rem;
+}
+
+.tablePanel {
+  background-color: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  box-shadow: $roca-shadow-sm;
+  overflow: hidden;
+
+  :global(.p-datatable .p-datatable-wrapper) {
+    overflow-x: auto !important;
+    overflow-y: hidden;
+  }
+
+  :global(.p-datatable .p-datatable-table) {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto !important;
+  }
+
+  :global(.p-datatable-thead > tr > th) {
+    padding: 0.5rem 0.55rem !important;
+    white-space: nowrap !important;
+    overflow: visible;
+  }
+
+  :global(.p-column-header-content) {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    width: max-content;
+  }
+
+  :global(.p-column-title) {
+    white-space: nowrap;
+    overflow: visible;
+    flex-shrink: 0;
+  }
+
+  :global(.p-sortable-column .p-sortable-column-icon) {
+    margin-left: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  :global(.p-datatable-tbody > tr > td) {
+    padding: 0.5rem 0.55rem !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

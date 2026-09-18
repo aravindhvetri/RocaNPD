@@ -39,15 +39,20 @@ $roca-dialog-control-size: 0.8125rem;
     }
 
     .p-dialog-content {
-      padding: 0.5rem 1.25rem 1rem;
+      padding: 0.5rem 1.25rem 1rem !important;
       background-color: $roca-color-bg-surface;
       font-family: 'Poppins', sans-serif;
     }
 
     .p-dialog-footer {
-      padding: 0.875rem 1.25rem 1.25rem;
+      padding: 0.875rem 1.25rem 1.25rem !important;
       background-color: $roca-color-bg-surface;
       border-top: 1px solid $roca-color-border-light;
+
+      :global(.p-button),
+      button {
+        margin: 0 !important;
+      }
     }
   }
 }
@@ -56,15 +61,20 @@ $roca-dialog-control-size: 0.8125rem;
   display: flex;
   justify-content: flex-end;
   gap: 0.625rem;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
 
   :global(.p-button) {
+    margin: 0 !important;
     min-width: 5.5rem;
     font-family: 'Poppins', sans-serif;
     font-size: $roca-dialog-control-size;
     font-weight: 600;
     border-radius: $roca-radius-sm;
     padding: 0.4375rem 1.125rem;
-    line-height: 1.25;
+    line-height: 1.2;
+    min-height: 2rem;
 
     &:enabled:focus,
     &:enabled:focus-visible,

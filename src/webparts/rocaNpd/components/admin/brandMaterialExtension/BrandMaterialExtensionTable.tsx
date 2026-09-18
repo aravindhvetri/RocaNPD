@@ -22,17 +22,29 @@ const BrandMaterialExtensionTable: React.FC<
         field: "Brand",
         header: FieldLabels.Brand,
         sortable: true,
+        style: { width: "50%" },
       },
       {
         field: "Plant",
         header: FieldLabels.Plant,
         sortable: true,
+        style: { width: "50%" },
       },
       {
         field: "Id",
         header: "Action",
-        style: { width: "6rem", textAlign: "right" },
-        headerStyle: { width: "6rem", textAlign: "right" },
+        style: {
+          width: "5.5rem",
+          minWidth: "5.5rem",
+          maxWidth: "6rem",
+          textAlign: "left",
+        },
+        headerStyle: {
+          width: "5.5rem",
+          minWidth: "5.5rem",
+          maxWidth: "6rem",
+          textAlign: "left",
+        },
         body: (row) => (
           <div className={styles.actionCell}>
             <Button

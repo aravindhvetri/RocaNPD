@@ -1,5 +1,8 @@
 import type { INpdGeneralInfo } from "../../../../../External/CommonServices/Interface";
-import { getVisibleNpdItemDetailFields } from "./npdItemDetailsConfig";
+import {
+  getVisibleNpdItemDetailFields,
+  isEmptyItemDetailRow,
+} from "./npdItemDetailsConfig";
 import type { INpdItemDetailRow } from "./npdItemDetails.types";
 
 function isEmptyText(value: string): boolean {
@@ -10,9 +13,12 @@ function isEmptyMultiValue(value: unknown): boolean {
   return !Array.isArray(value) || value.length === 0;
 }
 
-export function validateNpdRequestForm(
+function isEmptyNumber(value: unknown): boolean {
+  return typeof value !== "number" || !Number.isFinite(value);
+}
+
+export function validateNpdGeneralInfo(
   generalInfo: INpdGeneralInfo,
-  itemRows: INpdItemDetailRow[],
 ): string[] {
   const messages: string[] = [];
 
@@ -28,14 +34,24 @@ export function validateNpdRequestForm(
     messages.push("Plant / Source is required.");
   }
 
-  if (!itemRows.length) {
+  return messages;
+}
+
+export function validateNpdRequestForm(
+  generalInfo: INpdGeneralInfo,
+  itemRows: INpdItemDetailRow[],
+): string[] {
+  const messages = validateNpdGeneralInfo(generalInfo);
+  const filledRows = itemRows.filter((row) => !isEmptyItemDetailRow(row));
+
+  if (!filledRows.length) {
     messages.push("Add at least one item line.");
     return messages;
   }
 
   const visibleFields = getVisibleNpdItemDetailFields(generalInfo.brand);
 
-  itemRows.forEach((row, index) => {
+  filledRows.forEach((row, index) => {
     const lineLabel = `Item line ${index + 1}`;
 
     visibleFields.forEach((fieldDef) => {
@@ -46,6 +62,11 @@ export function validateNpdRequestForm(
       const value = row[fieldDef.field];
 
       if (fieldDef.controlType === "multiselect" && isEmptyMultiValue(value)) {
+        messages.push(`${lineLabel}: ${fieldDef.header} is required.`);
+        return;
+      }
+
+      if (fieldDef.controlType === "number" && isEmptyNumber(value)) {
         messages.push(`${lineLabel}: ${fieldDef.header} is required.`);
         return;
       }

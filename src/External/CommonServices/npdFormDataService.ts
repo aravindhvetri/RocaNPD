@@ -6,6 +6,11 @@ import {
 } from "./Config";
 import type { ISelectOption } from "./Interface";
 import {
+  getLookupTitles,
+  isDeletedApproverRow,
+  lookupTitlesInclude,
+} from "./lookupFieldUtils";
+import {
   personFieldMatchesEmail,
   resolveLoginEmail,
 } from "./personFieldUtils";
@@ -16,61 +21,8 @@ const APPROVERS_SELECT =
   "Id,System/Title,Role/Title,Brand/Title,Users/Id,Users/Title,Users/EMail";
 const APPROVERS_EXPAND = "System,Role,Brand,Users";
 
-/** Reads lookup Title values from single/multi expanded lookup payloads. */
-function getLookupTitles(value: unknown): string[] {
-  if (!value) {
-    return [];
-  }
-
-  if (typeof value === "string") {
-    const legacyDelimiter = value.indexOf(";#");
-    const title = (
-      legacyDelimiter > 0 ? value.slice(0, legacyDelimiter) : value
-    ).trim();
-    return title ? [title] : [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((entry) => getLookupTitles(entry));
-  }
-
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-
-    if (Array.isArray(record.results)) {
-      return getLookupTitles(record.results);
-    }
-
-    const title = String(
-      record.Title ?? record.title ?? record.Name ?? "",
-    ).trim();
-    return title ? [title] : [];
-  }
-
-  return [];
-}
-
-function lookupTitlesInclude(value: unknown, expected: string): boolean {
-  const expectedTitle = expected.trim().toLowerCase();
-  if (!expectedTitle) {
-    return false;
-  }
-
-  return getLookupTitles(value).some(
-    (title) => title.toLowerCase() === expectedTitle,
-  );
-}
-
 function getRowUsers(row: Record<string, unknown>): unknown {
   return row.Users ?? row.User;
-}
-
-function isDeletedApproverRow(row: Record<string, unknown>): boolean {
-  const normalized = String(row.IsDelete ?? row.IsDeleted ?? "")
-    .trim()
-    .toLowerCase();
-
-  return normalized === "yes" || normalized === "true" || normalized === "1";
 }
 
 function isActivePlantValue(value: unknown): boolean {

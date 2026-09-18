@@ -81,6 +81,47 @@ export const softDeleteLookup = createAsyncThunk(
   },
 );
 
+export const previewImportLookups = createAsyncThunk<
+  ILookupImportParseResult,
+  File,
+  { rejectValue: string; state: RootState }
+>("admin/previewImportLookups", async (file, { getState, rejectWithValue }) => {
+  try {
+    const existing = getState().admin.lookup.items;
+    let lookupTypes = getState().admin.lookupType.items;
+
+    if (!lookupTypes.length) {
+      lookupTypes = await lookupTypeService.fetchActiveLookupTypes();
+    }
+
+    return await lookupService.previewLookupImportFile(
+      file,
+      existing,
+      lookupTypes,
+    );
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const commitImportLookups = createAsyncThunk<
+  number,
+  ILookupImportParseResult["toCreate"],
+  { rejectValue: string }
+>("admin/commitImportLookups", async (toCreate, { dispatch, rejectWithValue }) => {
+  try {
+    await lookupService.commitLookupImport(toCreate);
+
+    if (toCreate.length) {
+      await dispatch(fetchLookups()).unwrap();
+    }
+
+    return toCreate.length;
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error));
+  }
+});
+
 export const importLookups = createAsyncThunk<
   ILookupImportParseResult,
   File,

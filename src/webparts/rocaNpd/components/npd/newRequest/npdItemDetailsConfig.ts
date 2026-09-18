@@ -1,4 +1,5 @@
 import { NpdRocaGlobalCodeBrands } from "../../../../../External/CommonServices/Config";
+import type { INpdItemDetailRecord } from "../../../../../External/CommonServices/Interface";
 import type {
   INpdItemDetailRow,
   NpdItemDetailFieldKey,
@@ -26,6 +27,7 @@ export function createNpdItemDetailRowId(): string {
 export function createEmptyNpdItemDetailRow(): INpdItemDetailRow {
   return {
     id: createNpdItemDetailRowId(),
+    sharePointId: 0,
     rocaGlobalCode: "",
     materialCode: "",
     materialDescription: "",
@@ -42,10 +44,54 @@ export function createEmptyNpdItemDetailRow(): INpdItemDetailRow {
     taxClassification: [],
     classNumberPcsName: [],
     hsnCode: "",
-    weightKg: [],
+    weightKg: null,
     uom: [],
     minQtyBoxQty: "",
   };
+}
+
+export function toNpdItemDetailRow(
+  record: INpdItemDetailRecord,
+): INpdItemDetailRow {
+  return {
+    ...record,
+    id: createNpdItemDetailRowId(),
+    sharePointId: record.sharePointId || 0,
+  };
+}
+
+export function toNpdItemDetailRecord(
+  row: INpdItemDetailRow,
+): INpdItemDetailRecord {
+  return {
+    sharePointId: row.sharePointId || 0,
+    rocaGlobalCode: row.rocaGlobalCode,
+    materialCode: row.materialCode,
+    materialDescription: row.materialDescription,
+    productGroupMg2: row.productGroupMg2,
+    productCategoryMg3: row.productCategoryMg3,
+    productTypeMg4: row.productTypeMg4,
+    productSourceMg5: row.productSourceMg5,
+    colorMgp1a: row.colorMgp1a,
+    productRangeMgp2a: row.productRangeMgp2a,
+    productSubCategoryMgp3a: row.productSubCategoryMgp3a,
+    materialGroup: row.materialGroup,
+    extMaterialGroup: row.extMaterialGroup,
+    productSegment: row.productSegment,
+    taxClassification: row.taxClassification,
+    classNumberPcsName: row.classNumberPcsName,
+    hsnCode: row.hsnCode,
+    weightKg: row.weightKg,
+    uom: row.uom,
+    minQtyBoxQty: row.minQtyBoxQty,
+  };
+}
+
+export function isEmptyItemDetailRow(row: INpdItemDetailRow): boolean {
+  return (
+    !String(row.materialCode ?? "").trim() &&
+    !String(row.materialDescription ?? "").trim()
+  );
 }
 
 export function isRocaGlobalCodeBrand(brand: string | null): boolean {
@@ -73,7 +119,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     field: "materialCode",
     header: "Material Code",
     required: true,
-    placeholder: "Maxi 18 Chars",
+    placeholder: "Max 18 Chars",
     minWidth: "10.5rem",
     controlType: "text",
     maxLength: 18,
@@ -82,8 +128,8 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     field: "materialDescription",
     header: "Material Description",
     required: true,
-    placeholder: "Maxi 40 Chars",
-    minWidth: "13rem",
+    placeholder: "Max 40 Chars",
+    minWidth: "19.5rem",
     controlType: "text",
     maxLength: 40,
   },
@@ -195,9 +241,9 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     field: "weightKg",
     header: "Weight (Kg)",
     required: true,
-    placeholder: "Select Weight",
+    placeholder: "Enter Weight",
     minWidth: "10rem",
-    controlType: "multiselect",
+    controlType: "number",
   },
   {
     field: "uom",

@@ -18,4 +18,10 @@
 .panel {
   font-family: 'Poppins', sans-serif !important;
   font-size: 0.8125rem;
+
+  :global(.p-multiselect-empty-message) {
+    font-size: 12px !important;
+    line-height: 1.4;
+    padding: 0.75rem 0.875rem;
+  }
 }

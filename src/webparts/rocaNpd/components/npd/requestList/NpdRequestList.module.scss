@@ -1,0 +1,316 @@
+@import "../../../styles/_theme-import.scss";
+@import "../../../styles/_master-toolbar.scss";
+
+.page {
+  padding: 0 1.25rem 1rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 5.25rem;
+  padding: 0.875rem 1rem;
+  background: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  box-shadow: $roca-shadow-sm;
+}
+
+.cardCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cardLabel {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $roca-color-text-muted;
+  font-family: "Poppins", sans-serif;
+}
+
+.cardValue {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-family: "Poppins", sans-serif;
+}
+
+.cardIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.cardTotal .cardValue {
+  color: $roca-color-text-primary;
+}
+
+.cardTotal .cardIcon {
+  background: #e8f4f6;
+  color: $roca-color-accent;
+}
+
+.cardPending .cardValue {
+  color: $roca-color-warning;
+}
+
+.cardPending .cardIcon {
+  background: $roca-color-warning-bg;
+  color: $roca-color-warning;
+}
+
+.cardRework .cardValue {
+  color: $roca-color-error;
+}
+
+.cardRework .cardIcon {
+  background: $roca-color-error-bg;
+  color: $roca-color-error;
+}
+
+.cardApproved .cardValue {
+  color: $roca-color-success;
+}
+
+.cardApproved .cardIcon {
+  background: $roca-color-success-bg;
+  color: $roca-color-success;
+}
+
+.toolbar {
+  @include master-toolbar-shell;
+  margin-bottom: 0.875rem;
+}
+
+.toolbarTitle {
+  @include master-toolbar-title;
+}
+
+.toolbarStacked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.toolbarStacked .toolbarTitle {
+  margin: 0;
+}
+
+.toolbarStacked .toolbarActions {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.toolbarActions {
+  @include master-toolbar-actions;
+}
+
+.filterDropdown {
+  width: 10.5rem;
+  min-width: 10.5rem;
+  margin-bottom: 0;
+
+  :global(.field) {
+    margin-bottom: 0;
+  }
+
+  :global(.p-dropdown) {
+    height: 2rem;
+    min-height: 2rem;
+    border-color: $roca-color-input-border;
+    border-radius: $roca-radius-sm;
+    font-family: "Poppins", sans-serif;
+  }
+
+  :global(.p-dropdown-label) {
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
+
+.exportButton {
+  @include master-toolbar-action-button;
+}
+
+.tablePanel {
+  background-color: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  box-shadow: $roca-shadow-sm;
+  overflow: hidden;
+
+  :global(.p-datatable .p-datatable-wrapper) {
+    overflow-x: auto !important;
+    overflow-y: hidden;
+  }
+
+  :global(.p-datatable .p-datatable-table) {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto !important;
+  }
+
+  :global(.p-datatable-thead > tr > th) {
+    padding: 0.5rem 0.55rem !important;
+    white-space: nowrap !important;
+    overflow: visible;
+  }
+
+  :global(.p-column-header-content) {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    width: max-content;
+  }
+
+  :global(.p-column-title) {
+    white-space: nowrap;
+    overflow: visible;
+    flex-shrink: 0;
+  }
+
+  :global(.p-sortable-column .p-sortable-column-icon) {
+    margin-left: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  :global(.p-datatable-tbody > tr > td) {
+    padding: 0.5rem 0.55rem !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.requestId {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $roca-color-text-link;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  font-family: "Poppins", sans-serif;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    color: $roca-color-text-link-hover;
+    text-decoration: underline;
+  }
+}
+
+.currentApprover {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  max-width: 100%;
+
+  :global(.ms-Persona) {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  :global(.ms-Persona-imageArea),
+  :global(.ms-Persona-coin),
+  :global(.ms-Persona-image),
+  :global(.ms-Persona-initials) {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important;
+  }
+}
+
+.currentApproverName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.125rem 0.4rem;
+  border-radius: 999px;
+  background: #e8f4f6;
+  color: $roca-color-primary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+}
+
+.statusPending,
+.statusApproved,
+.statusRework,
+.statusDraft,
+.statusRejected {
+  max-width: 100%;
+  font-size: 0.75rem !important;
+
+  :global(.p-tag-value) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.statusPending {
+  background: $roca-color-status-pending-bg !important;
+  color: $roca-color-warning !important;
+}
+
+.statusApproved {
+  background: $roca-color-status-approved-bg !important;
+  color: $roca-color-success !important;
+}
+
+.statusRework {
+  background: #fff4e5 !important;
+  color: $roca-color-warning !important;
+}
+
+.statusDraft {
+  background: $roca-color-status-draft-bg !important;
+  color: $roca-color-text-secondary !important;
+}
+
+.statusRejected {
+  background: $roca-color-status-rejected-bg !important;
+  color: $roca-color-error !important;
+}
+
+@media (max-width: 1100px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

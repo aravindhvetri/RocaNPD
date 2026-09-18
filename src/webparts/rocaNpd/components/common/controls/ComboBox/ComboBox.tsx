@@ -46,6 +46,16 @@ const ComboBox: React.FC<IComboBoxProps> = ({
       panelClassName={styles.panel}
       className={error ? "p-invalid" : undefined}
       inputClassName="w-full"
+      pt={{
+        input: {
+          root: {
+            name: id,
+            autoComplete: "off",
+            autoCorrect: "off",
+            spellCheck: false,
+          },
+        },
+      }}
       data-testid={testId}
       completeMethod={(event) => onSearch(event.query)}
       onChange={(event) => onChange(String(event.value ?? ""))}

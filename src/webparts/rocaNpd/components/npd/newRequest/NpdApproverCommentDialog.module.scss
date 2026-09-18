@@ -1,0 +1,10 @@
+@import '../../../styles/_theme-import.scss';
+@import '../../../styles/_form-dialog-standard.scss';
+
+.dialog {
+  @include roca-form-dialog-shell;
+}
+
+.footer {
+  @include roca-form-dialog-footer;
+}

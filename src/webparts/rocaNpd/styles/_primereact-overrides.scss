@@ -1,13 +1,13 @@
-@import '../../../External/CommonServices/theme.scss';
-@import './_roca-form-controls.scss';
-@import './_datatable-pagination.scss';
+@import "../../../External/CommonServices/theme.scss";
+@import "./_roca-form-controls.scss";
+@import "./_datatable-pagination.scss";
 
 @mixin roca-primereact-overrides {
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 
   .p-component,
   .p-inputtext {
-    font-family: 'Poppins', sans-serif !important;
+    font-family: "Poppins", sans-serif !important;
   }
 
   // Remove focus rings / box shadows on all PrimeReact components.
@@ -27,9 +27,10 @@
   }
 
   .p-button {
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.8125rem;
-    padding: 0.4375rem 0.875rem;
+    font-family: "Poppins", sans-serif;
+    font-size: 12px;
+    padding: 0.45rem 0.875rem;
+    line-height: 1.2;
 
     &:focus,
     &:focus-visible,
@@ -74,7 +75,11 @@
   }
 
   .p-button.p-button-primary,
-  .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-help):not(.p-button-danger) {
+  .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(
+      .p-button-secondary
+    ):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(
+      .p-button-help
+    ):not(.p-button-danger) {
     background: $roca-color-btn-primary-bg;
     border-color: $roca-color-btn-primary-bg;
     color: $roca-color-btn-primary-text;
@@ -197,6 +202,23 @@
       font-weight: 600;
       font-size: 0.8125rem;
       padding: 0.625rem 0.875rem;
+      vertical-align: middle !important;
+      white-space: nowrap;
+
+      .p-column-header-content {
+        display: flex;
+        align-items: center;
+      }
+
+      &[style*="text-align: center"] .p-column-header-content,
+      &[style*="text-align:center"] .p-column-header-content {
+        justify-content: center;
+      }
+
+      &[style*="text-align: right"] .p-column-header-content,
+      &[style*="text-align:right"] .p-column-header-content {
+        justify-content: flex-end;
+      }
     }
 
     .p-sortable-column {
@@ -230,9 +252,19 @@
 
     .p-datatable-tbody > tr > td {
       border-color: $roca-color-table-border;
-      padding: 0.625rem 0.75rem;
+      padding: 0.625rem 0.875rem;
       color: $roca-color-text-primary;
       font-size: 0.8125rem;
+      vertical-align: middle !important;
+      white-space: nowrap;
+    }
+
+    .p-datatable-tbody > tr.p-datatable-emptymessage > td {
+      text-align: center !important;
+      vertical-align: top !important;
+      white-space: normal !important;
+      height: auto !important;
+      padding: 2.5rem 0.75rem 4.25rem !important;
     }
 
     .p-datatable-tbody > tr.p-row-odd {
@@ -249,12 +281,21 @@
     box-shadow: $roca-shadow-lg;
     overflow: hidden;
     font-size: 0.8125rem;
+
+    .p-dialog-content {
+      padding: 0.5rem 1.25rem 1rem !important;
+    }
   }
 
   .p-dialog-footer {
+    padding: 0.875rem 1.25rem 1.25rem !important;
+
     .p-button {
-      font-size: 0.75rem;
-      padding: 0.3125rem 0.75rem;
+      margin: 0 !important;
+      font-size: 0.8125rem;
+      padding: 0.4375rem 1.125rem;
+      line-height: 1.2;
+      min-height: 2rem;
 
       &:enabled:focus,
       &:enabled:active,
@@ -264,7 +305,9 @@
       }
     }
 
-    .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-danger) {
+    .p-button:not(.p-button-outlined):not(.p-button-text):not(
+        .p-button-link
+      ):not(.p-button-secondary):not(.p-button-danger) {
       background: $roca-color-primary;
       border-color: $roca-color-primary;
 
@@ -292,8 +335,10 @@
     }
 
     .p-dialog-footer .p-button {
-      font-size: 0.75rem;
-      padding: 0.3125rem 0.75rem;
+      font-size: 0.8125rem;
+      padding: 0.4375rem 1.125rem;
+      line-height: 1.2;
+      min-height: 2rem;
     }
   }
 

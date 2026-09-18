@@ -11,26 +11,26 @@
 | Phase | Total Tasks | Completed | Status |
 |---|---:|---:|---|
 | Phase 0 — Project Preparation | 13 | 1 | In Progress |
-| Phase 1 — Application Foundation | 65 | 38 | In Progress |
+| Phase 1 — Application Foundation | 71 | 47 | In Progress |
 | Phase 2 — SharePoint Data Structure | 22 | 4 | In Progress |
-| Phase 3 — Security & Role Management | 14 | 0 | Not Started |
-| Phase 4 — Admin Module | 48 | 18 | In Progress |
-| Phase 5 — NPD Initiator Module | 32 | 0 | Not Started |
-| Phase 6 — NPD Vertical Head Module | 16 | 0 | Not Started |
-| Phase 7 — NPD MIS Coordinator Module | 22 | 0 | Not Started |
+| Phase 3 — Security & Role Management | 14 | 13 | In Progress |
+| Phase 4 — Admin Module | 54 | 24 | In Progress |
+| Phase 5 — NPD Initiator Module | 34 | 28 | In Progress |
+| Phase 6 — NPD Vertical Head Module | 16 | 12 | In Progress |
+| Phase 7 — NPD MIS Coordinator Module | 22 | 6 | In Progress |
 | Phase 8 — Material Group Initiator Module | 20 | 0 | Not Started |
 | Phase 9 — Material Group Consultant Module | 14 | 0 | Not Started |
-| Phase 10 — Workflow Automation | 18 | 0 | Not Started |
+| Phase 10 — Workflow Automation | 18 | 7 | In Progress |
 | Phase 11 — SAP Integration | 12 | 0 | Not Started |
 | Phase 12 — Material Master Integration | 8 | 0 | Not Started |
 | Phase 13 — Analytics & Reports | 10 | 0 | Not Started |
-| Phase 14 — Email Notifications | 8 | 0 | Blocked (ROCA content) |
+| Phase 14 — Email Notifications | 8 | 2 | In Progress |
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **368** | **60** | **In Progress** |
+| **TOTAL** | **376** | **137** | **In Progress** |
 
-**Last Updated:** 16 September 2026
+**Last Updated:** 18 September 2026
 
 ---
 
@@ -88,14 +88,14 @@
 ### 1.4 Routing & App Shell
 
 - [x] **T-0130** Implement `AppRoutes.tsx` with module routes (placeholder screens; Plant/Role/Approver Config routes omitted — ROCA data)
-- [ ] **T-0131** Implement route guards by role (`ProtectedRoute`) — deferred to next phase
+- [x] **T-0131** Implement route guards by role (`ProtectedRoute` + `permissionService.canAccessRoute`)
 - [x] **T-0132** Implement `AppShell.tsx` layout wrapper
 - [x] **T-0133** Implement `Header.tsx` (static `headerSample` wireframe + ROCA logo)
 - [x] **T-0134** Implement `SideNavigation.tsx` — Plant Master, Role, and Approver Configuration removed (ROCA-sourced; no local modules)
 - [ ] **T-0135** Implement `PageHeader.tsx` (screen title, breadcrumbs, actions)
-- [x] **T-0136** Implement `RoleIndicator.tsx` (bottom-left active role display)
+- [x] **T-0136** `RoleIndicator.tsx` implemented (removed from side navigation / AppShell per design requirement)
 - [x] **T-0137** Wire navigation to react-router-dom routes (HashRouter)
-- [ ] **T-0138** Implement unauthorized / access-denied page
+- [x] **T-0138** Implement unauthorized / access-denied page
 
 ### 1.5 Common Components — Composites
 
@@ -123,7 +123,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 - [ ] **T-0150** Populate `Config.ts` with list names, lookup type keys, status constants, roles (routes + nav + roles + `ListNames.LookupType` done)
 - [ ] **T-0151** Populate `Interface.ts` with all domain TypeScript interfaces (`ILookupType` done)
-- [ ] **T-0152** Create `roleService.ts` (user role + brand resolution)
+- [x] **T-0152** Create `roleService.ts` (multi-role resolution from Admins group + ROCA `ApproversMaster`, brand mapping)
 - [ ] **T-0153** Create `lookupService.ts` (lookup queries with cache helpers)
 - [x] **T-0154** Create `exportService.ts`, `importService.ts`, `templateService.ts` (reusable Import/Export)
 - [ ] **T-0155** Implement global error handling pattern (toast + slice error state)
@@ -131,7 +131,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ### 1.7 Redux Foundation
 
-- [x] **T-0160** Create `appSlice.ts` (user, role, brands, toast, loader) — user + role done; toast/loader pending
+- [x] **T-0160** Create `appSlice.ts` (user, assignedRoles, per-role brands, roleStatus) — toast/loader pending
 - [ ] **T-0161** Create `lookupSlice.ts` (lookup cache by type)
 - [x] **T-0162** Create `uiSlice.ts` (sidebar, dialogs, nav state) — nav state done; confirm dialog pending
 - [x] **T-0163** Create `appThunks.ts` — `initializeApp` on mount
@@ -173,20 +173,20 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ## Phase 3 — Security & Role Management
 
-- [ ] **T-0301** Implement logged-in user identification (`currentUser`)
-- [ ] **T-0302** Implement Employee ID retrieval (profile / list)
-- [ ] **T-0303** Implement Admin group membership check
-- [ ] **T-0304** Implement role resolution from ROCA `ApproversMaster` (not a local Approver Configuration module)
-- [ ] **T-0305** Implement brand mapping for Initiator and Vertical Head
-- [ ] **T-0306** Store role + brands in Redux `appSlice`
-- [ ] **T-0307** Implement role-based navigation filtering
-- [ ] **T-0308** Implement role-based route guards
-- [ ] **T-0309** Implement role-based action button visibility
-- [ ] **T-0310** Block unauthorized URL / page access
-- [ ] **T-0311** Validate Initiator access rules (own requests only)
-- [ ] **T-0312** Validate Vertical Head brand-scoped access
-- [ ] **T-0313** Validate MIS Coordinator assigned-request access
-- [ ] **T-0314** Validate Consultant Material Group access only
+- [x] **T-0301** Implement logged-in user identification (`currentUser` / SPFx page context)
+- [ ] **T-0302** Implement Employee ID retrieval (profile / list) — role match uses ApproversMaster `Users` Person field, not Employee ID
+- [x] **T-0303** Implement Admin group membership check (`SharePointGroups.Admins`)
+- [x] **T-0304** Implement role resolution from ROCA `ApproversMaster` (expand `Role/Title`, match `Users`)
+- [x] **T-0305** Implement brand mapping for Initiator and Vertical Head (and other mapped roles)
+- [x] **T-0306** Store assigned roles + brands in Redux `appSlice` (multi-role union, no override)
+- [x] **T-0307** Implement role-based navigation filtering (`filterNavigationByRoles`)
+- [x] **T-0308** Implement role-based route guards (`ProtectedRoute`)
+- [x] **T-0309** Implement role-based action helpers (`hasPermission`, `canActOnNpdBrand`)
+- [x] **T-0310** Block unauthorized URL / page access (`/unauthorized`)
+- [x] **T-0311** Initiator access rules encoded (`includeOwn` + initiator brands; cannot approve/reject)
+- [x] **T-0312** Vertical Head brand-scoped access encoded (`npdVerticalHeadBrands`)
+- [x] **T-0313** MIS Coordinator assigned-request access encoded (brand filter when mapped; otherwise module-wide)
+- [x] **T-0314** Consultant Material Group access only (NPD nav/routes hidden; MG actions only)
 
 ---
 
@@ -252,6 +252,16 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0493** Shared form dialog SCSS (`_form-dialog-standard.scss`) — title/label hierarchy + footer buttons
 - [x] **T-0494** Consistent **Lookup Type** spelling in nav, headings, routes, and dialog titles
 - [x] **T-0495** Apply global standards to Lookup Type, Lookup, Brand Material Extension, Workflow Configuration masters
+- [x] **T-0496** Master reset button visible styling + compact toolbar control heights (`_master-toolbar.scss`)
+- [x] **T-0496a** Matched Search & Reset button heights (`2rem`) with dashboard buttons; Reset button theme-color background with white icon, permanent style (`_master-toolbar.scss`, `MasterToolbarSearch.tsx`)
+- [x] **T-0496b** DataTables Actions column alignment: compact column width (`5.5rem`), left-aligned under "Action" header, eliminated excess whitespace on right across all master tables
+- [x] **T-0496c** Form popup buttons alignment: eliminated PrimeReact default button right margins, aligned dialog content/footer padding to ensure buttons are flush with input fields
+- [x] **T-0496d** Side navigation: removed separator line below Reports at the very bottom while preserving all other section separators (`NavSection.module.scss`, `SideNavigation.module.scss`)
+- [x] **T-0497** Export `{Name}_Export_{DD-MM-YYYY}` + themed Excel header via `xlsx-js-style` (`exportService.ts`)
+- [x] **T-0498** Import duplicate validation table in `ImportDialog` (preview/commit thunks; Proceed imports valid rows)
+- [x] **T-0499** Taller form dialog footer buttons (`_form-dialog-standard.scss`)
+- [x] **T-0500** Workflow: editable Next Role on all steps except Initiator on edit; Current Role derived from prior Next Role
+- [x] **T-0500a** RoleMaster filter uses `System/Title eq "New Product Development"` for NPD workflow roles
 
 ### 4.9 Material Master
 
@@ -282,12 +292,16 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 
 ### 5.1 List Views
 
-- [ ] **T-0501** Implement NPD All Requests table (own requests, summary cards)
-- [ ] **T-0502** Implement NPD Pending Approval table (view-only, own requests)
-- [ ] **T-0503** Implement NPD Approved Requests table (view-only, own requests)
-- [ ] **T-0504** Implement NPD Draft / ReWork table (edit + resubmit)
-- [ ] **T-0505** Implement search, status filter, brand filter on All Requests
-- [ ] **T-0506** Implement Export CSV on All Requests
+- [x] **T-0501** Implement NPD All Requests table (own requests, summary cards)
+- [x] **T-0502** Implement NPD Pending Approval table (view-only, own requests)
+- [x] **T-0503** Implement NPD Approved Requests table (view-only, own requests)
+- [x] **T-0504** Implement NPD Draft / ReWork table (edit; resubmit pending Submit phase)
+- [x] **T-0505** Implement search, status filter, brand filter on All Requests
+- [x] **T-0506** Implement Export (Excel .xlsx) on All Requests and Approved Requests
+- [x] **T-0507** Standardize search field placeholders across NPD: 'Search here' for Pending/Draft-Rework, and 'Search by Request ID, Plant, Brand, Code, or Material...' for All/Approved dashboard
+- [x] **T-0508** Unify DataTable layout and cell alignment: synchronized column headers, widths, vertical-align middle, white-space nowrap, and left-aligned Products and Actions across All, Approved, Pending, and Draft/Rework
+- [x] **T-0509** Add read-only Workflow Status in a dedicated Workflow column (hidden for Draft); highlight only the current pending workflow role
+- [x] **T-0535** BroadcastChannel lock: View/Edit/Save Draft/Submit/workflow actions in one tab lock the other with Editing Restricted; popup on the other tab's next navigation/interaction
 
 ### 5.2 New NPD Request Form
 
@@ -295,12 +309,12 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0511** Implement cascading Plant/Source — disabled until Material Type selected; Finished Products → ROCA `PlantMaster` (Factory + active); Traded Products → `Config.NpdTradedPlantSources` (Imported, Domestic)
 - [ ] **T-0512** Filter Plant/Source by Brand Material Extension
 - [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
-- [x] **T-0514** Implement Item Details grid (all BRD columns; Material Code / Material Description / HSN / Min. Qty/Box Qty = InputText; other fields = MultiSelect placeholders)
+- [x] **T-0514** Implement Item Details grid (all BRD columns; MultiSelect options from `NPD_Lookup` by Lookup Type matching field name); paginate at 7 rows when there are more than 7 items
 - [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
 - [x] **T-0516** Implement + Add Another Item Line with small inline plus icon next to label
-- [ ] **T-0517** Implement Import items (Excel)
+- [x] **T-0517** Implement Import items (Excel) — header mapping is trim + lowercase + whitespace-insensitive so template columns match Item Details fields; up to 200 rows
 - [x] **T-0518** Implement Total Item Lines counter in section footer
-- [x] **T-0519** Implement Cancel / Back (navigate to `/npd/all`), Save Draft + Submit Request buttons — Save/Submit logic pending next phase
+- [x] **T-0519** Implement Cancel / Back, Save Draft + Submit Request buttons — Save Draft persists header + items (`Status=Draft`); Submit generates Request ID and routes to Vertical Head; Cancel/Back returns to the source list via `from`
 
 ### 5.3 NPD Form Validation
 
@@ -314,38 +328,38 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 ### 5.4 NPD Initiator Services & Redux
 
 - [x] **T-0530** Create `npdFormSlice.ts` and `npdFormThunks.ts` (General Info form state + ROCA dropdown fetches)
-- [x] **T-0531** Create `npdFormDataService.ts` (initiator brand + factory plant/source fetch) — header/items CRUD pending
-- [ ] **T-0532** Implement batch save for header + items on Save Draft / Submit
-- [ ] **T-0533** Implement view-only detail screen for Pending / Approved requests
-- [ ] **T-0534** Implement edit + resubmit flow for Draft / Rework requests
+- [x] **T-0531** Create `npdFormDataService.ts` (initiator brand + factory plant/source fetch) + `npdRequestGeneralInfoService.ts` (General Info Save Draft / load by id / Draft-Rework list)
+- [x] **T-0532** Implement batch save for header + items on Save Draft / Submit
+- [x] **T-0533** Implement view-only detail screen for Pending / Approved requests — Pending Edit opens the same form read-only (Approved list still pending)
+- [x] **T-0534** Implement edit + resubmit flow for Draft / Rework requests — Edit from Draft/Rework loads `/npd/new?id=`; Submit generates/keeps Request ID
 
 ---
 
 ## Phase 6 — NPD Vertical Head Module
 
-- [ ] **T-0601** Implement VH All Requests table (brand-scoped)
-- [ ] **T-0602** Implement VH Pending Approval table (counter + search)
-- [ ] **T-0603** Implement VH Approved Requests table (search, brand filter, Export CSV)
-- [ ] **T-0604** Implement VH Request Detail screen (read-only header + items)
-- [ ] **T-0605** Implement Approve action with confirmation dialog
-- [ ] **T-0606** Implement Rework action with comments and confirmation
-- [ ] **T-0607** Implement Reject action with comments and confirmation
-- [ ] **T-0608** Update request status and route to MIS on Approve
-- [ ] **T-0609** Route Rework back to Initiator with comments
-- [ ] **T-0610** Set Rejected status (permanently closed) on Reject
-- [ ] **T-0611** Implement `verticalHeadAction` thunk in npdSlice
+- [x] **T-0601** Implement VH All Requests table (brand-scoped)
+- [x] **T-0602** Implement VH Pending Approval table (counter + search)
+- [x] **T-0603** Implement VH Approved Requests table (search, brand filter, Export CSV)
+- [x] **T-0604** Implement VH Request Detail screen (read-only header + items)
+- [x] **T-0605** Implement Approve action with confirmation dialog
+- [x] **T-0606** Implement Rework action with comments and confirmation
+- [x] **T-0607** Implement Reject action with comments and confirmation
+- [x] **T-0608** Update request status and route to MIS on Approve
+- [x] **T-0609** Route Rework back to Initiator with comments
+- [x] **T-0610** Set Rejected status (permanently closed) on Reject
+- [x] **T-0611** Implement `verticalHeadAction` thunk in npdSlice — `applyNpdWorkflowAction`
 - [ ] **T-0612** Verify VH cannot access Material Group module
 - [ ] **T-0613** Verify VH cannot perform MIS Coordinator actions
-- [ ] **T-0614** Verify brand-scoped data filtering
+- [x] **T-0614** Verify brand-scoped data filtering
 
 ---
 
 ## Phase 7 — NPD MIS Coordinator Module
 
-- [ ] **T-0701** Implement MIS All Requests table (pending + self-posted)
-- [ ] **T-0702** Implement MIS Pending Approval table
-- [ ] **T-0703** Implement MIS Approved Requests table (posted to SAP by self)
-- [ ] **T-0704** Implement MIS Request Detail — read-only General Information
+- [x] **T-0701** Implement MIS All Requests table (pending + self-posted)
+- [x] **T-0702** Implement MIS Pending Approval table
+- [x] **T-0703** Implement MIS Approved Requests table (posted to SAP by self)
+- [x] **T-0704** Implement MIS Request Detail — read-only General Information
 - [ ] **T-0705** Implement editable Item Details grid
 - [ ] **T-0706** Implement Add Line Item
 - [ ] **T-0707** Implement Other Details section (SAP fields)
@@ -354,8 +368,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [ ] **T-0710** Implement conditional Plant Code / Valuation Class logic
 - [ ] **T-0711** Set Class Type = 001 always
 - [ ] **T-0712** Implement Post to SAP action with confirmation
-- [ ] **T-0713** Implement Rework action with comments
-- [ ] **T-0714** Implement Reject action with comments
+- [x] **T-0713** Implement Rework action with comments
+- [x] **T-0714** Implement Reject action with comments
 - [ ] **T-0715** Implement `misCoordinatorAction` thunk
 - [ ] **T-0716** Verify MIS cannot access Material Group module
 
@@ -404,14 +418,14 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 ## Phase 10 — Workflow Automation
 
 - [ ] **T-1001** Implement NPD request creation trigger
-- [ ] **T-1002** Implement NPD Request ID generation (`NPD-YYYY-####`)
-- [ ] **T-1003** Implement NPD Draft save handling
-- [ ] **T-1004** Implement NPD Submit → route to Vertical Head
-- [ ] **T-1005** Implement VH Approve → route to MIS Coordinator
-- [ ] **T-1006** Implement VH / MIS Rework → route to Initiator
-- [ ] **T-1007** Implement VH / MIS Reject → permanently closed
+- [x] **T-1002** Implement NPD Request ID generation (`NPD-YYYY-###`)
+- [x] **T-1003** Implement NPD Draft save handling — General Information → `NPD_Request` with `WorkFlowJSON`
+- [x] **T-1004** Implement NPD Submit → route to Vertical Head
+- [x] **T-1005** Implement VH Approve → route to MIS Coordinator
+- [x] **T-1006** Implement VH / MIS Rework → route to Initiator
+- [x] **T-1007** Implement VH / MIS Reject → permanently closed
 - [ ] **T-1008** Implement MIS Post to SAP → Completed
-- [ ] **T-1009** Implement NPD resubmission after Rework
+- [x] **T-1009** Implement NPD resubmission after Rework
 - [ ] **T-1010** Implement MG request creation trigger
 - [ ] **T-1011** Implement MG Request ID generation
 - [ ] **T-1012** Implement MG Submit → route to Consultant
@@ -475,9 +489,9 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 
 - [ ] **T-1401** Receive final email content from ROCA
 - [ ] **T-1402** Identify all notification scenarios and recipients
-- [ ] **T-1403** Create email templates
+- [x] **T-1403** Create email templates
 - [ ] **T-1404** Implement notification triggers (Power Automate or equivalent)
-- [ ] **T-1405** Include Request ID, details, status, rework info in emails
+- [x] **T-1405** Include Request ID, details, status, rework info in emails
 - [ ] **T-1406** Test each notification scenario
 - [ ] **T-1407** UAT notification flow
 - [ ] **T-1408** Enable notifications in production
@@ -560,6 +574,13 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 |---|---|---|
 | 10 Sep 2026 | Initial TaskList created from TechnicalArchitecture + TRD + Master doc | All |
 | 10 Sep 2026 | Marked Phase 1 setup tasks complete (SPFx, PnP v4, PrimeReact, theme) | T-0101–T-0107, T-0110–T-0113, T-0120–T-0122 |
+| 17 Sep 2026 | Standardized search placeholders ('Search here' / Plant) and unified common DataTable layout across all NPD views | T-0501–T-0508 |
+| 18 Sep 2026 | Fixed NPD Item Details Excel import header matching (trim + lowercase + whitespace-insensitive) so template columns are not marked missing | T-0517 |
+| 18 Sep 2026 | Role-based View/Edit/approval actions: View is read-only, Edit first when the user can act, no Delete on request tables, VH/MIS nav limited to permitted modules | T-0311–T-0313, T-0502, T-0533, T-0602 |
+| 18 Sep 2026 | Added read-only Workflow Status dialog on request list Actions; current Pending step highlighted from WorkFlowJSON | T-0509 |
+| 18 Sep 2026 | Workflow Status highlights logged-in user roles; empty approver status shows Pending; BroadcastChannel Editing Restricted lock across tabs | T-0509, T-0535 |
+| 18 Sep 2026 | Save Draft uses the Submit line-item progress bar; BroadcastChannel notifies View/Edit/any action; Item Details paginate at 7 rows; Workflow is its own column (hidden on Draft); highlight only the current pending workflow role | T-0509, T-0514, T-0519, T-0535 |
+| 18 Sep 2026 | Centered DataTable empty states; Pending status shows current workflow role; Current Approver column; Item Details render memoization | T-0501, T-0508, T-0514 |
 
 ---
 
