@@ -49,7 +49,8 @@ $roca-dialog-control-size: 0.8125rem;
       background-color: $roca-color-bg-surface;
       border-top: 1px solid $roca-color-border-light;
 
-      :global(.p-button),
+      /* Already inside :global — do not nest :global(...) (heft: Missing whitespace after :global). */
+      .p-button,
       button {
         margin: 0 !important;
       }

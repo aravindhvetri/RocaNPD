@@ -190,7 +190,7 @@ const WorkflowConfigurationMaster: React.FC = () => {
         ).unwrap();
         showSuccessToast(
           toastRef,
-          `Workflow for "${snapshot.requestType}" was deleted.`,
+          `Workflow for "${snapshot.requestType}" deleted successfully.`,
         );
       } catch {
         // Error toast handled via slice error effect.

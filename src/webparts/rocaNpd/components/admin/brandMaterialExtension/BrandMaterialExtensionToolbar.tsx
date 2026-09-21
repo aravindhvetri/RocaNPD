@@ -1,4 +1,5 @@
 import * as React from "react";
+import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import { Button } from "../../common/controls";
 import { MasterToolbarSearch } from "../../common/master/MasterToolbar";
 import styles from "../../common/master/MasterToolbar/MasterToolbar.module.scss";
@@ -8,6 +9,8 @@ export interface IBrandMaterialExtensionToolbarProps {
   onSearchChange: (value: string) => void;
   onResetFilters: () => void;
   filtersActive?: boolean;
+  exportDisabled?: boolean;
+  onExport: () => void;
   onAddNew: () => void;
 }
 
@@ -18,6 +21,8 @@ const BrandMaterialExtensionToolbar: React.FC<
   onSearchChange,
   onResetFilters,
   filtersActive = false,
+  exportDisabled = false,
+  onExport,
   onAddNew,
 }) => (
   <div className={styles.toolbar}>
@@ -32,6 +37,14 @@ const BrandMaterialExtensionToolbar: React.FC<
         onResetFilters={onResetFilters}
       />
 
+      <Button
+        label={FieldLabels.Export}
+        icon="pi pi-download"
+        size="sm"
+        className={styles.actionButton}
+        disabled={exportDisabled}
+        onClick={onExport}
+      />
       <Button
         label="Add New"
         icon="pi pi-plus"

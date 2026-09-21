@@ -14,6 +14,7 @@ import {
   softDeleteBrandMaterialExtension,
   updateBrandMaterialExtension,
 } from "../../../../../store/thunks/brandMaterialExtensionThunks";
+import { exportBrandMaterialExtensionsToExcel } from "../../../../../External/CommonServices/brandMaterialExtensionService";
 import {
   DeleteConfirmDialog,
   LoaderOverlay,
@@ -101,6 +102,29 @@ const BrandMaterialExtensionMaster: React.FC = () => {
     [items],
   );
 
+  const filteredRows = React.useMemo(() => {
+    const query = globalFilter.trim().toLowerCase();
+    if (!query) {
+      return tableRows;
+    }
+
+    return tableRows.filter(
+      (row) =>
+        row.Brand.toLowerCase().includes(query) ||
+        row.Plant.toLowerCase().includes(query),
+    );
+  }, [globalFilter, tableRows]);
+
+  const handleExportClick = (): void => {
+    if (!filteredRows.length) {
+      showWarningToast(toastRef, "No records to export.");
+      return;
+    }
+
+    exportBrandMaterialExtensionsToExcel(filteredRows);
+    showSuccessToast(toastRef, "Export completed successfully.");
+  };
+
   const openCreateDialog = (): void => {
     if (rocaOptions.brandsStatus === "loading") {
       showWarningToast(toastRef, "Brand options are still loading. Please wait.");
@@ -186,7 +210,7 @@ const BrandMaterialExtensionMaster: React.FC = () => {
     void (async () => {
       try {
         await dispatch(softDeleteBrandMaterialExtension(snapshot.id)).unwrap();
-        showSuccessToast(toastRef, `"${snapshot.brand}" was deleted.`);
+        showSuccessToast(toastRef, `"${snapshot.brand}" deleted successfully.`);
       } catch {
         // Error toast handled via slice error effect.
       }
@@ -204,17 +228,19 @@ const BrandMaterialExtensionMaster: React.FC = () => {
       <BrandMaterialExtensionToolbar
         searchValue={globalFilter}
         filtersActive={Boolean(globalFilter.trim())}
+        exportDisabled={!filteredRows.length}
         onSearchChange={setGlobalFilter}
         onResetFilters={() => setGlobalFilter("")}
+        onExport={handleExportClick}
         onAddNew={openCreateDialog}
       />
 
       <div className={styles.tablePanel}>
         <MasterTablePanel>
           <BrandMaterialExtensionTable
-            rows={tableRows}
+            rows={filteredRows}
             loading={false}
-            globalFilter={globalFilter}
+            globalFilter=""
             onEdit={openEditDialog}
             onDelete={requestDelete}
           />

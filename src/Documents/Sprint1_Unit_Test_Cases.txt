@@ -1,0 +1,329 @@
+ROCA NPD — SPRINT 1 UNIT TEST CASES
+===============================================================================
+Document:     Sprint1_Unit_Test_Cases.txt
+Location:     src/Documents/
+Purpose:      Manual Excel import. Each SHEET section below should become
+              a separate Excel worksheet.
+Application:  ROCA NPD (SPFx)
+Sprint scope: Sprint 1 — implemented NPD + Admin masters + Initiator submit
+              through Vertical Head email only.
+Button label: The form button is "SUBMIT REQUEST" (code). Treat "Send Request"
+              as the same action.
+Last updated: 18 September 2026
+Verified against current source (not a runtime UAT run).
+
+HOW TO LOAD INTO EXCEL
+-------------------------------------------------------------------------------
+1. Create a workbook with one sheet per SHEET name listed in the Cover sheet.
+2. Copy the column header row, then one row per test case.
+3. Suggested columns for every test sheet:
+   Test Case ID | Title | Type | Priority | Preconditions | Test Steps |
+   Expected Result | Test Data | Related Rule / Code
+4. Status / Actual Result / Tester / Date can be added in Excel.
+
+SPRINT 1 IN SCOPE
+-------------------------------------------------------------------------------
+- Login, role resolution, side navigation, unauthorized route
+- Admin: Lookup Type, Lookup, Workflow Configuration, Brand Material Extension
+- NPD lists: All Requests, Pending Approval, Approved Requests, Draft / ReWork
+- NPD Form: Initiator create / Save Draft / Submit Request
+- Submit email to Vertical Head (Approve / Re-work / Reject buttons)
+- Common DataTable empty state, search, export, import, tab lock
+- Common controls used by the above screens
+
+SPRINT 1 OUT OF SCOPE (do not execute in this pack)
+-------------------------------------------------------------------------------
+- Vertical Head Approve / Rework / Reject on the form (after email)
+- MIS Coordinator actions, Post to SAP
+- Material Group module
+- Reports
+- SAP / Material Master integration
+
+PASS/FAIL NOTE
+-------------------------------------------------------------------------------
+Expected results are taken from the current code and ProjectStandards
+(R-NPD*, R-SEC*, R-C*). If a step fails, log the defect against the
+Related Rule / Code column.
+
+===============================================================================
+SHEET: 00_Cover
+===============================================================================
+Sheet Name                         | Module                                      | Approx TCs
+00_Cover                           | Index                                       | —
+01_Roles_And_Navigation            | Login, roles, nav, route guard              | 18
+02_Lookup_Type_Master              | Administration — Lookup Type                | 16
+03_Lookup_Master                   | Administration — Lookup                     | 18
+04_Workflow_Configuration          | Administration — Workflow Configuration     | 14
+05_Brand_Material_Extension        | Administration — Brand Material Extension   | 12
+06_NPD_Form_Initiator_Submit       | New NPD Request through VH email            | 32
+07_Draft_Rework                    | Draft / ReWork list                         | 14
+08_All_Requests                    | All Requests dashboard                      | 16
+09_Pending_Approval                | Pending Approval list                       | 12
+10_Approved_Requests               | Approved Requests list                      | 10
+11_Common_UI_Import_Export         | Shared DataTable / import / export / empty  | 12
+12_Tab_Lock                        | Broadcast Channel two-tab lock              | 8
+
+===============================================================================
+SHEET: 01_Roles_And_Navigation
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-NAV-001 | App loads for mapped Initiator | Positive | High | User exists in ApproversMaster System=New Product Development, Role=Initiator, with at least one Brand | 1. Open the NPD workbench as that user. 2. Wait for app initialize. | App shell (header + side nav + content) loads. Home redirects to All Requests. No unauthorized page. | Initiator email mapped in ApproversMaster | permissionService.getDefaultRoute, initializeApp
+TC-NAV-002 | Initiator navigation items | Positive | High | Same as TC-NAV-001 | 1. Review NPD Request section in side nav. | Visible: New NPD Request, All Requests, Pending Approval, Approved Requests, Draft / ReWork. Hidden: Administration (unless also Admin). Material Group New/Draft only if also MG Initiator. | Initiator-only user | R-SEC03, NAV_ITEM_ALLOWED_ROLES
+TC-NAV-003 | Vertical Head navigation items | Positive | High | User mapped as Vertical Head for NPD, not Initiator | 1. Open app as VH. 2. Review side nav. | Visible: All Requests, Pending Approval, Approved Requests only. Hidden: New NPD Request, Draft / ReWork, Administration. | VH-only user | R-SEC03, filterNavigationByRoles
+TC-NAV-004 | MIS Coordinator navigation items | Positive | High | User mapped as MIS Coordinator for NPD | 1. Open app as MIS. 2. Review side nav. | Visible: All, Pending, Approved, Reports. Hidden: New NPD Request, Draft / ReWork unless also Initiator. | MIS-only user | R-SEC03
+TC-NAV-005 | Admin navigation items | Positive | High | User in SharePoint group Admins | 1. Open app as Admin. 2. Review Administration section. | Visible: Lookup Type, Lookup, Workflow Configuration, Brand Material Extension. Material Master may show as placeholder. | Admin group member | NAV_ITEM_ALLOWED_ROLES admin-*
+TC-NAV-006 | Multi-role union navigation | Positive | High | Same user is Initiator + Vertical Head in ApproversMaster | 1. Open app. 2. Review nav. | Union of both roles: New Request + Draft/ReWork (Initiator) AND All/Pending/Approved (both). One role does not hide the other. | Dual-role user | R-SEC03, R-NPD15
+TC-NAV-007 | Unmapped user sees unauthorized | Negative | High | User has no ApproversMaster NPD row and is not Admin | 1. Open app. | User cannot use NPD screens. Access denied / unauthorized or empty role set with protected routes blocking NPD. | Unmapped account | ProtectedRoute, canAccessRoute
+TC-NAV-008 | Direct URL to New Request as VH | Negative | High | VH-only user | 1. Open #/npd/new directly. | ProtectedRoute blocks. Redirect to unauthorized or default allowed route. Not the new-request form. | VH-only | ROUTE_ALLOWED_ROLES NpdNew = Initiator, VH, MIS — NOTE: code currently allows VH onto /npd/new for view/edit of existing requests. For NEW create without id, footer is initiator-edit only if canEditDraft. Verify: VH opening /npd/new with no id does not get Save Draft / SUBMIT REQUEST. | Config.Routes.NpdNew, resolveNpdFooterMode
+TC-NAV-009 | Compact vs expanded side nav | Positive | Medium | Any allowed user | 1. Collapse sidebar. 2. Expand again. 3. Click a nav item. | Compact icons still show allowed items only. Clicking navigates. Selected item uses white background + dark teal text. | Any | R-UI, SideNavigationCompact
+TC-NAV-010 | Active nav item matches route | Positive | Medium | Initiator | 1. Go to All Requests. 2. Go to Pending. 3. Go to Draft / ReWork. | The matching nav item is selected each time. | Initiator | NavRouteSync, SideNavigation
+TC-NAV-011 | New NPD Request is primary action | Positive | Medium | Initiator | 1. Locate New NPD Request. | Item is styled as primary action (gold selected bar). Click opens #/npd/new. | Initiator | navigationConfig isPrimaryAction
+TC-NAV-012 | HashRouter deep link after refresh | Positive | High | Initiator on All Requests | 1. Navigate to Pending Approval. 2. Refresh the browser. | Same hash route reloads Pending Approval, not a blank page. | Initiator | HashRouter
+TC-NAV-013 | Unknown hash redirects to default | Positive | Medium | Initiator | 1. Open #/does-not-exist. | Redirects to default home (All Requests). | Initiator | AppRoutes path=*
+TC-NAV-014 | Unauthorized page is reachable | Positive | Medium | Any authenticated user | 1. Open #/unauthorized. | Unauthorized page renders. Not a crash. | Any | Unauthorized.tsx
+TC-NAV-015 | Brand scope comes from ApproversMaster | Positive | High | Initiator mapped to Brand ROCA only | 1. Open New NPD Request. 2. Open Brand (MG1). | Only ROCA (and other brands mapped to that user as Initiator) appear. Brands for other initiators do not. | Initiator+ROCA | R-NPD03, fetchInitiatorBrandOptions
+TC-NAV-016 | VH brand scope for lists | Positive | High | VH mapped to Brand ROCA only | 1. Open All Requests. | Only requests with Brand ROCA are listed. Other brands hidden. | VH+ROCA | R-NPD17, fetchNpdDashboardList
+TC-NAV-017 | MIS sees all NPD brands | Positive | High | MIS Coordinator, requests exist for multiple brands | 1. Open All Requests. | Requests for all brands appear. MIS “see all” is a superset, not an override of other roles. | MIS | R-NPD17
+TC-NAV-018 | Role resolution uses email match | Positive | High | ApproversMaster Users person field email equals login email | 1. Login. | Roles resolve via client-side filter after expand (System, Role, Users email). No crash if OData person filter is unsupported. | Matching email | R-NPD05a, personFieldUtils
+
+===============================================================================
+SHEET: 02_Lookup_Type_Master
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-LT-001 | Admin can open Lookup Type | Positive | High | Admin user | 1. Open Administration > Lookup Type. | Master screen loads with toolbar (search, import, export, add) and DataTable. | Admin | LookupTypeMaster
+TC-LT-002 | Non-admin cannot open Lookup Type | Negative | High | Initiator-only | 1. Open #/admin/lookup-type. | Route blocked. Unauthorized or redirect. | Initiator | ProtectedRoute
+TC-LT-003 | Add Lookup Type success | Positive | High | Admin, unique name | 1. Click Add. 2. Enter Lookup Type name. 3. Save. | Record created in NPD_LookupType. Grid refreshes. Success toast. Soft-delete flag is active (not deleted). | Type = Product Group MG2 | lookupTypeService, softDelete
+TC-LT-004 | Lookup Type name required | Negative | High | Admin, add dialog open | 1. Leave name empty. 2. Save. | Validation warning. No SharePoint write. | Empty name | LookupTypeFormDialog
+TC-LT-005 | Duplicate Lookup Type blocked | Negative | High | Type "UOM" already exists (active) | 1. Add another "UOM" (same spelling, different case). 2. Save. | Duplicate validation. Record not created. | uom vs UOM | lookupType validation
+TC-LT-006 | Edit Lookup Type | Positive | High | Existing type | 1. Click Edit. 2. Change name. 3. Save. | Name updated. Grid shows new name. | Rename a test type | LookupTypeMaster
+TC-LT-007 | Delete Lookup Type with no children | Positive | High | Type not used by any Lookup | 1. Click Delete. 2. Confirm. | Soft delete (IsDeleted). Row disappears from active grid. | Unused type | softDeleteLookupType
+TC-LT-008 | Delete Lookup Type blocked when used | Negative | High | Type has Lookup children | 1. Click Delete. | Delete blocked dialog. Record remains active. | Type used by lookups | DeleteBlockedDialog
+TC-LT-009 | Search Lookup Type | Positive | Medium | Multiple types | 1. Type a partial name in search. | Grid filters to matching rows. Clear search restores all. | Partial name | MasterToolbarSearch
+TC-LT-010 | Empty search result message | Positive | Medium | Types exist | 1. Search a value that matches nothing. | Centered empty message (No Records Found), 12px, slightly above vertical center. | ZZZZ | DataTable emptyMessage
+TC-LT-011 | Export Lookup Type Excel | Positive | High | Types exist | 1. Click Export. | Excel .xlsx downloads. Filename {Name}_Export_{DD-MM-YYYY}. Header row themed. | Any types | exportToExcel, R-B39j
+TC-LT-012 | Import valid Lookup Types | Positive | High | Excel with new unique types | 1. Import. 2. Select file. 3. Confirm. | New types created. Success toast with count. | New unique names | commitImportLookupTypes
+TC-LT-013 | Import duplicate shows validation dialog | Negative | High | Excel contains an existing type name | 1. Import file. | ImportValidationDialog shows S.NO + Validation Error. User can cancel or proceed only with valid new rows per current import rules. | Duplicate name | ImportValidationDialog
+TC-LT-014 | Import rejects wrong file type / oversize | Negative | Medium | Non-xlsx or over max size | 1. Try import. | File rejected with size/format message. No write. | .txt file | Config.ImportExport
+TC-LT-015 | Pagination on Lookup Type | Positive | Medium | More than one page of types | 1. Change page / page size. | Paginator report: Showing x to y of z entries. No extra box around report. | 20+ types | DataTable paginator
+TC-LT-016 | Soft-deleted type not listed | Positive | High | Previously deleted type | 1. Open Lookup Type grid. | Deleted type is not in the active list. | Deleted type title | getActiveRecordFilters
+
+===============================================================================
+SHEET: 03_Lookup_Master
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-LK-001 | Admin can open Lookup | Positive | High | Admin, at least one Lookup Type | 1. Open Administration > Lookup. | Grid loads. Toolbar search/import/export/add available. | Admin | LookupMaster
+TC-LK-002 | Add Lookup success | Positive | High | Active Lookup Type exists | 1. Add. 2. Select Lookup Type. 3. Enter Lookup Name and Lookup Code. 4. Save. | Row created in NPD_Lookup. Name/Code/Type shown. | Type=UOM, Name=PC, Code=PC | lookupService
+TC-LK-003 | Lookup Type required | Negative | High | Add dialog open | 1. Leave Lookup Type empty. 2. Save. | Validation. No write. | — | LookupFormDialog required
+TC-LK-004 | Lookup Name required | Negative | High | Type selected | 1. Leave name empty. 2. Save. | Validation. No write. | — | LookupFormDialog
+TC-LK-005 | Lookup Code required | Negative | High | Type and name filled | 1. Leave code empty. 2. Save. | Validation. No write. | — | LookupFormDialog
+TC-LK-006 | Duplicate Lookup Name within type blocked | Negative | High | PC already exists under UOM | 1. Add another PC under UOM. | Duplicate warning. Not created. | Name=PC | lookupValidation
+TC-LK-007 | Same name allowed under different type | Positive | Medium | Name exists under Type A | 1. Create same name under Type B. | Allowed if validation is per type (verify current lookupValidation). If blocked globally, record actual vs expected. | Same name, different type | lookupValidation
+TC-LK-008 | Edit Lookup | Positive | High | Existing lookup | 1. Edit name/code. 2. Save. | Grid updates. | Change description/code | LookupMaster
+TC-LK-009 | Delete Lookup unused | Positive | High | Lookup not referenced | 1. Delete. Confirm. | Soft deleted. Removed from grid. | Unused lookup | softDeleteLookup
+TC-LK-010 | Delete Lookup blocked when used | Negative | High | Lookup used by Item Details / other dependency | 1. Delete. | Delete blocked dialog with reason. Record remains. | Used lookup | DeleteBlockedDialog, dependencyValidationService
+TC-LK-011 | Search Lookup | Positive | Medium | Multiple lookups | 1. Search by name or code. | Matching rows only. | Partial text | MasterToolbarSearch
+TC-LK-012 | Export Lookup Excel | Positive | High | Lookups exist | 1. Export. | Valid .xlsx with Lookup Type, Name, Code. | Any | exportToExcel
+TC-LK-013 | Import valid Lookups | Positive | High | Excel with type + name + code for existing types | 1. Import. | New lookups created. | Unique names | commitImportLookups
+TC-LK-014 | Import validation dialog columns | Negative | High | File with duplicates | 1. Import. | Validation popup columns are the Lookup import columns (not NPD S.NO-only). Duplicates listed. | Duplicate names | ImportValidationDialog
+TC-LK-015 | Empty Lookup grid message | Positive | Medium | Filter/search matches none | 1. Search nonsense. | Centered No Records Found, 12px. | ZZZZ | DataTable
+TC-LK-016 | Lookup options feed NPD Item Details | Positive | High | UOM lookups No and PC active | 1. As Initiator open New NPD Request. 2. Open UOM on a line. | Options are Lookup Title values (No, PC), not a LookupName column. | UOM No/PC | R-NPD11, lookupOptionUtils
+TC-LK-017 | Inactive/deleted lookup not in NPD dropdown | Positive | High | Soft-deleted UOM value | 1. Open Item Details UOM. | Deleted value is not selectable. | Deleted lookup | fetchActiveLookups
+TC-LK-018 | Non-admin cannot open Lookup | Negative | High | Initiator | 1. Open #/admin/lookup. | Blocked. | Initiator | ProtectedRoute
+
+===============================================================================
+SHEET: 04_Workflow_Configuration
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-WF-001 | Admin opens Workflow Configuration | Positive | High | Admin | 1. Open Workflow Configuration. | Grid of request type + steps. Add/Edit/Delete available. | Admin | WorkflowConfigurationMaster
+TC-WF-002 | Create NPD Request workflow | Positive | High | NPD roles exist in RoleMaster | 1. Add. 2. Request Type = NPD Request. 3. Add steps Initiator → Vertical Head → MIS Coordinator in order. 4. Save. | One configuration stored in NPD_WorkflowConfig. Sequence preserved. | NPD Request | R-NPD09, workflowConfigurationUtils
+TC-WF-003 | At least one step required | Negative | High | Add dialog | 1. Choose request type. 2. Remove all steps. 3. Save. | Warning: At least one workflow step is required. No write. | — | WorkflowConfigFormDialog
+TC-WF-004 | Next role options sequential | Positive | High | NPD Request type | 1. Set first step role. 2. Open next step role dropdown. | Only allowed next roles from configuration utils (cannot skip sequence incorrectly). | NPD | getAvailableNextRoleOptions
+TC-WF-005 | Duplicate request type blocked | Negative | High | NPD Request config already exists | 1. Add another NPD Request workflow. | Validation prevents duplicate request type configuration. | NPD Request | workflowConfigurationValidation
+TC-WF-006 | Edit workflow steps | Positive | High | Existing NPD config | 1. Edit. 2. Change a step. 3. Save. | Steps updated. Old step ids handled (update/soft delete as coded). | Change sequence | softDeleteWorkflowConfiguration / save
+TC-WF-007 | Delete workflow configuration | Positive | Medium | Unused or allowed config | 1. Delete. Confirm. | Configuration steps soft-deleted. Removed from grid. | Test MG or extra config | WorkflowConfigurationMaster
+TC-WF-008 | NPD submit uses this sequence | Positive | High | NPD config Initiator → VH → MIS | 1. As Initiator submit a request. 2. Open Workflow Status on the new Pending row. | JSON roles match config order. Initiator Status is blank. First approver (VH) Status = Pending. MIS Status blank. | New submit | R-NPD09, buildNpdDraftWorkflowJson
+TC-WF-009 | VH users resolved from ApproversMaster by brand | Positive | High | VH mapped to Brand ROCA | 1. Submit ROCA request. 2. Inspect WorkFlowJSON. | Vertical Head UserEmail is the ApproversMaster VH for that brand. | Brand ROCA | R-NPD09
+TC-WF-010 | MIS emails include all MIS assignees | Positive | High | Two MIS users in ApproversMaster | 1. Submit request. 2. Inspect JSON MIS step. | MIS Coordinator includes assigned emails (all MIS), not brand-filtered. | Two MIS emails | R-NPD09
+TC-WF-011 | Initiator step is logged-in user | Positive | High | Initiator A submits | 1. Submit. 2. Read JSON Initiator UserEmail. | Equals Initiator A email. Status "". | Initiator A | R-NPD09
+TC-WF-012 | Non-admin cannot open workflow config | Negative | High | Initiator | 1. Open #/admin/workflow-config. | Blocked. | Initiator | ProtectedRoute
+TC-WF-013 | Search / empty state | Positive | Medium | Config rows exist | 1. Search unmatched text. | Centered empty message. | ZZZZ | DataTable
+TC-WF-014 | MG Request type available but out of Sprint 1 execution | Informational | Low | Admin | 1. Open add dialog. | MG Request may appear as a request type. Do not use for Sprint 1 NPD sign-off. | — | WorkflowRequestTypes.MgRequest
+
+===============================================================================
+SHEET: 05_Brand_Material_Extension
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-BME-001 | Admin opens Brand Material Extension | Positive | High | Admin | 1. Open Brand Material Extension. | Grid loads with add/edit/delete. | Admin | BrandMaterialExtensionMaster
+TC-BME-002 | Add mapping success | Positive | High | Brand and material type values available | 1. Add. 2. Select Brand and Material Type / extension fields as on dialog. 3. Save. | Row created in NPD_BrandMaterialExtensionMaster. | Brand + type | BrandMaterialExtensionFormDialog
+TC-BME-003 | Required fields enforced | Negative | High | Add dialog | 1. Leave required dropdowns empty. 2. Save. | Validation. No write. | Empty | required fields
+TC-BME-004 | Duplicate mapping blocked | Negative | High | Same pair already exists | 1. Add duplicate. | Duplicate validation. | Existing pair | brand extension validation
+TC-BME-005 | Edit mapping | Positive | Medium | Existing row | 1. Edit. 2. Save. | Grid updates. | Change type | BrandMaterialExtensionMaster
+TC-BME-006 | Delete mapping | Positive | Medium | Unused mapping | 1. Delete. Confirm. | Soft deleted. Hidden from grid. | Unused | softDeleteBrandMaterialExtension
+TC-BME-007 | Search mapping | Positive | Medium | Multiple rows | 1. Search brand name. | Filtered rows. | Brand text | MasterToolbarSearch
+TC-BME-008 | Empty state | Positive | Medium | No match | 1. Search nonsense. | No Records Found centered 12px. | ZZZZ | DataTable
+TC-BME-009 | Non-admin blocked | Negative | High | Initiator | 1. Open #/admin/brand-extension. | Blocked. | Initiator | ProtectedRoute
+TC-BME-010 | Export if available | Positive | Medium | Rows exist | 1. Click Export if shown. | Excel generated or control not present — record actual. | — | Master toolbar
+TC-BME-011 | Pagination | Positive | Low | Many rows | 1. Page through. | Paginator works. | 15+ rows | DataTable
+TC-BME-012 | Soft-deleted mapping not listed | Positive | High | Deleted row | 1. Reload page. | Deleted mapping absent. | Deleted | getActiveRecordFilters
+
+===============================================================================
+SHEET: 06_NPD_Form_Initiator_Submit
+===============================================================================
+Sprint 1 form boundary: stop after SUBMIT REQUEST succeeds and Vertical Head
+receives the approval email. Do not execute Approve / Rework / Reject.
+
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-FRM-001 | Open New NPD Request | Positive | High | Initiator | 1. Click New NPD Request. | Title "New NPD Request". General Information above Item Details. Footer: Cancel / Back, Save Draft, SUBMIT REQUEST. autoComplete off. | Initiator | R-NPD01, R-NPD19, NpdRequestForm
+TC-FRM-002 | Brand options from ApproversMaster | Positive | High | Initiator mapped to specific brands | 1. Open Brand (MG1). | Only Initiator-mapped brands. | Mapped brands | R-NPD03
+TC-FRM-003 | Material Type options | Positive | High | Brand selected | 1. Open Material Type. | Finished Products and Traded Products from Config.NpdMaterialTypes only. | — | R-NPD04
+TC-FRM-004 | Plant disabled until Material Type | Positive | High | Brand selected, type empty | 1. Check Plant / Source. | Plant / Source disabled or empty until Material Type is chosen. | — | R-NPD05, NpdGeneralInfoSection
+TC-FRM-005 | Finished Products plant from PlantMaster | Positive | High | Material Type = Finished Products | 1. Open Plant / Source. | Factory plants, PlantType=Factory, Active=Yes, showing PlantCode from ROCA PlantMaster. | Finished Products | R-NPD05
+TC-FRM-006 | Traded Products plant choices | Positive | High | Material Type = Traded Products | 1. Open Plant / Source. | Imported and Domestic only. | Traded Products | R-NPD05, NpdTradedPlantSources
+TC-FRM-007 | Changing Material Type clears plant | Positive | Medium | Plant already selected | 1. Change Material Type. | Plant / Source clears and reloads options for the new type. | Switch FP to Traded | npdFormSlice setNpdMaterialType
+TC-FRM-008 | Save Draft blocked without Brand | Negative | High | Empty form | 1. Click Save Draft. | Single toast: Brand (MG1) is required. No list write. Progress overlay not completing a save. | Empty | R-NPD20, validateNpdGeneralInfo
+TC-FRM-009 | Save Draft blocked without Material Type | Negative | High | Brand only | 1. Save Draft. | Toast: Material Type is required. First message only. | Brand set | R-NPD20
+TC-FRM-010 | Save Draft blocked without Plant | Negative | High | Brand + type | 1. Save Draft. | Toast: Plant / Source is required. | — | R-NPD20
+TC-FRM-011 | Save Draft success without items | Positive | High | GI complete, item grid empty/blank line | 1. Save Draft. | Header saved to NPD_Request. Status=Draft. Title=Brand (not NPD-YYYY-###). Overlay shows line-item progress then navigates to Draft / ReWork. | Brand ROCA | R-NPD08
+TC-FRM-012 | Save Draft progress bar | Positive | High | GI complete, several item lines | 1. Save Draft. | Overlay starts immediately. Caption {n} / {m} Line Items Added. Count holds at total-5 until save finishes (e.g. 150→145) then completes to total and redirects. | 10+ lines | R-NPD08, startSubmitProgress
+TC-FRM-013 | Save Draft item batch is one call | Positive | High | 2 or more persistable lines | 1. Save Draft. 2. Watch network. | One $batch mutate for item details (not per-row PATCH). Header is a separate add/update. | 2 lines | R-NPD08, batchMutate
+TC-FRM-014 | Save Draft 150 lines | Positive | High | Import or enter 150 persistable lines | 1. Save Draft. | Completes without UI freeze. Progress never shows 100% before save returns. Items stored against the request. | 150 lines | R-NPD08
+TC-FRM-015 | Draft WorkFlowJSON built | Positive | High | After Save Draft | 1. Open Workflow on the draft? Draft hides Workflow icon. 2. Inspect NPD_Request.WorkFlowJSON. | Array of { Role, UserEmail, Status }. Initiator Status "". Approver statuses "". | Draft item | R-NPD09, R-NPD21
+TC-FRM-016 | Add item line | Positive | High | Form open | 1. Click add line / plus on last row. | New empty row. S.No increments. | — | NpdItemDetailsSection
+TC-FRM-017 | Delete item line | Positive | Medium | Two lines | 1. Delete a non-last row. | Row removed. Remaining S.No updates on current page. | 2 lines | useNpdItemDetailsColumns
+TC-FRM-018 | Item Details pagination 7 | Positive | Medium | 8+ lines | 1. Add 8 lines. | Paginator appears. Page size 7. | 8 lines | R-NPD11, Config.NpdItemDetailsPageSize
+TC-FRM-019 | Roca Global Code required for Roca/Laufen/Armani | Positive | High | Brand = Roca | 1. Confirm Item Details columns. | Roca Global Code column visible and required. | Brand Roca | NpdRocaGlobalCodeBrands
+TC-FRM-020 | Roca Global Code hidden for other brands | Positive | High | Brand not Roca/Laufen/Armani | 1. Select that brand. | Roca Global Code column not shown. | Other brand | getVisibleNpdItemDetailFields
+TC-FRM-021 | Material Code max 18 | Negative | Medium | Item line | 1. Type 19 characters in Material Code. | Input capped at 18. | 19 chars | maxLength 18
+TC-FRM-022 | Material Description max 40 | Negative | Medium | Item line | 1. Type 41 characters. | Capped at 40. | 41 chars | maxLength 40
+TC-FRM-023 | Required item fields on Submit | Negative | High | GI complete, one incomplete line with material code | 1. SUBMIT REQUEST. | First validation toast only (e.g. Item line 1: Material Description is required). Request not submitted. | Partial line | R-NPD20, validateNpdRequestForm
+TC-FRM-024 | Submit blocked with zero item lines | Negative | High | GI complete, no persistable items | 1. SUBMIT REQUEST. | Toast: Add at least one item line. No Request ID generated. | Empty items | validateNpdRequestForm
+TC-FRM-025 | MultiSelect options from Lookup Type titles | Positive | High | Lookups exist for Product Group (MG2) etc. | 1. Open Product Group (MG2). | Options match NPD_Lookup titles for that type. Matching ignores punctuation/parentheses. Empty overlay text 12px "No available options". | MG2 lookups | R-NPD11, R-NPD12
+TC-FRM-026 | Item import template | Positive | High | NPD_Templates has TemplateType NPDItemDetails | 1. Click Import. 2. Download/use template. | Import dialog same as Lookup. Max 200 rows. | Template library | R-NPD13
+TC-FRM-027 | Item import validation columns | Negative | High | File with invalid UOM | 1. Import. | Validation popup columns S.NO and Validation Error only (no Material Code column). One toast if errors shown as toast. | Bad UOM | R-NPD13
+TC-FRM-028 | Item import success | Positive | High | Valid Excel ≤200 rows matching lookups | 1. Import. | Rows appear in Item Details. Duplicate handling uses Lookup-style duplicate popup when applicable. | Valid file | NpdItemDetailsImport
+TC-FRM-029 | SUBMIT REQUEST success — header | Positive | High | GI complete, at least one valid line, NPD workflow configured, VH exists for brand | 1. Click SUBMIT REQUEST. | Status=Pending. Title=NPD-YYYY-### (pad 3). First request of year NPD-2026-001 style. Overlay progress same as draft. Navigates to Pending Approval. | Valid form | R-NPD14
+TC-FRM-030 | SUBMIT REQUEST success — items | Positive | High | Same as TC-FRM-029 | 1. Submit. 2. Check NPD_ItemDetails. | All persistable lines saved. RequestGeneralInfoId = request Id. Title on item empty. Single batch write. | 2+ lines | R-NPD14, R-NPD16 Title empty
+TC-FRM-031 | SUBMIT REQUEST workflow pending VH | Positive | High | After submit | 1. Open Workflow Status from Pending list. | Current pending role is Vertical Head (highlighted). Initiator not highlighted. MIS not highlighted. Current Approver column shows VH name + 24px round persona photo. Status label Pending with VH. | Submitted request | R-NPD09, R-NPD15, R-NPD21, renderSharePointUserPersona
+TC-FRM-032 | Email sent to Vertical Head | Positive | High | VH has valid email; Graph/Outlook send configured | 1. Submit request. 2. Open VH mailbox. | Email subject "{RequestId} — Approval Required". Body has NPD Request header, ROCA logo, greeting, request details. Buttons Approve, Re-work, Reject. Links use #/npd/new?id=&action=&from=pending. Only VH emails include those buttons. | VH inbox | R-NPD16, sendNpdApprovalNotification, shouldIncludeNpdEmailActions
+TC-FRM-033 | Email failure does not roll back request | Negative | Medium | Simulate mail failure if possible, or disconnect Graph | 1. Submit. | Request still Pending in SharePoint even if mail throws. Form still navigates/success path after persist. | Mail blocked | submitNpdRequest try/catch around send
+TC-FRM-034 | Request ID skips deleted records | Positive | Medium | Soft-deleted NPD-2026-005 exists; 006 is next live | 1. Submit new request. | Next id ignores IsDeleted=true rows. | Deleted 005 | R-NPD14, generateNextNpdRequestId
+TC-FRM-035 | Cancel from New Request goes to All Requests | Positive | Medium | Opened from nav (no from query) | 1. Click Cancel / Back. | Returns to All Requests. No save. | Nav entry | R-NPD19
+TC-FRM-036 | Cancel from query from=draft-rework | Positive | High | Opened Edit from Draft list | 1. Cancel / Back. | Returns to Draft / ReWork. | from=draft-rework | R-NPD19
+TC-FRM-037 | Submit progress holds 5 before total | Positive | High | 150 valid lines | 1. SUBMIT REQUEST. Watch overlay. | Counter stops around 145 / 150 while save continues, then jumps to 150 / 150 when persist completes. Bar does not show complete before save returns. | 150 lines | startSubmitProgress holdAt = total-5
+TC-FRM-038 | Autocomplete off on form fields | Positive | Low | Browser with saved addresses | 1. Focus Brand/text inputs. | No browser autofill suggestions (autoComplete=off). | — | R-NPD19
+TC-FRM-039 | View mode has no Submit | Positive | High | Initiator opens View from All Requests | 1. Open View. | Footer has Cancel / Back only (read-only). No Save Draft, no SUBMIT REQUEST, no Approve. | View URL mode=view | R-NPD15, footerMode read-only
+TC-FRM-040 | Edit draft hydrates plant without clearing | Positive | High | Saved draft with plant | 1. Edit from Draft list. | Brand, Material Type, Plant restored. Plant not wiped by setNpdMaterialType on hydrate. | Draft with plant | R-NPD10
+
+===============================================================================
+SHEET: 07_Draft_Rework
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-DR-001 | Initiator sees own drafts only | Positive | High | Drafts exist for Initiator A and B | 1. Login as A. Open Draft / ReWork. | Only A's Draft and Rework rows. | Two initiators | R-NPD10
+TC-DR-002 | VH cannot open Draft / ReWork nav | Positive | High | VH-only | 1. Look at nav. 2. Open #/npd/draft-rework. | Nav item hidden. Direct URL blocked. | VH | R-SEC03
+TC-DR-003 | Search Draft / ReWork | Positive | Medium | Own drafts | 1. Search by Request ID / Brand / Plant. | Matching rows. Unmatched shows No Requests Found 12px. | Search text | NpdDraftRework
+TC-DR-004 | Status filter Draft vs In Rework | Positive | Medium | Both statuses exist | 1. Filter Draft. 2. Filter In Rework. | Correct subset. In Rework label not raw Rework if formatted. | Draft + Rework | getDraftStatusOptions, FieldLabels.InRework
+TC-DR-005 | Brand filter | Positive | Medium | Multiple brands | 1. Filter one brand. | Only that brand. | Two brands | matchesNpdBrandFilter
+TC-DR-006 | Edit opens form with from=draft-rework | Positive | High | Own draft | 1. Click Edit. | URL mode=edit and from=draft-rework. Form editable. Save Draft / SUBMIT REQUEST visible. | Draft | R-NPD10, R-NPD19
+TC-DR-007 | View is read-only | Positive | High | Own draft | 1. Click View. | mode=view. No submit. | Draft | R-NPD15
+TC-DR-008 | No Delete on table | Positive | High | Draft list | 1. Inspect Actions. | Edit (if allowed) + View only. No Delete. | — | R-NPD15
+TC-DR-009 | Workflow icon hidden for Draft | Positive | High | Draft row | 1. Inspect Workflow column. | No sitemap icon on Draft. | Draft | R-NPD21
+TC-DR-010 | Workflow icon visible for Rework | Positive | Medium | Rework row | 1. Click Workflow. | Dialog opens. Initiator row highlighted for rework. No mutation. | Rework | R-NPD21
+TC-DR-011 | Columns fit / headings not clipped | Positive | Medium | Desktop width | 1. View header row. | Request ID, Brand (MG1), Material Type, Plant, Products, Status, Current Approver, Submitted Date, Workflow, Actions all one line. Horizontal scroll allowed if needed. | — | NpdRequestListTable
+TC-DR-012 | Current Approver dash for draft | Positive | Medium | Draft row | 1. Read Current Approver. | Shows "—" (not pending). No persona. | Draft | getNpdCurrentApprover
+TC-DR-013 | After Save Draft land on this list | Positive | High | Save Draft from new form | 1. Save Draft. | Lands on Draft / ReWork. New row visible. | New draft | finishWithSuccess NpdDraftRework
+TC-DR-014 | Heading and toolbar | Positive | Low | Page open | 1. Inspect layout. | Heading and search/filters consistent with other NPD lists. | — | NpdDraftRework.tsx
+
+===============================================================================
+SHEET: 08_All_Requests
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-ALL-001 | Initiator All Requests brand scope | Positive | High | Requests for mapped and unmapped brands | 1. Open All Requests. | Only brands mapped to this Initiator in ApproversMaster. | Mixed brands | R-NPD17
+TC-ALL-002 | Summary cards | Positive | High | Mixed statuses | 1. View cards. | Total, Pending, In Rework/Drafts, Approved counts match the scoped list (not global unscoped). | Mixed data | NpdRequestSummaryCards
+TC-ALL-003 | Search | Positive | High | Rows exist | 1. Search Request ID, Plant, Brand, code, material text as placeholder. | Matching rows. Empty: No Requests Found 12px centered slightly up. | Request ID | NpdRequestListToolbar
+TC-ALL-004 | Status filter | Positive | High | Mixed statuses | 1. Filter Pending / Approved / Draft / Rework / Rejected. | Correct rows. Pending filter uses stored status Pending. | All statuses | useNpdRequestListFilters
+TC-ALL-005 | Brand filter | Positive | Medium | Multiple brands in scope | 1. Filter one brand. | Subset. All Brands restores. | Two brands | filter dropdown
+TC-ALL-006 | Export Excel | Positive | High | Filtered or full list | 1. Click Export. | .xlsx not CSV. Name Export still. Columns include Request ID, Brand, Material Type, Plant, Products, Status, date. | Any rows | R-NPD17, exportToExcel
+TC-ALL-007 | Status Pending with VH | Positive | High | Request pending VH | 1. Read Status column. | "Pending with VH" (or Pending with Vertical Head label from FieldLabels.PendingWithVh). Tag styling pending. | Pending VH | formatNpdRequestListStatus
+TC-ALL-008 | Current Approver name + photo | Positive | High | Pending VH with UserEmail | 1. Read Current Approver. | Display name plus 24px perfectly round persona from /_layouts/15/userphoto.aspx?size=S&username={email}. | VH email | renderSharePointUserPersona
+TC-ALL-009 | Current Approver dash when not pending | Positive | Medium | Approved or Draft row | 1. Read Current Approver. | "—" | Approved | getNpdCurrentApprover
+TC-ALL-010 | Products line count | Positive | Medium | Request with 2 items | 1. Read Products. | Badge "2 lines" (or "1 line"). | 2 items | ProductCount
+TC-ALL-011 | Workflow dialog highlight pending role only | Positive | High | Pending VH request | 1. Click Workflow. | Dialog lists JSON steps. Only VH pending row light highlight. No italic/colored role text. Close does not change data. | Pending | R-NPD21
+TC-ALL-012 | Edit vs View | Positive | High | Own Draft and someone else's Pending | 1. Inspect Actions. | Edit only when user can act. View always. No Delete. | Mixed | canEditNpdListRow
+TC-ALL-013 | View URL includes from=all | Positive | High | Any row | 1. View. 2. Cancel. | Returns to All Requests. | from=all | R-NPD19
+TC-ALL-014 | Submitted Date format | Positive | Low | Any row | 1. Read Submitted Date. | DD-MM-YYYY. | Created date | formatNpdCreatedDate
+TC-ALL-015 | Header names single line | Positive | Medium | Desktop | 1. Inspect headers. | No wrapped/clipped Products heading. Scroll OK if needed. | — | NpdRequestList.module.scss
+TC-ALL-016 | Cards responsive | Positive | Low | Narrow window | 1. Resize below 1100px. | Cards go to 2 columns. | — | NpdRequestList.module.scss media
+
+===============================================================================
+SHEET: 09_Pending_Approval
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-PEN-001 | Initiator sees own pending | Positive | High | Own pending + others pending | 1. Open Pending Approval. | Own Pending requests shown per list service rules. | Two initiators pending | R-NPD15, npdRequestListService
+TC-PEN-002 | VH sees brand-pending-VH only | Positive | High | Pending VH ROCA and pending VH other brand; also a pending-MIS request | 1. Login VH ROCA. Open Pending. | Only Pending with VH for mapped brands. No pending-MIS-only rows. No other-brand VH. | Mixed pending | R-NPD15
+TC-PEN-003 | MIS sees all pending-MIS | Positive | High | Pending MIS across brands | 1. Login MIS. Open Pending. | All requests whose current pending role is MIS Coordinator. | Multiple brands | R-NPD15
+TC-PEN-004 | Search and brand filter | Positive | Medium | Several pending | 1. Search. 2. Filter brand. | Filters apply. Empty message when none. | — | NpdDraftRework reused table
+TC-PEN-005 | After Initiator submit, request appears here | Positive | High | Just submitted | 1. Submit. 2. Land on Pending. | New NPD-YYYY-### visible. Status Pending with VH. | New submit | finishWithSuccess NpdPending
+TC-PEN-006 | VH Edit shows approval footer (out of Sprint 1 execute) | Informational | Medium | VH pending request | 1. Note Edit is visible for acting VH. | Sprint 1: do not click Approve/Reject/Rework. Record that Edit is available for later sprint. | VH | R-NPD16 OUT OF SPRINT 1
+TC-PEN-007 | View has no approval buttons | Positive | High | Pending request | 1. View as VH or Initiator. | Read-only footer. No Approve/Rework/Reject. | Pending | R-NPD16
+TC-PEN-008 | Workflow column not in Actions | Positive | Medium | Pending row | 1. Confirm separate Workflow column. | Sitemap icon present (not Draft). | Pending | R-NPD21
+TC-PEN-009 | Export if toolbar has Export | Positive | Medium | Pending rows | 1. Export if present. | Excel OK or control absent — record actual. | — | toolbar
+TC-PEN-010 | No Delete | Positive | High | Pending table | 1. Inspect Actions. | No Delete icon. | — | R-NPD15
+TC-PEN-011 | Persona on Current Approver | Positive | High | Pending VH | 1. Confirm photo + name. | 24px round photo for VH email. | VH email | personFieldUtils
+TC-PEN-012 | Headers and spacing | Positive | Medium | Desktop | 1. Review columns including Actions. | Headings complete. Extra empty gap on Actions reduced. Horizontal scroll acceptable. | — | NpdRequestListTable
+
+===============================================================================
+SHEET: 10_Approved_Requests
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-APR-001 | Page heading above toolbar | Positive | High | Approver/Initiator with access | 1. Open Approved Requests. | Heading "Approved Requests" sits above search/filter row. | — | R-NPD18
+TC-APR-002 | Only approved/completed in list | Positive | High | Mix of statuses | 1. Open page. | Only Approved (and Completed if mapped as approved) rows. No Draft/Pending/Rework. | Mixed | isApprovedNpdStatus
+TC-APR-003 | Brand scope | Positive | High | Initiator/VH mapped brands | 1. Compare to unmapped brand approved request. | Unmapped brand hidden. MIS sees all. | Mixed brands | R-NPD18 / R-NPD17
+TC-APR-004 | Search | Positive | Medium | Approved rows | 1. Search. | Filter works. No Requests Found when empty. | — | toolbar
+TC-APR-005 | Brand filter | Positive | Medium | Two approved brands | 1. Filter brand. | Subset. | Two brands | filter
+TC-APR-006 | Export Excel | Positive | High | Approved rows | 1. Export. | File NPD_Approved_Requests_Export_DD-MM-YYYY.xlsx (or equivalent buildExportFileName). | — | R-NPD18
+TC-APR-007 | View only — no Edit | Positive | High | Approved row | 1. Inspect Actions. | View only (canEditRow false on approved variant). No Delete. | Approved dashboard variant | NpdRequestDashboard canEditRow
+TC-APR-008 | Workflow icon visible | Positive | Medium | Approved row | 1. Open Workflow. | All steps completed as stored. No current pending highlight (unless code still highlights none). Read-only. | Approved | R-NPD21
+TC-APR-009 | Current Approver dash | Positive | Medium | Approved | 1. Read column. | "—" because not pending. | Approved | getNpdCurrentApprover
+TC-APR-010 | Cancel from View returns to Approved | Positive | High | View from this list | 1. View. 2. Cancel / Back. | Returns to Approved Requests (from=approved). | from=approved | R-NPD19
+
+===============================================================================
+SHEET: 11_Common_UI_Import_Export
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-UI-001 | DataTable empty message | Positive | Medium | Any master or NPD list with no rows | 1. Force empty (filter). | Message 12px, horizontally centered, slightly above middle of body. | Empty filter | DataTable.module.scss, _primereact-overrides
+TC-UI-002 | DataTable sort | Positive | Medium | Two+ rows | 1. Click sortable headers. | Sort toggles. Header stays one line. | Any list | DataTable sortable
+TC-UI-003 | DataTable paginator | Positive | Medium | > page size | 1. Use first/prev/next/last. | Report text left, controls right. Showing x to y of z entries. | 15+ rows | _datatable-pagination
+TC-UI-004 | Loader overlay on list load | Positive | Medium | Slow network optional | 1. Open All Requests. | Loader overlay while status=loading. | — | LoaderOverlay
+TC-UI-005 | Toast first error only | Positive | High | Form missing multiple fields | 1. Submit empty GI. | Only first validation message. | Empty GI | R-NPD20, firstValidationMessage
+TC-UI-006 | Import dialog file constraints | Negative | Medium | Admin Lookup Type | 1. Import oversized or bad extension. | Rejected with Config.ImportExport labels. | Huge file | ImportDialog
+TC-UI-007 | Export is Excel not CSV | Positive | High | Any export button | 1. Export. | .xlsx. Button still named Export. | — | exportToExcel
+TC-UI-008 | Confirm delete dialog | Positive | Medium | Admin unused lookup type | 1. Delete. | Confirm dialog before soft delete. | Unused type | ConfirmDialog
+TC-UI-009 | Poppins font on overlays | Positive | Low | Open dropdown overlay | 1. Inspect font. | Poppins on dropdown/dialog/toast. | — | R-UI, theme
+TC-UI-010 | No PrimeReact import in feature screens | Informational | Low | Code review | 1. Search feature folders for primereact/*. | Feature modules import common/controls only. | — | R-C01
+TC-UI-011 | Master toolbar height consistent | Positive | Low | Compare Lookup vs Lookup Type | 1. Compare search/import/export/add. | Shared compact height. | — | _master-toolbar
+TC-UI-012 | Persona reusable from CommonServices | Positive | Medium | Pending request | 1. Confirm photo on Current Approver. 2. Confirm helper is personFieldUtils.renderSharePointUserPersona. | No extra feature-only Persona component folder. Email is username query param. | VH email | personFieldUtils
+
+===============================================================================
+SHEET: 12_Tab_Lock
+===============================================================================
+Test Case ID | Title | Type | Priority | Preconditions | Test Steps | Expected Result | Test Data | Related Rule / Code
+TC-TAB-001 | Two tabs claim same request | Positive | High | Same user, two browser tabs (not duplicated sessionStorage twin if possible — use two windows) | 1. Tab 1 Edit request. 2. Tab 2 click Edit/View same id. | Tab 2 shows Editing Restricted. Go to Dashboard -> /npd/all. Reload Page reloads. | Same request | R-NPD22, npdRequestTabSync
+TC-TAB-002 | Save Draft notifies other tab | Positive | High | Tab 1 and Tab 2 on same draft | 1. Tab 1 Save Draft. 2. Interact in Tab 2. | Tab 2 popup: request saved as draft in another tab, with time. | Draft | kind draft-saved
+TC-TAB-003 | Submit notifies other tab | Positive | High | Both tabs on same request form | 1. Tab 1 SUBMIT REQUEST. 2. Interact Tab 2. | Tab 2 popup submitted/updated in another tab. | Valid submit | kind submitted
+TC-TAB-004 | List click blocked when locked | Positive | High | Tab 1 has form open (claimed) | 1. Tab 2 on All Requests click View/Edit same id. | Dialog before navigation. Does not open a second editor. | Same id | useNpdRequestTabGuard
+TC-TAB-005 | New request (no id) does not claim | Positive | Medium | Two tabs on blank New NPD Request | 1. Type in both. | No Editing Restricted until a SharePoint id exists. | New form | isOpen requires requestId
+TC-TAB-006 | Go to Dashboard | Positive | Medium | Restriction dialog visible | 1. Click Go to Dashboard. | Navigates to All Requests. Dialog closes. | — | npdTabDashboardRoute
+TC-TAB-007 | Reload Page | Positive | Medium | Restriction dialog | 1. Click Reload Page. | Full page reload. | — | window.location.reload
+TC-TAB-008 | Duplicate tab still distinct lock ids | Positive | High | Chrome Duplicate Tab previously broke sync | 1. Duplicate tab after opening a request. 2. Act in original. | Other copy still receives lock (in-memory tab id, BroadcastChannel + localStorage poll). | Duplicate tab | getNpdTabId runtimeTabId
+
+===============================================================================
+END OF DOCUMENT
+===============================================================================
+Total designed Sprint 1 cases: 18+16+18+14+12+40+14+16+12+10+12+8 = 190
+
+Tester notes:
+- Use a dedicated test Initiator, Vertical Head, MIS Coordinator, and Admin.
+- Configure NPD_WorkflowConfig as Initiator → Vertical Head → MIS Coordinator before form submit tests.
+- Confirm Graph/Outlook mail is enabled before TC-FRM-032.
+- Do not execute Vertical Head approval from the email or form in Sprint 1.
+- Log defects with Test Case ID and Related Rule / Code.

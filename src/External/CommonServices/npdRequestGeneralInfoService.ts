@@ -44,7 +44,7 @@ const LIST_NAME = (): string => Config.ListNames.NpdRequest;
 const FIELDS = Config.FieldNames.NpdRequest;
 
 const SELECT_FIELDS =
-  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Author/Id,Author/Title,Author/EMail";
+  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail";
 const EXPAND_FIELDS = "Author";
 
 function getNumericId(value: unknown): number {
@@ -101,6 +101,7 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     AuthorEmail: getAuthorEmail(item),
     AuthorTitle: getAuthorTitle(item),
     Created: String(item.Created ?? ""),
+    Modified: String(item.Modified ?? item.Created ?? ""),
   };
 }
 

@@ -12,16 +12,6 @@ export function validateLookupForm(
     return `${FieldLabels.LookupType} is required.`;
   }
 
-  const trimmedName = lookupName.trim();
-
-  if (!trimmedName) {
-    return `${FieldLabels.LookupName} is required.`;
-  }
-
-  if (trimmedName.length > 255) {
-    return `${FieldLabels.LookupName} must be 255 characters or less.`;
-  }
-
   const trimmedCode = lookupCode.trim();
 
   if (!trimmedCode) {
@@ -30,6 +20,16 @@ export function validateLookupForm(
 
   if (trimmedCode.length > 255) {
     return `${FieldLabels.LookupCode} must be 255 characters or less.`;
+  }
+
+  const trimmedName = lookupName.trim();
+
+  if (!trimmedName) {
+    return `${FieldLabels.LookupName} is required.`;
+  }
+
+  if (trimmedName.length > 255) {
+    return `${FieldLabels.LookupName} must be 255 characters or less.`;
   }
 
   const isDuplicate = existingItems.some(

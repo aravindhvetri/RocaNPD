@@ -321,10 +321,10 @@ Each master follows list + create/edit form pattern:
 
 | Navigation Section | Initiator | Vertical Head | MIS Coordinator | Consultant | Admin |
 |---|---|---|---|---|---|
-| NPD Request | ✅ (incl. New + Draft) | ✅ All / Pending / Approved only | ✅ All / Pending / Approved | ❌ | ✅ (view all) |
-| New Material Group | ✅ | ❌ | ❌ | ✅ | ✅ (view all) |
+| NPD Request | ✅ (incl. New + Draft) | ✅ All / Pending / Approved only | ✅ All / Pending / Approved | ❌ | ✅ All Requests only (view all data) |
+| New Material Group | ✅ (incl. New + Draft) | ❌ | ❌ | ✅ All / Pending / Completed only | ✅ All Requests only (view all data) |
 | Administration | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Analytics & Reports | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Analytics & Reports | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### 6.3 Action Access Matrix (NPD)
 
@@ -349,13 +349,13 @@ sp.web.currentUser() + Employee ID from profile/list
    ↓
 Check Admin SharePoint group membership → **add** Admin role (does not replace other roles)
    ↓
-Resolve **all** matching rows from ROCA `ApproversMaster` by Users (Person or Group)
+Resolve **all** matching rows from ROCA `ApproversMaster` by Users email (**System/Title required** — blank System ignored)
    ↓
-Collect roles: Initiator | Vertical Head | MIS Coordinator | Consultant (union)
+Collect roles: Initiator | Vertical Head | MIS Coordinator | Consultant (union; scoped by System)
    ↓
-Store in Redux `appSlice.assignedRoles` + per-role `mappedBrands`
+Store in Redux `appSlice.assignedRoles` + per-role `mappedBrands` + `assignments` (role + system + brands)
    ↓
-Filter navigation, routes, and data queries by the **union** of roles + brand scope
+Filter navigation, routes, and data queries by the **union** of roles + System + brand scope
 ```
 
 **Implementation requirements:**
@@ -365,7 +365,8 @@ Filter navigation, routes, and data queries by the **union** of roles + brand sc
 3. Enforce SharePoint list item-level permissions (not UI-only) using `canViewRequest` / view-scope helpers when querying lists
 4. Prevent unauthorized URL access via `ProtectedRoute`
 5. Brand multi-select scope for Initiator and Vertical Head from ROCA `ApproversMaster`
-6. Multi-role users keep every assigned role — Admin does **not** override Initiator / Vertical Head / other roles
+6. Multi-role users keep every assigned role — Admin does **not** override Initiator / Vertical Head / other roles, and Admin alone does **not** receive Initiator/Consultant nav items
+7. ApproversMaster `System` must be known (`New Product Development` or `New Material Group`). **Consultant** → Material Group module (even if System title is NPD). **Initiator** → both NPD and MG navigation. VH / MIS → NPD only. Blank System rows are skipped (R-SEC03a)
 
 ---
 
@@ -859,7 +860,7 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 
 **UI route:** `/admin/workflow-config` → `WorkflowConfigurationMaster`
 
-**Services:** `workflowConfigurationService.ts` (CRUD), `workflowConfigurationUtils.ts` (chain ordering/grouping), `rocaMasterDataService.fetchRocaNpdRoleOptions()` (cross-site roles)
+**Services:** `workflowConfigurationService.ts` (CRUD), `workflowConfigurationUtils.ts` (chain ordering/grouping), `rocaMasterDataService.fetchRocaNpdRoleOptions()` (cross-site roles; `IsDelete = false` only)
 
 **Drives:** Runtime approval routing for NPD and Material Group requests — future modules must load active steps from this list rather than hardcoding stage sequences.
 
@@ -977,12 +978,15 @@ Read from ROCA `PlantMaster` via `rocaMasterDataService` / `npdFormDataService`.
 
 Read from ROCA `ApproversMaster` via `npdFormDataService` / role resolution. Do not provision this list on the NPD site.
 
+Select includes **`IsDelete`**. Active rows only (`IsDelete` false / empty) via `isDeletedApproverRow`. Brand options for the NPD Form are seeded in `initializeApp` from resolved access; Item Details lookup options are prefetched in the same init path.
+
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | Approver Role | Lookup/Choice | ✅ | Initiator, Vertical Head, MIS Coordinator, Consultant |
 | User Name | Text | ✅ | |
 | Employee ID | Text | ✅ | |
 | Brand | Multi-select | Conditional | Required for Initiator & Vertical Head; hidden for MIS & Consultant |
+| IsDelete | Yes/No | | Soft-delete flag — excluded from role/brand/routing reads when true |
 
 ### 12.12 Config.ts Convention
 
@@ -1114,8 +1118,8 @@ interface AppState {
 
 **Async thunks:**
 
-- `initializeApp` — resolve user, role, brands on app load
-- `showToast` / `clearToast` — notification management
+- `initializeApp` — resolve user, role, brands on app load; seed NPD Brand options; prefetch Item Details lookup options
+- `showToast` / `clearToast` — notification management (success messages use “… successfully.” format)
 
 #### 13.4.2 lookupSlice — Master Lookup Cache
 

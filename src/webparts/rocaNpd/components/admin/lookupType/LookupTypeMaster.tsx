@@ -261,7 +261,7 @@ const LookupTypeMaster: React.FC = () => {
         await dispatch(
           softDeleteLookupType({ id: snapshot.id, title: snapshot.title }),
         ).unwrap();
-        showSuccessToast(toastRef, `"${snapshot.title}" was deleted.`);
+        showSuccessToast(toastRef, `"${snapshot.title}" deleted successfully.`);
       } catch {
         // Error toast handled via slice error effect.
       }
@@ -362,6 +362,7 @@ const LookupTypeMaster: React.FC = () => {
       <LookupTypeToolbar
         searchValue={globalFilter}
         filtersActive={Boolean(globalFilter.trim())}
+        exportDisabled={!filteredRows.length}
         onSearchChange={setGlobalFilter}
         onResetFilters={() => setGlobalFilter("")}
         onImport={handleImportClick}

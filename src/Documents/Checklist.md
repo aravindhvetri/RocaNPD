@@ -264,15 +264,18 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 - [ ] **CHK-E17** Loading spinner/skeleton shown during data operations
 - [x] **CHK-E18** Empty state shown when lists have no records
-- [ ] **CHK-E19** Success toast shown after Save, Submit, Approve, Complete, etc.
-- [ ] **CHK-E20** Error toast shown on validation failure or SP errors
+- [x] **CHK-E19** Success toast shown after Save, Submit, Approve, Complete, etc. — consistent “… successfully.” format (created / updated / deleted / imported)
+- [x] **CHK-E20** Error toast shown on validation failure or SP errors
 - [x] **CHK-E21** Cancel / Back returns to the source list (`from` query: All, Pending, Approved, Draft/Rework); New Request without `from` goes to All Requests — confirm dialog pending
 - [ ] **CHK-E22** Read-only screens cannot be edited (form controls disabled)
 - [ ] **CHK-E23** Editable screens show only permitted actions for current role
 - [x] **CHK-E24** Horizontal scroll works on wide Item Details grid (shared surface scrollbar)
 - [x] **CHK-E25** Total Item Lines counter updates correctly on NPD form
 - [ ] **CHK-E26** Dynamic pending/completed counters update on list views
-
+- [x] **CHK-E27** `DeleteBlockedDialog` (“Cannot Delete”) is compact — reduced padding, centered message and Close button (overrides injected dialog padding via `.roca-delete-blocked-dialog`)
+- [x] **CHK-E28** Export disabled when displayed DataTable has no rows (Lookup Type, Lookup, Brand Material Extension, NPD All/Approved)
+- [x] **CHK-E29** Master/list DataTables ordered by `Modified` descending (newest modified first)
+- [x] **CHK-E30** Status filter options derived from table data (+ Status field choices); empty table does not show Draft/Rework placeholders; In ReWork → **Rework**
 ---
 
 ## F — Admin Module
@@ -298,12 +301,13 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 - [x] **CHK-F05** List displays lookups with Lookup Type, Lookup Code, then Lookup Name columns
 - [x] **CHK-F06** Add Lookup popup: Lookup Type, Lookup Code, then Lookup Name field order
+- [x] **CHK-F06a** Lookup form validation order matches UI: Lookup Type → Lookup Code → Lookup Name
 - [x] **CHK-F07** Edit lookup works
 - [x] **CHK-F08** Soft delete lookup works when no dependency exists
 - [x] **CHK-F09** Lookup correctly linked to Lookup Type Master (`NPD_Lookup.LookupType`)
-- [x] **CHK-F09a** Import uses `NPD_Templates` where `TemplateType = "Lookup"`
+- [x] **CHK-F09a** Import uses `NPD_Templates` where `TemplateType = "Lookup"` (columns include Lookup Code)
 - [x] **CHK-F09b** Import duplicates shown in Import popup validation table with record name + error pill
-- [x] **CHK-F09c** Export downloads Excel for filtered grid data
+- [x] **CHK-F09c** Export downloads Excel for filtered grid data including Lookup Code
 - [x] **CHK-F09d** Lookup Type delete dependency check runs before delete confirm dialog
 - [x] **CHK-F09e** Lookup delete blocked when referenced in Brand Material Extension (Toast)
 
@@ -312,6 +316,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F10** Plant Master not in side nav or routes; plants loaded from ROCA `PlantMaster`
 - [x] **CHK-F16** Role not in side nav or routes; NPD roles loaded from ROCA `RoleMaster`
 - [x] **CHK-F19** Approver Configuration not in side nav or routes; approvers/brands loaded from ROCA `ApproversMaster`
+- [x] **CHK-F19a** ApproversMaster reads select `IsDelete` and exclude rows where `IsDelete` is true (`isDeletedApproverRow`)
 
 ### F.6 Brand Material Extension
 
@@ -321,18 +326,19 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F26a** Plant stored as comma-separated values; MultiSelect repopulates on edit
 - [x] **CHK-F26b** ROCA site URL resolved via `resolveRocaMasterSiteUrl()` (not hardcoded in UI)
 - [x] **CHK-F26c** Duplicate Brand blocked with warning Toast
-
+- [x] **CHK-F26d** Export only (Excel) on Brand Material Extension toolbar; disabled when no rows
 ### F.7 Workflow Configuration
 
 - [x] **CHK-F27** Workflow stages display as grouped Approval Chain (e.g. Initiator → VH → MIS)
 - [x] **CHK-F28** Configure Workflow modal saves correctly (NPD multi-step + MG Consultant step)
-- [x] **CHK-F28a** NPD Next Role from ROCA RoleMaster (`System/Title eq "New Product Development"`); Initiator, Consultant, and used roles excluded
-- [x] **CHK-F28b** Edit replaces existing steps; Delete soft-deletes all steps for request type
+- [x] **CHK-F28a** NPD Next Role from ROCA RoleMaster (`System/Title eq "New Product Development"`); Initiator, Consultant, and used roles excluded; **`IsDelete = false` only**
+- [x] **CHK-F26e** Brand Material Extension Plant column shows first 8 values then `...` with full list in `title` hover (`MultiValueCell`)
+- [x] **CHK-E31** Multi-value DataTable cells use shared `MultiValueCell` (limit 8 + ellipsis + title tooltip)- [x] **CHK-F28b** Edit replaces existing steps; Delete soft-deletes all steps for request type
 - [x] **CHK-F28c** Duplicate request type blocked; validation via Toast only
 - [x] **CHK-F28d** Add Step hidden when no valid Next Role options remain for a new step
 - [x] **CHK-F28e** All applicable steps have editable Next Role; changing Next Role cascades Current Role to following step
 - [x] **CHK-F28f** Form dialog font size and button/icon sizing consistent with master popup standards
-
+- [x] **CHK-F28g** Save blocked until all available Next Role options are selected (incomplete NPD chain → Toast warning)
 ### F.8 Material Master
 
 - [ ] **CHK-F29** Material Master list with search and filters works
@@ -364,7 +370,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### G.2 Initiator — New NPD Request Form
 
-- [x] **CHK-G09** Brand (MG1) dropdown populated from ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users matched by `EMail` (+ `UsersId` site-user map fallback)
+- [x] **CHK-G09** Brand (MG1) dropdown populated from ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users matched by `EMail` (+ `UsersId` site-user map fallback); options seeded on app init so available on first NPD Form open
 - [x] **CHK-G10** Material Type dropdown populated from `Config.NpdMaterialTypes` (Finished Products, Traded Products)
 - [x] **CHK-G11** Plant/Source disabled until Material Type selected (Finished or Traded Products)
 - [x] **CHK-G12a** Plant/Source (Finished Products) from ROCA `PlantMaster` — `PlantType`=Factory, active plants, options=`PlantCode`
@@ -373,8 +379,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-G12** Plant/Source filtered by Brand Material Extension for selected Brand
 - [x] **CHK-G13** Roca Global Code column shown for Roca, Laufen, Armani brands (UI)
 - [x] **CHK-G14** Roca Global Code column hidden for other brands
-- [x] **CHK-G15** Item Details grid displays all required BRD columns; MultiSelect options from Lookup list by Lookup Type (`trim` + lowercase, compact / parenthetical-stripped title match); DataTable paginates at 7 rows when there are more than 7 items
-- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
+- [x] **CHK-G15** Item Details grid displays all required BRD columns; MultiSelect options from Lookup list by Lookup Type (`trim` + lowercase, compact / parenthetical-stripped title match); DataTable paginates at 7 rows when there are more than 7 items; lookup options prefetched on app init so available on first NPD Form open
+- [x] **CHK-G15a** Item Details selection fields allow only one option (`selectionLimit={1}`)- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
 - [x] **CHK-G17** + Add Another Item Line works with small inline plus icon next to label
 - [x] **CHK-G18** Import items from Excel works — Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
 - [x] **CHK-G19** Save Draft saves header + items without submitting
@@ -688,6 +694,9 @@ Use this table to sign off each phase only when all related checklist items are 
 | 18 Sep 2026 | Workflow Status dialog on request list Actions; current Pending step highlighted from WorkFlowJSON | CHK-G08a |
 | 18 Sep 2026 | Workflow Status highlights logged-in user/role; Pending default; BroadcastChannel Editing Restricted popup | CHK-G08a, CHK-G08b |
 | 18 Sep 2026 | Centered DataTable empty states; Pending status shows current role (Pending with VH / MIS Coordinator); Current Approver column; Item Details cell memoization | CHK-E18, CHK-G01, CHK-G06a |
+| 21 Sep 2026 | Compact Cannot Delete dialog; Lookup validation Code→Name; ApproversMaster IsDelete filter; Workflow full-chain save validation; success toast “… successfully.”; Brand + Item Details options prefetch on app init | CHK-E19/E20/E27, CHK-F06a/F09a/c/F19a/F28g, CHK-G09/G15/G15a |
+| 21 Sep 2026 | Tighter Cannot Delete spacing; BME Export; Export disabled when empty; OrderBy Modified; data-driven Status filters | CHK-E27–E30, CHK-F26d |
+| 21 Sep 2026 | RoleMaster IsDelete filter; MultiValueCell (8 values + ellipsis + title) for multi-value columns | CHK-F28a, CHK-F26e, CHK-E31 |
 
 ---
 

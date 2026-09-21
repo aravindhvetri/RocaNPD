@@ -31,9 +31,9 @@ const LOOKUP_FIELDS = Config.FieldNames.Lookup;
 
 /** Title = Lookup Name. LookupType/Title requires Expand on LookupType. */
 const SELECT_FIELDS =
-  "Id,Title,LookupCode,IsDeleted,LookupTypeId,LookupType/Id,LookupType/Title";
+  "Id,Title,LookupCode,IsDeleted,Modified,LookupTypeId,LookupType/Id,LookupType/Title";
 const SELECT_FIELDS_WITHOUT_TYPE_ID_PATH =
-  "Id,Title,LookupCode,IsDeleted,LookupTypeId,LookupType/Title";
+  "Id,Title,LookupCode,IsDeleted,Modified,LookupTypeId,LookupType/Title";
 
 function getIdFromLookupValue(value: unknown): number {
   if (typeof value === "number" && value > 0) {
@@ -134,8 +134,8 @@ async function readLookupItems(
     Select: selectFields,
     Expand: LOOKUP_FIELDS.LookupType,
     Filter: filterActive ? getActiveRecordFilters() : [],
-    Orderby: LOOKUP_FIELDS.Title,
-    Orderbydecorasc: true,
+    Orderby: "Modified",
+    Orderbydecorasc: false,
     Topcount: 5000,
   })) as Record<string, unknown>[];
 }
@@ -231,6 +231,7 @@ export async function bulkCreateLookups(
     ListName: LIST_NAME(),
     responseData: records.map((record) => ({
       Title: record.lookupName.trim(),
+      LookupCode: (record.lookupCode ?? "").trim(),
       LookupTypeId: record.lookupTypeId,
       ...getActiveRecordCreatePayload(),
     })),
@@ -265,10 +266,18 @@ export async function parseLookupImportFile(
     headerRow,
     FieldLabels.LookupName,
   );
+  const lookupCodeColumnIndex = findColumnIndex(
+    headerRow,
+    FieldLabels.LookupCode,
+  );
 
-  if (lookupTypeColumnIndex < 0 || lookupNameColumnIndex < 0) {
+  if (
+    lookupTypeColumnIndex < 0 ||
+    lookupNameColumnIndex < 0 ||
+    lookupCodeColumnIndex < 0
+  ) {
     throw new Error(
-      `The uploaded file must include "${FieldLabels.LookupType}" and "${FieldLabels.LookupName}" columns.`,
+      `The uploaded file must include "${FieldLabels.LookupType}", "${FieldLabels.LookupName}", and "${FieldLabels.LookupCode}" columns.`,
     );
   }
 
@@ -299,13 +308,26 @@ export async function parseLookupImportFile(
 
     const lookupTypeTitle = String(row[lookupTypeColumnIndex] ?? "").trim();
     const lookupName = String(row[lookupNameColumnIndex] ?? "").trim();
+    const lookupCode = String(row[lookupCodeColumnIndex] ?? "").trim();
 
-    if (!lookupTypeTitle && !lookupName) {
+    if (!lookupTypeTitle && !lookupName && !lookupCode) {
       continue;
     }
 
     if (!lookupTypeTitle) {
       errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupType} is required.`);
+      continue;
+    }
+
+    if (!lookupCode) {
+      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupCode} is required.`);
+      continue;
+    }
+
+    if (lookupCode.length > 255) {
+      errors.push(
+        `Row ${rowIndex + 1}: ${FieldLabels.LookupCode} must be 255 characters or less.`,
+      );
       continue;
     }
 
@@ -342,6 +364,7 @@ export async function parseLookupImportFile(
       lookupTypeId: lookupType.Id,
       lookupTypeTitle: lookupType.Title,
       lookupName,
+      lookupCode,
     });
   }
 
@@ -386,6 +409,10 @@ export function exportLookupsToExcel(rows: ILookupRow[]): void {
       {
         header: FieldLabels.LookupType,
         value: (row) => row.LookupTypeTitle,
+      },
+      {
+        header: FieldLabels.LookupCode,
+        value: (row) => row.LookupCode,
       },
       {
         header: FieldLabels.LookupName,

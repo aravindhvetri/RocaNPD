@@ -25,11 +25,14 @@ function toDashboardRow(item: INpdRequestListItem): INpdRequestListItemRow {
   return { ...item } as INpdRequestListItemRow;
 }
 
-function sortByCreated<T extends { Created: string }>(items: T[]): T[] {
-  return [...items].sort(
-    (left, right) =>
-      new Date(right.Created).getTime() - new Date(left.Created).getTime(),
-  );
+function sortByModified<T extends { Modified?: string; Created?: string }>(
+  items: T[],
+): T[] {
+  return [...items].sort((left, right) => {
+    const rightTime = new Date(right.Modified || right.Created || 0).getTime();
+    const leftTime = new Date(left.Modified || left.Created || 0).getTime();
+    return rightTime - leftTime;
+  });
 }
 
 export const fetchNpdDraftReworkList = createAsyncThunk<
@@ -39,7 +42,7 @@ export const fetchNpdDraftReworkList = createAsyncThunk<
 >("npdRequest/fetchDraftRework", async (_, { getState, rejectWithValue }) => {
   try {
     const email = getState().app.userEmail || getState().app.userLoginName;
-    return sortByCreated(
+    return sortByModified(
       (await npdRequestListService.fetchNpdDraftReworkItems(email)).map(
         toDashboardRow,
       ),
@@ -57,7 +60,7 @@ export const fetchNpdPendingList = createAsyncThunk<
   try {
     const state = getState();
     const email = state.app.userEmail || state.app.userLoginName;
-    return sortByCreated(
+    return sortByModified(
       (
         await npdRequestListService.fetchNpdPendingItems(
           email,
@@ -78,7 +81,7 @@ export const fetchNpdDashboardList = createAsyncThunk<
   try {
     const state = getState();
     const email = state.app.userEmail || state.app.userLoginName;
-    return sortByCreated(
+    return sortByModified(
       (
         await npdRequestListService.fetchNpdDashboardItems(
           email,

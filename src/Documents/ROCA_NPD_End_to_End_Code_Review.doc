@@ -1,0 +1,411 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>ROCA NPD — End-to-End Code Review Guide</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+  body { font-family: Calibri, Arial, sans-serif; color: #162C34; font-size: 11pt; line-height: 1.35; }
+  h1 { color: #1d4e56; font-size: 20pt; border-bottom: 2px solid #40919d; padding-bottom: 6px; }
+  h2 { color: #1d4e56; font-size: 14pt; margin-top: 18pt; }
+  h3 { color: #40919d; font-size: 12pt; }
+  .cover { text-align: center; margin: 24pt 0 28pt; }
+  .cover h1 { border: none; font-size: 28pt; margin-bottom: 4pt; }
+  .sub { color: #40919d; font-size: 16pt; font-weight: bold; }
+  .meta { color: #4B5563; font-size: 11pt; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0 14pt; font-size: 10pt; }
+  th { background: #1d4e56; color: #fff; text-align: left; padding: 6pt 8pt; }
+  td { border: 1px solid #c5d5d8; padding: 6pt 8pt; vertical-align: top; }
+  tr:nth-child(even) td { background: #E8F4F6; }
+  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+  pre { background: #f4f7f8; border-left: 3px solid #40919d; padding: 10pt; white-space: pre-wrap; }
+  ul { margin-top: 4pt; }
+  li { margin-bottom: 3pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ROCA NPD</h1>
+  <div class="sub">End-to-End Code Review Guide</div>
+  <p class="meta">New Product Development Request Tracker &nbsp;|&nbsp; 18 September 2026 &nbsp;|&nbsp; SPFx + React + Redux + SharePoint</p>
+</div>
+
+<p>This document explains the complete ROCA NPD application for code review: what each component is for, how it works, where data is fetched, which SharePoint lists own that data, how components connect through Redux and services, and the full request flow from login to approval. It describes the current codebase as implemented, including items still pending (Material Group screens, SAP posting, Reports).</p>
+
+<h1>1. What this application is</h1>
+<p>ROCA NPD is a SharePoint Framework (SPFx) client-side web part named <b>NPD REQUESTS — New Product Development</b>. Users create New Product Development requests, save drafts, submit them into a sequential approval chain (Initiator → Vertical Head → MIS Coordinator), and review requests on role-scoped list screens. Administration of Lookup Type, Lookup, Workflow Configuration, and Brand Material Extension lives in the same app. Plant, Role, and Approver master data are not maintained here — they are read from the separate ROCA site.</p>
+<ul>
+  <li>NPD request create / draft / submit / view / approve / rework / reject.</li>
+  <li>Role-based navigation and data scope from ROCA ApproversMaster (union of roles).</li>
+  <li>Admin masters for lookups, workflow steps, and brand-material extension.</li>
+  <li>Email notification on submit and Vertical Head actions (Graph CID logo).</li>
+  <li>Material Group, SAP Post, Material Master auto-populate, and Reports are designed but not implemented as full screens yet.</li>
+</ul>
+
+<h1>2. Technology stack</h1>
+<table>
+  <tr><th>Layer</th><th>Choice</th><th>Where it lives</th></tr>
+  <tr><td>Host</td><td>SharePoint Online + SPFx 1.23.2</td><td>src/webparts/rocaNpd/RocaNpdWebPart.ts</td></tr>
+  <tr><td>UI</td><td>React 17 + PrimeReact 10, wrapped</td><td>components/common/controls/</td></tr>
+  <tr><td>State</td><td>Redux Toolkit</td><td>src/store/</td></tr>
+  <tr><td>SharePoint API</td><td>PnPjs v4 (spfi + SPFx)</td><td>External/CommonServices/SPServices.ts</td></tr>
+  <tr><td>Routing</td><td>react-router-dom HashRouter</td><td>#/npd/..., #/admin/...</td></tr>
+  <tr><td>Styling</td><td>SCSS modules + theme.scss</td><td>External/CommonServices/theme.scss</td></tr>
+  <tr><td>Standards</td><td>Mandatory MD docs</td><td>src/Documents/</td></tr>
+</table>
+<p>Feature screens must not import primereact/* directly. They use the common wrappers. Components must not call SharePoint; they dispatch thunks, thunks call services, services call SPServices.</p>
+
+<h1>3. How the application starts</h1>
+<p>Bootstrap is a straight line. Nothing in a screen should re-initialize PnP.</p>
+<pre>RocaNpdWebPart.onInit
+  → loadApplicationStyles (PrimeReact + Poppins + theme)
+RocaNpdWebPart.render
+  → React.createElement(RocaNpd, { context })
+RocaNpd constructor
+  → spfi().using(SPFx(context))
+  → setupSP(sp) and setupSpfxContext(context)
+  → &lt;Provider store&gt; → MainComponent
+MainComponent
+  → dispatch(initializeApp(spfxContext))
+  → HashRouter → AppShell (Header + SideNavigation) → AppRoutes</pre>
+<p><code>initializeApp</code> (src/store/thunks/appThunks.ts) writes the logged-in user into appSlice (display name, email, login name, userId, site URL), then calls <code>resolveUserAccess</code> in roleService.ts. That function:</p>
+<ul>
+  <li>Adds Admin if the user is in the NPD-site SharePoint group “Admins”.</li>
+  <li>Loads ROCA ApproversMaster (System, Role, Brand, Users expanded).</li>
+  <li>Matches the current user by email only (normalizeEmail). It does not use NPD-site user IDs or WorkflowJSON.</li>
+  <li>Collects every matching role as a union (Initiator, Vertical Head, MIS Coordinator, Consultant) plus per-role brand lists.</li>
+  <li>Stores the result in appSlice.assignedRoles / mappedBrands / npdInitiatorBrands / npdVerticalHeadBrands, etc.</li>
+</ul>
+<p>Until that finishes, MainComponent shows LoaderOverlay. ProtectedRoute then blocks any route the resolved roles cannot access. Side navigation is filtered by the same access object (useFilteredNavigation → permissionService.filterNavigationByRoles).</p>
+
+<h1>4. Layered architecture</h1>
+<pre>Screen / layout component
+        ↓  dispatch / useAppSelector
+Redux thunk (store/thunks)
+        ↓  calls
+Service (External/CommonServices)
+        ↓  PnP via SPServices, sometimes Web([sp.web, rocaSiteUrl])
+SharePoint list item
+        ↓  mapped DTO
+Slice extraReducer writes state
+        ↓
+Screen re-renders</pre>
+<p>This is the only allowed data path (ProjectStandards ADR-005). If you find PnP inside a React component during review, that is a defect.</p>
+
+<h1>5. Folder map (what lives where)</h1>
+<table>
+  <tr><th>Path</th><th>Responsibility</th></tr>
+  <tr><td>src/webparts/rocaNpd/RocaNpdWebPart.ts</td><td>SPFx lifecycle, styles, render React root</td></tr>
+  <tr><td>src/webparts/rocaNpd/components/RocaNpd.tsx</td><td>PnP setup + Redux Provider</td></tr>
+  <tr><td>.../components/MainComponent.tsx</td><td>initializeApp, HashRouter, AppShell, routes</td></tr>
+  <tr><td>.../components/layout/</td><td>Header, AppShell, SideNavigation, RoleIndicator</td></tr>
+  <tr><td>.../components/routes/</td><td>AppRoutes, ProtectedRoute, Unauthorized</td></tr>
+  <tr><td>.../components/npd/newRequest/</td><td>NPD form (create / view / edit / approve)</td></tr>
+  <tr><td>.../components/npd/requestList/</td><td>All + Approved dashboards + Workflow Status</td></tr>
+  <tr><td>.../components/npd/draftRework/</td><td>Draft/Rework and Pending list screens</td></tr>
+  <tr><td>.../components/admin/</td><td>Lookup Type, Lookup, Workflow Config, Brand Extension</td></tr>
+  <tr><td>.../components/common/controls/</td><td>PrimeReact wrappers used by every screen</td></tr>
+  <tr><td>src/store/</td><td>Redux store, slices, typed hooks, thunks</td></tr>
+  <tr><td>src/External/CommonServices/</td><td>Config, PnP, all SharePoint/business services</td></tr>
+  <tr><td>src/Documents/</td><td>TechnicalArchitecture, ProjectStandards, TaskList, Checklist</td></tr>
+</table>
+
+<h1>6. Redux store — how state is connected</h1>
+<p>configureStore in src/store/index.ts registers five slices. Screens select with useAppSelector and dispatch with useAppDispatch (src/store/hooks.ts).</p>
+<table>
+  <tr><th>Slice</th><th>Holds</th><th>Filled by</th></tr>
+  <tr><td>appSlice</td><td>User identity, roles, brands, init flag</td><td>initializeApp / roleService</td></tr>
+  <tr><td>uiSlice</td><td>Sidebar collapsed and related UI flags</td><td>layout actions</td></tr>
+  <tr><td>adminSlice</td><td>Lookup Type, Lookup, Workflow Config, Brand Extension rows</td><td>admin thunks</td></tr>
+  <tr><td>npdFormSlice</td><td>Open request: general info, item rows, lookup options, submit progress</td><td>npdFormThunks</td></tr>
+  <tr><td>npdRequestSlice</td><td>List rows for Draft, Pending, All/Approved dashboards</td><td>npdRequestThunks</td></tr>
+</table>
+<p>npdFormSlice is the working copy of one request. npdRequestSlice is the list cache. They are separate so opening a form does not wipe the dashboard, and saving a draft does not require the list to own form field state.</p>
+
+<h1>7. Where the data comes from</h1>
+<p>There are two SharePoint sites. The NPD site hosts this web part and the NPD lists. The ROCA master site hosts shared masters. Cross-site reads use requireRocaMasterSiteUrl() from the SPFx site URL (not window.origin alone) and PnP Web([sp.web, rocaSiteUrl]).</p>
+
+<h2>7.1 NPD site lists</h2>
+<table>
+  <tr><th>List (Config.ListNames)</th><th>Used for</th><th>Primary service</th></tr>
+  <tr><td>NPD_Request</td><td>Request header: Brand, MaterialType, Plant, Status, WorkFlowJSON, Title/Request ID</td><td>npdRequestGeneralInfoService.ts</td></tr>
+  <tr><td>NPD_ItemDetails</td><td>Line items; lookup to NPD_Request via RequestGeneralInfoId</td><td>npdItemDetailsService.ts</td></tr>
+  <tr><td>NPD_ApproverComments</td><td>Rework/Reject comments + acting user Person field</td><td>npdApproverCommentsService.ts</td></tr>
+  <tr><td>NPD_LookupType</td><td>Admin Lookup Type master</td><td>lookupTypeService.ts</td></tr>
+  <tr><td>NPD_Lookup</td><td>Admin Lookup values AND Item Details MultiSelect options</td><td>lookupService.ts + lookupOptionUtils.ts</td></tr>
+  <tr><td>NPD_WorkflowConfig</td><td>Approval chain: RequestType, CurrentRole, NextRole, order</td><td>workflowConfigurationService.ts</td></tr>
+  <tr><td>NPD_BrandMaterialExtensionMaster</td><td>Brand → plant/warehouse extension mapping</td><td>brandMaterialExtensionService.ts</td></tr>
+  <tr><td>NPD_Templates library</td><td>Excel import templates + approval email HTML template</td><td>templateService.ts</td></tr>
+</table>
+
+<h2>7.2 ROCA master site lists</h2>
+<table>
+  <tr><th>List</th><th>Used for</th><th>Primary service</th></tr>
+  <tr><td>ApproversMaster</td><td>Who has which role on which brand/system; initiator Brand dropdown</td><td>roleService.ts, npdApproverAssignmentService.ts, npdFormDataService.ts</td></tr>
+  <tr><td>PlantMaster</td><td>Finished Products Plant/Source (PlantType=Factory, active, PlantCode)</td><td>npdFormDataService.ts / rocaMasterDataService.ts</td></tr>
+  <tr><td>RoleMaster</td><td>Workflow Config Next Role options (NPD excludes Consultant)</td><td>workflowConfigurationService.ts</td></tr>
+  <tr><td>BrandMaster</td><td>Brand titles when needed as ROCA lookup source</td><td>rocaMasterDataService.ts</td></tr>
+</table>
+<p>ApproversMaster matching is email-only after expand (System/Title, Role/Title, Brand/Title, Users/EMail). Do not filter those lookup/person fields in OData — load and filter in TypeScript (R-NPD05a). Vertical Head brands are brand-scoped. MIS Coordinator is not brand-scoped for pending work.</p>
+
+<h1>8. Service catalog (review this layer first)</h1>
+<p>Every SharePoint call funnels through SPServices.ts (add/update/delete/read/batch, getAllUsers, ensureUser, groups). Business services sit on top of it.</p>
+<table>
+  <tr><th>Service file</th><th>What it does</th></tr>
+  <tr><td>Config.ts</td><td>List names, field names, labels, roles, routes, statuses — never hardcode these in UI</td></tr>
+  <tr><td>Interface.ts</td><td>DTOs: INpdRequestGeneralInfo, INpdWorkflowStepJson, IResolvedUserAccess, etc.</td></tr>
+  <tr><td>roleService.ts</td><td>Resolve assigned roles + brand maps from ApproversMaster + Admin group</td></tr>
+  <tr><td>permissionService.ts</td><td>hasRole, canViewRequest, canActOnPendingNpdStep, filterNavigationByRoles, ProtectedRoute helpers</td></tr>
+  <tr><td>personFieldUtils.ts</td><td>normalizeEmail, extractPersonEmails, approversRowMatchesEmail</td></tr>
+  <tr><td>npdWorkflowJsonService.ts</td><td>Build, parse, submit, approve/rework/reject WorkFlowJSON; pending role helpers</td></tr>
+  <tr><td>npdApproverAssignmentService.ts</td><td>Emails for a workflow role + brand from ApproversMaster</td></tr>
+  <tr><td>npdRequestGeneralInfoService.ts</td><td>CRUD header; Save Draft; Submit; applyNpdWorkflowAction; Author expand</td></tr>
+  <tr><td>npdRequestListService.ts</td><td>Dashboard / pending / draft-rework queries + item-line counts</td></tr>
+  <tr><td>npdItemDetailsService.ts</td><td>Batch insert/update/delete line items</td></tr>
+  <tr><td>npdItemDetailsImportService.ts</td><td>Excel parse + lookup option validation for Item Details</td></tr>
+  <tr><td>npdRequestIdService.ts</td><td>NPD-YYYY-### generation, skip IsDeleted</td></tr>
+  <tr><td>npdFormDataService.ts</td><td>Initiator brands + factory plants (ROCA)</td></tr>
+  <tr><td>npdNotificationService.ts</td><td>Send approval emails after submit / VH action</td></tr>
+  <tr><td>npdWorkflowStatusView.ts</td><td>Read-only Workflow Status rows + display-name resolution</td></tr>
+  <tr><td>lookupService.ts / lookupTypeService.ts</td><td>Admin CRUD + active lookups for MultiSelect options</td></tr>
+  <tr><td>importService.ts / exportService.ts</td><td>Shared Excel import/export used by Admin and NPD</td></tr>
+  <tr><td>softDelete.ts</td><td>IsDeleted payloads; all deletes are soft</td></tr>
+  <tr><td>rocaSiteUrlResolver.ts</td><td>Map current site URL → ROCA master site URL</td></tr>
+</table>
+
+<h1>9. Common UI components (used everywhere)</h1>
+<p>These wrappers are the only PrimeReact surface. Feature screens import from components/common/controls. If a pattern appears twice, it belongs here (R-C02).</p>
+<table>
+  <tr><th>Component</th><th>Used for</th></tr>
+  <tr><td>Button</td><td>Primary/secondary/text/icon actions (Edit, View, Workflow, Save, Submit)</td></tr>
+  <tr><td>InputText / InputNumber / InputTextarea</td><td>Form fields; NPD Form sets autoComplete=off</td></tr>
+  <tr><td>Dropdown / MultiSelect / ComboBox</td><td>Single and multi lookups; overlay styles from theme</td></tr>
+  <tr><td>DatePicker</td><td>Date fields in admin/filter patterns</td></tr>
+  <tr><td>DataTable</td><td>Every master and request list, plus Item Details grid</td></tr>
+  <tr><td>Dialog / ConfirmDialog</td><td>Forms, Workflow Status, comments, confirmations</td></tr>
+  <tr><td>DeleteConfirmDialog / DeleteBlockedDialog</td><td>Admin soft-delete and dependency-blocked delete</td></tr>
+  <tr><td>Toast</td><td>One-at-a-time validation and success/error messages</td></tr>
+  <tr><td>Tag</td><td>Status chips (Draft, Pending, Rework, Approved, Rejected)</td></tr>
+  <tr><td>LoaderOverlay</td><td>App init, list load, submit line-item progress bar</td></tr>
+  <tr><td>FileUpload</td><td>Excel import</td></tr>
+  <tr><td>ControlField</td><td>Label + required + control layout</td></tr>
+  <tr><td>MasterTablePanel / MasterToolbarSearch</td><td>Admin and NPD list chrome</td></tr>
+  <tr><td>ImportDialog / ImportValidationDialog</td><td>Shared import UX; NPD validation shows S.NO + Error only</td></tr>
+</table>
+
+<h1>10. Layout, navigation, and routing</h1>
+<table>
+  <tr><th>Component</th><th>Role</th></tr>
+  <tr><td>AppShell</td><td>Header + collapsible sidebar + content slot + version label</td></tr>
+  <tr><td>Header</td><td>App title “New Product Development” and user context</td></tr>
+  <tr><td>SideNavigation / Compact variants</td><td>NAV_SECTIONS from navigationConfig.ts, filtered by roles</td></tr>
+  <tr><td>RoleIndicator</td><td>Shows resolved roles (union, not a switch that overrides others)</td></tr>
+  <tr><td>useFilteredNavigation.ts</td><td>Applies permissionService.filterNavigationByRoles(access)</td></tr>
+  <tr><td>AppRoutes.tsx</td><td>Maps hash paths to implemented screens or RoutePlaceholder</td></tr>
+  <tr><td>ProtectedRoute.tsx</td><td>Blocks URL access if the resolved role cannot open that route</td></tr>
+  <tr><td>Unauthorized.tsx</td><td>Fallback when the user has no access</td></tr>
+</table>
+<p>Implemented hash routes:</p>
+<table>
+  <tr><th>Route</th><th>Screen component</th><th>Who typically sees it</th></tr>
+  <tr><td>/npd/new</td><td>NpdRequestForm</td><td>Initiator create/edit; all roles view; VH/MIS edit when acting</td></tr>
+  <tr><td>/npd/all</td><td>NpdRequestDashboard variant=all</td><td>Initiator, VH, MIS, Admin</td></tr>
+  <tr><td>/npd/pending</td><td>NpdDraftRework (pending fetch)</td><td>Initiator (own), VH (brand pending), MIS (pending role)</td></tr>
+  <tr><td>/npd/approved</td><td>NpdRequestDashboard variant=approved</td><td>Same visibility as All, filtered to Approved</td></tr>
+  <tr><td>/npd/draft-rework</td><td>NpdDraftRework</td><td>Initiator only (own Draft/Rework)</td></tr>
+  <tr><td>/admin/lookup-type</td><td>LookupTypeMaster</td><td>Admin</td></tr>
+  <tr><td>/admin/lookup</td><td>LookupMaster</td><td>Admin</td></tr>
+  <tr><td>/admin/workflow-config</td><td>WorkflowConfigurationMaster</td><td>Admin</td></tr>
+  <tr><td>/admin/brand-extension</td><td>BrandMaterialExtensionMaster</td><td>Admin</td></tr>
+  <tr><td>MG + Reports + Material Master</td><td>RoutePlaceholder</td><td>Not built yet</td></tr>
+</table>
+<p>Vertical Head navigation is strictly All Requests, Pending Approval, Approved Requests. No New, Draft, Material Group, Admin, or Reports. That filter is role+module based from ApproversMaster, not from WorkflowJSON or the last selected role.</p>
+
+<h1>11. Administration module — component by component</h1>
+<p>Each admin screen follows the same pattern: Master page → Toolbar (search/add/import/export) → Table → Form dialog. Thunks live in lookupTypeThunks, lookupThunks, workflowConfigurationThunks, brandMaterialExtensionThunks. Soft delete uses IsDeleted. Delete is blocked when dependencyValidationService finds child records.</p>
+<table>
+  <tr><th>Screen</th><th>Components</th><th>Data</th></tr>
+  <tr><td>Lookup Type</td><td>LookupTypeMaster, Toolbar, Table, FormDialog</td><td>NPD_LookupType via lookupTypeService</td></tr>
+  <tr><td>Lookup</td><td>LookupMaster, Toolbar, Table, FormDialog</td><td>NPD_Lookup; type from Lookup Type; Title is the option label used later on the NPD form</td></tr>
+  <tr><td>Workflow Configuration</td><td>WorkflowConfigurationMaster, Table, WorkflowConfigFormDialog</td><td>NPD_WorkflowConfig + RoleMaster for Next Role; builds the NPD approval sequence</td></tr>
+  <tr><td>Brand Material Extension</td><td>BrandMaterialExtensionMaster, Table, FormDialog</td><td>NPD_BrandMaterialExtensionMaster; ROCA brand/plant options</td></tr>
+</table>
+<p>Workflow Configuration is what later becomes WorkFlowJSON on a request. If NPD Request steps are missing, Save Draft / Submit throw “NPD workflow is not configured.”</p>
+
+<h1>12. NPD list screens — how they fetch and connect</h1>
+<p>All four request lists share one table: NpdRequestListTable. Draft/Rework and Pending wrap it with NpdDraftReworkTable. All and Approved use NpdRequestDashboard.</p>
+<table>
+  <tr><th>Screen</th><th>Thunk</th><th>Service filter</th></tr>
+  <tr><td>All Requests</td><td>fetchNpdDashboardList</td><td>fetchNpdDashboardItems → canViewRequest (brand/role union; MIS sees all)</td></tr>
+  <tr><td>Approved Requests</td><td>same thunk, client filter Approved</td><td>Same scope as All, Status = Approved</td></tr>
+  <tr><td>Pending Approval</td><td>fetchNpdPendingList</td><td>Status=Pending AND (user can act on pending role OR initiator owns the row)</td></tr>
+  <tr><td>Draft / ReWork</td><td>fetchNpdDraftReworkList</td><td>Status Draft/Rework AND AuthorEmail = current user</td></tr>
+</table>
+<p>List rows come from NPD_Request (Author expanded) plus a summary of NPD_ItemDetails (product/line count). Columns: Request ID, Brand (MG1), Material Type, Plant, Products, Status, Created Date, Actions.</p>
+
+<h2>12.1 Actions column</h2>
+<ul>
+  <li><b>Edit</b> (pencil) — only if canEditNpdListRow: own Draft/Rework, or current pending VH/MIS step. Opens /npd/new?id=&amp;mode=edit&amp;from=...</li>
+  <li><b>Workflow</b> (sitemap) — always. Opens read-only Workflow Status dialog. Does not change data.</li>
+  <li><b>View</b> (eye) — always. Opens /npd/new?id=&amp;mode=view&amp;from=... Read-only; never shows Approve/Reject/Rework.</li>
+  <li>No Delete on request tables.</li>
+</ul>
+<p><code>from</code> is a short key (all / pending / approved / draft-rework). Cancel/Back on the form uses resolveNpdFormCancelRoute so the user returns to the list they came from. Email links use from=pending.</p>
+
+<h1>13. NPD form — components and data fetch</h1>
+<p>Route /npd/new is one form used for New, Draft edit, View, and approver Edit. useNpdRequestFormController.ts owns load, save, submit, approve, cancel, and footer mode. NpdRequestForm.tsx renders the shell (form autoComplete=off). Sections are split to stay small.</p>
+<table>
+  <tr><th>Component</th><th>What it does</th><th>Data</th></tr>
+  <tr><td>NpdRequestForm</td><td>Page shell, toasts, loader, wires controller</td><td>npdFormSlice</td></tr>
+  <tr><td>NpdGeneralInfoSection</td><td>Brand, Material Type, Plant/Source</td><td>Brands from ApproversMaster; Material Type from Config.NpdMaterialTypes; Plant from PlantMaster or Config.NpdTradedPlantSources</td></tr>
+  <tr><td>NpdItemDetailsSection</td><td>Line-item grid + Import + add/delete row</td><td>NPD_ItemDetails + NPD_Lookup options</td></tr>
+  <tr><td>NpdItemDetailsTableCell / useNpdItemDetailsColumns</td><td>Cell editors (Input/MultiSelect) by column config</td><td>npdItemDetailsConfig.ts</td></tr>
+  <tr><td>NpdItemDetailsImport</td><td>Excel import using shared ImportDialog</td><td>NPD_Templates TemplateType=NPDItemDetails; lookup values must exist</td></tr>
+  <tr><td>NpdFormSectionPanel</td><td>Teal section header chrome</td><td>Presentational</td></tr>
+  <tr><td>NpdRequestFormFooter</td><td>Cancel/Back, Save Draft, Submit, Approve/Rework/Reject/Post to SAP</td><td>Footer mode from role + request status + view/edit</td></tr>
+  <tr><td>NpdApproverCommentDialog</td><td>Comment required for Rework/Reject</td><td>Written to NPD_ApproverComments</td></tr>
+</table>
+
+<h2>13.1 Hydration (opening an existing request)</h2>
+<pre>URL: /npd/new?id={Id}&amp;mode=view|edit&amp;from=pending
+hydrateNpdRequestForm thunk
+  → npdRequestGeneralInfoService.get by Id
+  → npdItemDetailsService.fetch by RequestGeneralInfoId
+  → npdFormSlice: generalInfo, items, requestStatus, WorkFlowJSON steps, title
+Also in parallel as needed:
+  fetchNpdInitiatorBrandOptions / fetchNpdPlantSourceOptions / fetchNpdLookupOptions</pre>
+<p>Do not use setNpdMaterialType when hydrating a saved Plant/Source — that action clears plant. The controller sets general info fields so an existing plant is preserved (R-NPD10).</p>
+
+<h2>13.2 Save Draft</h2>
+<p>saveNpdDraft → npdRequestGeneralInfoService. Creates or updates NPD_Request. Status stays Draft on create; existing Rework is preserved. Title stores Brand until a Request ID exists. WorkFlowJSON is rebuilt every save from NPD_WorkflowConfig + ApproversMaster (Initiator = current user Status ""; approvers Status ""). Item details are batch written. No Request ID yet. No email.</p>
+
+<h2>13.3 Submit Request</h2>
+<p>submitNpdRequest validates (first error toast only). Then:</p>
+<ul>
+  <li>Generate Title = NPD-YYYY-### (npdRequestIdService; skip IsDeleted).</li>
+  <li>Status = Pending.</li>
+  <li>applySubmitWorkflowStatuses: first non-Initiator role (usually Vertical Head) → Pending; later roles stay empty; Initiator Status remains "".</li>
+  <li>Patch item RequestGeneralInfoId to the header.</li>
+  <li>Loader shows “{n} / {m} Line Items Added”.</li>
+  <li>Email the pending Vertical Head users (Approve / Re-work / Reject buttons in mail). MIS mail does not get those buttons.</li>
+</ul>
+
+<h1>14. Workflow JSON and the Workflow Status dialog</h1>
+<p>NPD_Request.WorkFlowJSON is an array of { Role, UserEmail, Status }. It is the live approval tracker. The list already has it parsed as WorkflowSteps on each row.</p>
+
+<h2>14.1 How status updates as approvers act</h2>
+<pre>Draft:      Initiator "" | Vertical Head "" | MIS Coordinator ""
+Submit:     Initiator "" | Vertical Head Pending | MIS ""     (header Status = Pending)
+VH Approve: Initiator "" | Vertical Head Approved | MIS Pending
+MIS complete: ... MIS Approved                               (header Status = Approved)
+Rework:     pending role Rework; header Status = Rework; initiator edits and resubmits
+Reject:     pending role Rejected; header Status = Rejected (closed)</pre>
+<p>applyNpdWorkflowAction (npdFormThunks → npdRequestGeneralInfoService) is the only mutation path. Approve/Rework/Reject from the form footer and from email action= query params share it. Actions are role-based and user-independent: any user assigned to the pending role may act (VH still brand-scoped; MIS any assigned MIS user). View mode never shows those buttons.</p>
+
+<h2>14.2 Workflow Status dialog (display only)</h2>
+<p>NpdRequestListTable Workflow icon → useNpdWorkflowStatusDialog → buildNpdWorkflowStatusViewRows. Dialog: NpdWorkflowStatusDialog. Columns: Role, Name, Workflow Role, Status. Footer: Cancel only. No writes.</p>
+<ul>
+  <li>Role = WorkFlowJSON.Role (Initiator, Vertical Head, MIS Coordinator, …).</li>
+  <li>Name = AuthorTitle if email matches author; else SharePoint siteUsers Title; else formatted email local-part.</li>
+  <li>Workflow Role = “Initiator” or “Approver”.</li>
+  <li>Initiator Status column shows Draft if the request is still Draft, otherwise Initiated (JSON Status is always empty for Initiator).</li>
+  <li>Approver Status is Pending / Approved / Rework / Rejected / —.</li>
+  <li>Every step with Status Pending is the current processing row: yellow background, italic orange role, orange Pending — matching the provided screenshot.</li>
+</ul>
+<p>Because the dialog reads the current WorkFlowJSON on the list row, it always reflects the latest saved approval step. After an approver acts, the next list refresh shows the new current user highlighted.</p>
+
+<h1>15. Permissions — how screens decide what you can do</h1>
+<table>
+  <tr><th>Question</th><th>Answered by</th></tr>
+  <tr><td>Which nav items?</td><td>filterNavigationByRoles(selectResolvedAccess) — union of ApproversMaster roles + Admin group</td></tr>
+  <tr><td>Can this URL open?</td><td>ProtectedRoute + permissionService route map</td></tr>
+  <tr><td>Which requests appear?</td><td>canViewRequest / pending helpers in npdRequestListService</td></tr>
+  <tr><td>Show Edit icon?</td><td>canEditNpdListRow (own draft/rework or current pending VH/MIS step)</td></tr>
+  <tr><td>Show Approve on form?</td><td>mode=edit AND canActOnPendingNpdStep AND footer mode for that role — never in view</td></tr>
+  <tr><td>Which brands on New Request?</td><td>app.npdInitiatorBrands from ApproversMaster System=New Product Development, Role=Initiator</td></tr>
+</table>
+<p>Multi-role users keep every role. Admin does not replace Initiator. If a user is Vertical Head for ROCA only, they see VH nav and ROCA-scoped lists — not Initiator New/Draft unless ApproversMaster also has them as Initiator.</p>
+
+<h1>16. Complete end-to-end flow</h1>
+<h2>16.1 Login to first paint</h2>
+<ul>
+  <li>SharePoint loads the web part. RocaNpdWebPart loads CSS and renders RocaNpd.</li>
+  <li>PnP is bound to the SPFx context. Redux store wraps MainComponent.</li>
+  <li>initializeApp stores the user and resolves roles from Admin group + ApproversMaster.</li>
+  <li>AppShell renders. Side nav shows only modules for those roles.</li>
+  <li>Default route is getDefaultRoute(access) (typically /npd/all or first allowed item).</li>
+</ul>
+<h2>16.2 Initiator creates a request</h2>
+<ul>
+  <li>Opens /npd/new. Controller loads brand options (ApproversMaster), lookup options (NPD_Lookup), plants when Material Type is chosen.</li>
+  <li>Fills General Information and Item Details (manual rows or Excel import).</li>
+  <li>Save Draft writes NPD_Request + NPD_ItemDetails and rebuilds WorkFlowJSON with empty approver statuses. Appears on Draft / ReWork.</li>
+  <li>Submit validates one field at a time, assigns NPD-YYYY-###, sets Pending, marks Vertical Head Pending, emails VH, shows line-item progress.</li>
+  <li>Request leaves Draft list and appears on All + Pending (for VH).</li>
+</ul>
+<h2>16.3 Vertical Head processes it</h2>
+<ul>
+  <li>Pending list shows requests whose WorkFlowJSON pending role is Vertical Head and Brand is in that user’s VH brands.</li>
+  <li>Workflow icon shows Initiator = Initiated (green) and Vertical Head = Pending (highlighted).</li>
+  <li>View is read-only. Edit opens approve/rework/reject.</li>
+  <li>Approve writes VH Approved, sets MIS Coordinator Pending, header stays Pending, emails MIS (no action buttons).</li>
+  <li>Rework/Reject collect comments into NPD_ApproverComments and update JSON + header Status.</li>
+</ul>
+<h2>16.4 MIS Coordinator processes it</h2>
+<ul>
+  <li>Any user with MIS Coordinator in ApproversMaster sees the request when MIS is Pending (not limited to the JSON email).</li>
+  <li>Workflow dialog now highlights MIS Coordinator as current.</li>
+  <li>Edit allows Rework / Reject / Post to SAP (Post to SAP UI/SAP call still pending in TaskList).</li>
+  <li>When the last approver completes, header Status becomes Approved and the row appears on Approved Requests.</li>
+</ul>
+<h2>16.5 How the pieces talk during that flow</h2>
+<pre>NpdDraftRework / NpdRequestDashboard
+  dispatch fetchNpdPendingList / fetchNpdDashboardList
+    npdRequestListService + npdRequestGeneralInfoService (NPD_Request + item counts)
+      npdRequestSlice.pendingItems / dashboardItems
+        NpdRequestListTable (Edit / Workflow / View)
+          Workflow → NpdWorkflowStatusDialog (WorkFlowJSON only)
+          View/Edit → /npd/new?id&amp;mode&amp;from
+            useNpdRequestFormController.hydrateNpdRequestForm
+              npdFormSlice
+                NpdGeneralInfoSection + NpdItemDetailsSection + Footer
+                  Save/Submit/Approve → npdFormThunks → generalInfo + item + workflow + email services
+                    SharePoint lists updated → user returns to `from` list → thunk refetch</pre>
+
+<h1>17. Suggested code-review path</h1>
+<ul>
+  <li>Start with src/Documents/TechnicalArchitecture.md §2, §6, §7, §12 and ProjectStandards R-NPD01–R-NPD21.</li>
+  <li>Read Config.ts and Interface.ts so list/field names are not guessed.</li>
+  <li>Read roleService.ts + permissionService.ts + ProtectedRoute — this is security.</li>
+  <li>Read npdWorkflowJsonService.ts — this is the approval state machine.</li>
+  <li>Read npdRequestGeneralInfoService.ts — persist + submit + apply action.</li>
+  <li>Read NpdRequestListTable + NpdWorkflowStatusDialog — list UX including Workflow Status.</li>
+  <li>Read useNpdRequestFormController.ts — form orchestration.</li>
+  <li>Only then read individual section components and admin masters; they follow one repeated pattern.</li>
+</ul>
+
+<h1>18. Not implemented yet (do not expect these in this review)</h1>
+<ul>
+  <li>Material Group module screens (placeholders only).</li>
+  <li>Reports dashboard.</li>
+  <li>Admin Material Master screen.</li>
+  <li>MIS Other Details / SAP field auto-populate and live Post to SAP.</li>
+  <li>Plant/Source filter by Brand Material Extension (T-0512).</li>
+</ul>
+
+<h1>19. Documents that govern this code</h1>
+<table>
+  <tr><th>Document</th><th>Use it for</th></tr>
+  <tr><td>TechnicalArchitecture.md</td><td>System design, lists, workflow, role matrix — source of truth</td></tr>
+  <tr><td>ProjectStandards.md</td><td>Mandatory coding rules (wrappers, Redux path, NPD rules R-NPD*)</td></tr>
+  <tr><td>TaskList.md</td><td>What is done vs pending (T-0509 = Workflow Status dialog)</td></tr>
+  <tr><td>Checklist.md</td><td>Verification items (CHK-G08a = Workflow Status)</td></tr>
+  <tr><td>This Word file</td><td>Narrative of how the running code is wired for reviewers</td></tr>
+</table>
+
+<p class="meta" style="text-align:center;margin-top:28pt;">ROCA NPD • End-to-End Code Review Guide • Generated from the current codebase • 18 September 2026</p>
+</body>
+</html>

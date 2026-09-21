@@ -14,7 +14,7 @@ import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
 export const APPROVERS_SELECT =
-  "Id,System/Title,Role/Title,Brand/Title,Users/Id,Users/Title,Users/EMail";
+  "Id,IsDelete,System/Title,Role/Title,Brand/Title,Users/Id,Users/Title,Users/EMail";
 export const APPROVERS_EXPAND = "System,Role,Brand,Users";
 
 const KNOWN_ROLES: UserRole[] = [
@@ -23,6 +23,11 @@ const KNOWN_ROLES: UserRole[] = [
   Config.Roles.MisCoordinator,
   Config.Roles.Consultant,
 ];
+
+const KNOWN_SYSTEMS = new Set<string>([
+  ApproverSystems.NewProductDevelopment.toLowerCase(),
+  ApproverSystems.NewMaterialGroup.toLowerCase(),
+]);
 
 export const emptyUserAccess = (): IResolvedUserAccess => ({
   assignedRoles: [],
@@ -120,11 +125,23 @@ async function fetchMatchingApproverAssignments(
       return;
     }
 
-    const systemTitle = getLookupTitles(row.System)[0] ?? "";
-    const key = `${knownRole}::${systemTitle}`;
+    const rawSystem = (getLookupTitles(row.System)[0] ?? "").trim();
+    if (!isKnownSystem(rawSystem)) {
+      return;
+    }
+
+    // Map ApproversMaster System+Role → module system used by nav/permissions.
+    // Consultant always owns Material Group (even if listed under NPD System).
+    // VH / MIS always own NPD. Initiator keeps the row System (NPD and/or MG).
+    const moduleSystem = resolveModuleSystem(knownRole, rawSystem);
+    if (!moduleSystem) {
+      return;
+    }
+
+    const key = `${knownRole}::${moduleSystem}`;
     const existing = assignmentMap.get(key) ?? {
       role: knownRole,
-      system: systemTitle,
+      system: moduleSystem,
       brands: [],
     };
     const brands = new Set(existing.brands);
@@ -158,12 +175,60 @@ function matchKnownRole(roleTitle: string): UserRole | null {
   );
 }
 
+function isKnownSystem(systemTitle: string): boolean {
+  return KNOWN_SYSTEMS.has(systemTitle.trim().toLowerCase());
+}
+
+/**
+ * Resolves which module System an ApproversMaster row applies to.
+ * Returns null when the Role+System combination is invalid.
+ */
+function resolveModuleSystem(
+  role: UserRole,
+  rawSystemTitle: string,
+): string | null {
+  const raw = rawSystemTitle.trim().toLowerCase();
+  const npd = ApproverSystems.NewProductDevelopment;
+  const mg = ApproverSystems.NewMaterialGroup;
+  const npdKey = npd.toLowerCase();
+  const mgKey = mg.toLowerCase();
+
+  if (role === Config.Roles.Consultant) {
+    // Consultant is Material Group only (Project Master §6.4). Accept either
+    // ApproversMaster System title used on the ROCA site.
+    if (raw === npdKey || raw === mgKey) {
+      return mg;
+    }
+    return null;
+  }
+
+  if (
+    role === Config.Roles.VerticalHead ||
+    role === Config.Roles.MisCoordinator
+  ) {
+    return raw === npdKey ? npd : null;
+  }
+
+  if (role === Config.Roles.Initiator) {
+    if (raw === npdKey) {
+      return npd;
+    }
+    if (raw === mgKey) {
+      return mg;
+    }
+    return null;
+  }
+
+  return null;
+}
+
 function brandsFor(
   assignments: IRoleBrandAssignment[],
   role: UserRole,
   system?: string,
 ): string[] {
   const titles = new Set<string>();
+  const systemKey = (system ?? "").trim().toLowerCase();
 
   assignments.forEach((assignment) => {
     if (assignment.role !== role) {
@@ -171,9 +236,8 @@ function brandsFor(
     }
 
     if (
-      system &&
-      assignment.system &&
-      assignment.system.toLowerCase() !== system.toLowerCase()
+      systemKey &&
+      (assignment.system ?? "").trim().toLowerCase() !== systemKey
     ) {
       return;
     }
@@ -201,37 +265,32 @@ function buildResolvedAccess(
     Config.Roles.Initiator,
     npdSystem,
   );
-  const fallbackInitiatorBrands =
-    npdInitiatorBrands.length > 0
-      ? npdInitiatorBrands
-      : brandsFor(assignments, Config.Roles.Initiator);
-
   const mgInitiatorBrands = brandsFor(
     assignments,
     Config.Roles.Initiator,
     mgSystem,
   );
-  const npdVerticalHeadBrands = brandsFor(
-    assignments,
-    Config.Roles.VerticalHead,
-    npdSystem,
-  );
-  const fallbackVerticalHeadBrands =
-    npdVerticalHeadBrands.length > 0
-      ? npdVerticalHeadBrands
-      : brandsFor(assignments, Config.Roles.VerticalHead);
+  // Project Master §6.1: Initiator uses both modules. If only one System row
+  // exists, reuse those brands for the other module's brand scope.
+  const allInitiatorBrands = brandsFor(assignments, Config.Roles.Initiator);
 
   return {
     assignedRoles: Array.from(assignedRoles),
     mappedBrands: uniqueBrands(assignments),
-    npdInitiatorBrands: fallbackInitiatorBrands,
-    npdVerticalHeadBrands: fallbackVerticalHeadBrands,
+    npdInitiatorBrands:
+      npdInitiatorBrands.length > 0 ? npdInitiatorBrands : allInitiatorBrands,
+    npdVerticalHeadBrands: brandsFor(
+      assignments,
+      Config.Roles.VerticalHead,
+      npdSystem,
+    ),
     npdMisCoordinatorBrands: brandsFor(
       assignments,
       Config.Roles.MisCoordinator,
+      npdSystem,
     ),
     mgInitiatorBrands:
-      mgInitiatorBrands.length > 0 ? mgInitiatorBrands : fallbackInitiatorBrands,
+      mgInitiatorBrands.length > 0 ? mgInitiatorBrands : allInitiatorBrands,
     mgConsultantBrands: brandsFor(assignments, Config.Roles.Consultant),
     assignments,
   };

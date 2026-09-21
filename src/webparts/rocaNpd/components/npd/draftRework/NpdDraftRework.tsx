@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config, FieldLabels, RequestStatus } from "../../../../../External/CommonServices/Config";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import { selectResolvedAccess } from "../../../../../store/slices/appSlice";
 import { clearNpdRequestError } from "../../../../../store/slices/npdRequestSlice";
@@ -27,12 +27,13 @@ import {
 import {
   ALL_BRAND_VALUE,
   ALL_STATUS_VALUE,
-  getDraftStatusOptions,
+  buildStatusFilterOptionsFromData,
   matchesNpdBrandFilter,
   matchesNpdListSearch,
   matchesNpdStatusFilter,
   uniqueBrandOptions,
 } from "../requestList/npdRequestListUtils";
+import { fetchNpdRequestStatusChoices } from "../../../../../External/CommonServices/npdRequestStatusChoices";
 import styles from "./NpdDraftRework.module.scss";
 
 const NpdDraftRework: React.FC = () => {
@@ -51,11 +52,16 @@ const NpdDraftRework: React.FC = () => {
   const [searchValue, setSearchValue] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState(ALL_STATUS_VALUE);
   const [brandFilter, setBrandFilter] = React.useState(ALL_BRAND_VALUE);
+  const [statusChoices, setStatusChoices] = React.useState<string[]>([]);
   const isPendingList = location.pathname === Config.Routes.NpdPending;
   const emailRequestId = parseEditId(searchParams.get("id"));
   const emailAction = parseNpdWorkflowAction(
     searchParams.get(Config.NpdEmail.QueryAction),
   );
+
+  React.useEffect(() => {
+    void fetchNpdRequestStatusChoices().then(setStatusChoices);
+  }, []);
 
   React.useEffect(() => {
     if (!emailRequestId) {
@@ -117,6 +123,29 @@ const NpdDraftRework: React.FC = () => {
   }, [dispatch, error]);
 
   const sourceRows = isPendingList ? pendingItems : draftItems;
+  const statusOptions = React.useMemo(
+    () =>
+      buildStatusFilterOptionsFromData(
+        sourceRows.map((item) => item.Status),
+        statusChoices,
+      ),
+    [sourceRows, statusChoices],
+  );
+
+  React.useEffect(() => {
+    if (statusFilter === ALL_STATUS_VALUE) {
+      return;
+    }
+
+    const stillValid = statusOptions.some(
+      (option) =>
+        String(option.value).toLowerCase() === statusFilter.toLowerCase(),
+    );
+    if (!stillValid) {
+      setStatusFilter(ALL_STATUS_VALUE);
+    }
+  }, [statusFilter, statusOptions]);
+
   const filteredRows = sourceRows.filter(
     (item) =>
       matchesNpdStatusFilter(item.Status, statusFilter) &&
@@ -144,14 +173,7 @@ const NpdDraftRework: React.FC = () => {
         searchValue={searchValue}
         searchPlaceholder="Search here"
         statusValue={statusFilter}
-        statusOptions={
-          isPendingList
-            ? [
-                { label: FieldLabels.AllStatuses, value: ALL_STATUS_VALUE },
-                { label: RequestStatus.Pending, value: RequestStatus.Pending },
-              ]
-            : getDraftStatusOptions()
-        }
+        statusOptions={statusOptions}
         brandValue={brandFilter}
         brandOptions={uniqueBrandOptions(sourceRows.map((item) => item.Brand))}
         filtersActive={Boolean(

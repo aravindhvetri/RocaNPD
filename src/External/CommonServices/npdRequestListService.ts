@@ -1,4 +1,4 @@
-import { Config, RequestStatus } from "./Config";
+import { ApproverSystems, Config, RequestStatus } from "./Config";
 import type {
   INpdRequestGeneralInfo,
   INpdRequestListItem,
@@ -18,7 +18,7 @@ import { normalizeEmail } from "./personFieldUtils";
 import {
   canActOnPendingNpdStep,
   canViewRequest,
-  hasRole,
+  hasSystemRole,
 } from "./permissionService";
 import SPServices from "./SPServices";
 
@@ -159,7 +159,11 @@ export async function fetchNpdPendingItems(
       }
 
       return (
-        hasRole(access.assignedRoles, Config.Roles.Initiator) &&
+        hasSystemRole(
+          access,
+          Config.Roles.Initiator,
+          ApproverSystems.NewProductDevelopment,
+        ) &&
         normalizeEmail(item.AuthorEmail) === loginEmail
       );
     })

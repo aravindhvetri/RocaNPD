@@ -1,7 +1,7 @@
 import * as React from "react";
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { IBrandMaterialExtensionRow } from "../../../../../External/CommonServices/Interface";
-import { Button, DataTable } from "../../common/controls";
+import { Button, DataTable, MultiValueCell } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
 import styles from "../../common/controls/DataTable/DataTable.module.scss";
 
@@ -22,13 +22,14 @@ const BrandMaterialExtensionTable: React.FC<
         field: "Brand",
         header: FieldLabels.Brand,
         sortable: true,
-        style: { width: "50%" },
+        style: { width: "30%" },
       },
       {
         field: "Plant",
         header: FieldLabels.Plant,
         sortable: true,
-        style: { width: "50%" },
+        style: { width: "70%" },
+        body: (row) => <MultiValueCell value={row.Plant} />,
       },
       {
         field: "Id",

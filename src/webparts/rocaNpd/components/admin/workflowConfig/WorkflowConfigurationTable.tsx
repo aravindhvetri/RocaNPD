@@ -1,7 +1,7 @@
 import * as React from "react";
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { IWorkflowConfigTableRow } from "../../../../../External/CommonServices/Interface";
-import { Button, DataTable } from "../../common/controls";
+import { Button, DataTable, MultiValueCell } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
 import styles from "../../common/controls/DataTable/DataTable.module.scss";
 
@@ -32,6 +32,13 @@ const WorkflowConfigurationTable: React.FC<IWorkflowConfigurationTableProps> = (
         field: "ApprovalChain",
         header: FieldLabels.ApprovalChain,
         sortable: true,
+        body: (row) => (
+          <MultiValueCell
+            value={row.ApprovalChain}
+            splitPattern={/\s*→\s*/}
+            joinWith=" → "
+          />
+        ),
       },
       {
         field: "RequestType",

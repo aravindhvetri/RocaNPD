@@ -5,7 +5,7 @@ import type { INpdRequestListItemRow } from "../../../../../External/CommonServi
 import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
 import { npdTabDashboardRoute } from "../../../../../External/CommonServices/npdRequestTabSync";
 import { renderSharePointUserPersona } from "../../../../../External/CommonServices/personFieldUtils";
-import { Button, DataTable, Tag } from "../../common/controls";
+import { Button, DataTable, MultiValueCell, Tag } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
 import tableStyles from "../../common/controls/DataTable/DataTable.module.scss";
 import NpdEditingRestrictedDialog from "../tabLock/NpdEditingRestrictedDialog";
@@ -134,6 +134,7 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
         header: FieldLabels.Plant,
         sortable: true,
         ...columnSize("5.75rem"),
+        body: (row) => <MultiValueCell value={row.Plant} />,
       },
       {
         field: "ProductCount",

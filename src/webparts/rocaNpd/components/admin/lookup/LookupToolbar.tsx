@@ -8,6 +8,7 @@ export interface ILookupToolbarProps {
   onSearchChange: (value: string) => void;
   onResetFilters: () => void;
   filtersActive?: boolean;
+  exportDisabled?: boolean;
   onImport: () => void;
   onExport: () => void;
   onAddNew: () => void;
@@ -18,6 +19,7 @@ const LookupToolbar: React.FC<ILookupToolbarProps> = ({
   onSearchChange,
   onResetFilters,
   filtersActive = false,
+  exportDisabled = false,
   onImport,
   onExport,
   onAddNew,
@@ -46,6 +48,7 @@ const LookupToolbar: React.FC<ILookupToolbarProps> = ({
         icon="pi pi-download"
         size="sm"
         className={styles.actionButton}
+        disabled={exportDisabled}
         onClick={onExport}
       />
       <Button
