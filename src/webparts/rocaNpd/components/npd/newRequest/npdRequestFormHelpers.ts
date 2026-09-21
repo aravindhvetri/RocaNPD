@@ -1,4 +1,5 @@
 import {
+  ApproverSystems,
   Config,
   NpdFormFrom,
   RequestStatus,
@@ -13,6 +14,7 @@ import type {
 import {
   canActOnPendingNpdStep,
   hasPermission,
+  hasSystemRole,
 } from "../../../../../External/CommonServices/permissionService";
 import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
 import {
@@ -118,7 +120,11 @@ export function canEditNpdListRow(
 ): boolean {
   if (isDraftOrReworkStatus(row.Status)) {
     return (
-      hasPermission(access.assignedRoles, "npd.editDraft") &&
+      hasSystemRole(
+        access,
+        Config.Roles.Initiator,
+        ApproverSystems.NewProductDevelopment,
+      ) &&
       normalizeEmail(row.AuthorEmail) === normalizeEmail(currentUserEmail)
     );
   }

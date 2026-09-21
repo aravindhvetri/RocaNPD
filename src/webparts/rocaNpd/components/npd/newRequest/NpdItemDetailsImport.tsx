@@ -74,8 +74,8 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
     showSuccessToast(
       toastRef,
       importedRows.length === 1
-        ? "1 item line imported."
-        : `${importedRows.length} item lines imported.`,
+        ? "1 item line imported successfully."
+        : `${importedRows.length} item lines imported successfully.`,
     );
     setPreview(null);
     setValidationRows([]);

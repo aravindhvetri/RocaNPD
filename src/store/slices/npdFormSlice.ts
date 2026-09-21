@@ -61,6 +61,14 @@ const npdFormSlice = createSlice({
       state.saveStatus = "idle";
       state.error = null;
     },
+    /** Seed Brand options from resolved ApproversMaster access (immediate, no wait). */
+    setNpdBrandOptions(
+      state,
+      action: PayloadAction<ISelectOption[]>,
+    ) {
+      state.brandOptions = action.payload;
+      state.brandOptionsStatus = "idle";
+    },
     setNpdBrand(state, action: PayloadAction<string | null>) {
       state.generalInfo.brand = action.payload;
     },
@@ -222,6 +230,7 @@ const npdFormSlice = createSlice({
 export const {
   clearNpdFormError,
   resetNpdFormState,
+  setNpdBrandOptions,
   setNpdBrand,
   setNpdMaterialType,
   setNpdPlantSource,

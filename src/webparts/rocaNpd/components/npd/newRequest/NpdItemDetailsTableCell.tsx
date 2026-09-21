@@ -74,7 +74,9 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
     );
   }
 
-  const multiValue = Array.isArray(row[field]) ? (row[field] as string[]) : [];
+  const multiValue = Array.isArray(row[field])
+    ? (row[field] as string[]).slice(0, 1)
+    : [];
 
   return (
     <MultiSelect
@@ -85,11 +87,12 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
       filter={!readOnly}
       display="comma"
       selectAll={false}
+      selectionLimit={1}
       readOnly={readOnly}
       disabled={readOnly}
       className={controlClassName}
       onChange={(value) =>
-        handleChange(value.map((entry) => String(entry)))
+        handleChange(value.map((entry) => String(entry)).slice(0, 1))
       }
     />
   );

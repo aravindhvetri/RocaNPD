@@ -198,7 +198,7 @@ export function getDashboardStatusOptions(): IDropdownOption[] {
     { label: FieldLabels.AllStatuses, value: ALL_STATUS_VALUE },
     { label: RequestStatus.Draft, value: RequestStatus.Draft },
     { label: RequestStatus.Pending, value: RequestStatus.Pending },
-    { label: FieldLabels.InRework, value: RequestStatus.Rework },
+    { label: RequestStatus.Rework, value: RequestStatus.Rework },
     { label: RequestStatus.Approved, value: RequestStatus.Approved },
     { label: RequestStatus.Rejected, value: RequestStatus.Rejected },
   ];
@@ -208,6 +208,97 @@ export function getDraftStatusOptions(): IDropdownOption[] {
   return [
     { label: FieldLabels.AllStatuses, value: ALL_STATUS_VALUE },
     { label: RequestStatus.Draft, value: RequestStatus.Draft },
-    { label: FieldLabels.InRework, value: RequestStatus.Rework },
+    { label: RequestStatus.Rework, value: RequestStatus.Rework },
+  ];
+}
+
+/**
+ * Status filter options from rows currently in the DataTable.
+ * - Empty table → All Statuses only (no Draft/Rework placeholders).
+ * - "In ReWork" / Rework → label **Rework**.
+ * - When `choiceCatalog` is provided (NPD_Request Status choices), use that order
+ *   and only include choices that appear in the table data.
+ */
+export function buildStatusFilterOptionsFromData(
+  statuses: string[],
+  choiceCatalog: string[] = [],
+): IDropdownOption[] {
+  const presentByKey = new Map<string, string>();
+
+  statuses.forEach((raw) => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const value = getNpdStatusFilterKey(trimmed);
+    const key = value.toLowerCase();
+    if (!key || presentByKey.has(key)) {
+      return;
+    }
+
+    const label =
+      key === RequestStatus.Rework.toLowerCase()
+        ? RequestStatus.Rework
+        : value;
+    presentByKey.set(key, label);
+  });
+
+  const allOption: IDropdownOption = {
+    label: FieldLabels.AllStatuses,
+    value: ALL_STATUS_VALUE,
+  };
+
+  if (!presentByKey.size) {
+    return [allOption];
+  }
+
+  const buildOption = (rawChoice: string): IDropdownOption | null => {
+    const value = getNpdStatusFilterKey(rawChoice);
+    const key = value.toLowerCase();
+    if (!presentByKey.has(key)) {
+      return null;
+    }
+
+    const label =
+      key === RequestStatus.Rework.toLowerCase()
+        ? RequestStatus.Rework
+        : presentByKey.get(key) ?? value;
+
+    return { label, value };
+  };
+
+  if (choiceCatalog.length) {
+    const fromChoices: IDropdownOption[] = [];
+    const used = new Set<string>();
+
+    choiceCatalog.forEach((choice) => {
+      const option = buildOption(choice);
+      if (!option) {
+        return;
+      }
+      const key = String(option.value).toLowerCase();
+      if (used.has(key)) {
+        return;
+      }
+      used.add(key);
+      fromChoices.push(option);
+    });
+
+    presentByKey.forEach((label, key) => {
+      if (used.has(key)) {
+        return;
+      }
+      fromChoices.push({ label, value: label });
+    });
+
+    return [allOption, ...fromChoices];
+  }
+
+  return [
+    allOption,
+    ...Array.from(presentByKey.values())
+      .sort((left, right) => left.localeCompare(right))
+      .map((label) => ({ label, value: label })),
   ];
 }

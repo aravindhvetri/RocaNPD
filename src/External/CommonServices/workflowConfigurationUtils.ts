@@ -82,18 +82,16 @@ export function groupWorkflowStepsByRequestType(
     grouped.set(requestType, existing);
   });
 
-  return Array.from(grouped.entries())
-    .map(([requestType, requestSteps]) => {
-      const orderedSteps = orderWorkflowSteps(requestSteps, requestType);
+  return Array.from(grouped.entries()).map(([requestType, requestSteps]) => {
+    const orderedSteps = orderWorkflowSteps(requestSteps, requestType);
 
-      return {
-        RequestType: requestType,
-        ApprovalChain: buildApprovalChainLabel(requestSteps, requestType),
-        StepIds: orderedSteps.map((step) => step.Id),
-        Steps: orderedSteps,
-      };
-    })
-    .sort((left, right) => left.RequestType.localeCompare(right.RequestType));
+    return {
+      RequestType: requestType,
+      ApprovalChain: buildApprovalChainLabel(requestSteps, requestType),
+      StepIds: orderedSteps.map((step) => step.Id),
+      Steps: orderedSteps,
+    };
+  });
 }
 
 export function createInitialFormSteps(requestType: string): IWorkflowFormStep[] {

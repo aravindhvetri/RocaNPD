@@ -177,6 +177,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [ ] **T-0302** Implement Employee ID retrieval (profile / list) — role match uses ApproversMaster `Users` Person field, not Employee ID
 - [x] **T-0303** Implement Admin group membership check (`SharePointGroups.Admins`)
 - [x] **T-0304** Implement role resolution from ROCA `ApproversMaster` (expand `Role/Title`, match `Users`)
+- [x] **T-0304a** ApproversMaster Select includes `IsDelete`; exclude deleted rows via `isDeletedApproverRow`
 - [x] **T-0305** Implement brand mapping for Initiator and Vertical Head (and other mapped roles)
 - [x] **T-0306** Store assigned roles + brands in Redux `appSlice` (multi-role union, no override)
 - [x] **T-0307** Implement role-based navigation filtering (`filterNavigationByRoles`)
@@ -211,6 +212,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 - [x] **T-0410** Implement Lookup Master list screen (toolbar, table, pagination — same pattern as LookupType)
 - [x] **T-0411** Implement Add/Edit Lookup popup (Lookup Type dropdown + Lookup Name — wireframe)
+- [x] **T-0411a** Lookup Code field + validation order Type → Code → Name; Import/Export includes Lookup Code
 - [x] **T-0412** Implement Edit Lookup
 - [x] **T-0413** Implement soft delete Lookup with dependency validation
 - [x] **T-0414** Implement Lookup → Lookup Type mapping (`NPD_Lookup.LookupType` → `NPD_LookupType`)
@@ -218,7 +220,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0415a** Implement Lookup Import/Export (template `TemplateType = "Lookup"`)
 - [x] **T-0415b** Implement reusable delete dependency validation (`dependencyValidationService.ts`)
 - [x] **T-0415c** Block LookupType delete when referenced by Lookup records
-
+- [x] **T-0415d** Compact `DeleteBlockedDialog` spacing to match wireframe
 ### 4.3 Plant / Role / Approver — ROCA site (no local admin modules)
 
 Plant Master, Role, and Approver Configuration are maintained on the **ROCA site**. This app reads them via cross-site services. Do not add nav items, routes, or NPD-site lists.
@@ -231,6 +233,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0451** Implement Add/Edit popup (Brand ComboBox, Plant MultiSelect)
 - [x] **T-0452** Source Brand from ROCA `Brandmaster`; Plant from ROCA `PlantMaster` (`IsDeleted = false`)
 - [x] **T-0453** Implement Edit / Delete (soft delete)
+- [x] **T-0453a** Brand Material Extension Export (Excel only; no Import); Export disabled when empty
 - [x] **T-0454** Store/read Plant as comma-separated values; populate MultiSelect on edit
 - [x] **T-0455** Add reusable `resolveRocaMasterSiteUrl()` + `rocaMasterDataService.ts`
 - [x] **T-0456** Duplicate Brand validation + required-field Toast validation
@@ -241,6 +244,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0461** Implement Configure Workflow modal (step builder, NPD multi-step, MG single-step Consultant)
 - [x] **T-0462** Persist and load active workflow stages in `NPD_WorkflowConfig` (one record per step)
 - [x] **T-0463** NPD role filtering: exclude Consultant via `WorkflowNpdExcludedNextRoles`; dynamic Add Step visibility
+- [x] **T-0463a** Block save until all available Next Role options are selected (Toast when chain incomplete)
 - [x] **T-0464** Lock earlier step Next Role when chain grows; only latest step editable/removable
 - [x] **T-0465** Workflow form dialog consistent font size (`0.8125rem`) and standard Add Step icon sizing
 
@@ -262,7 +266,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0499** Taller form dialog footer buttons (`_form-dialog-standard.scss`)
 - [x] **T-0500** Workflow: editable Next Role on all steps except Initiator on edit; Current Role derived from prior Next Role
 - [x] **T-0500a** RoleMaster filter uses `System/Title eq "New Product Development"` for NPD workflow roles
-
+- [x] **T-0500b** RoleMaster Select includes `IsDelete`; exclude deleted roles from Workflow Next Role options
+- [x] **T-0496e** Shared `MultiValueCell` — first 8 delimited values + `...` + `title` tooltip (Brand Material Plant, Approval Chain, reusable)
 ### 4.9 Material Master
 
 - [ ] **T-0470** Implement Material Master list screen
@@ -306,10 +311,12 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 ### 5.2 New NPD Request Form
 
 - [x] **T-0510** Implement General Information section (Brand, Material Type, Plant/Source) — Brand from ROCA `ApproversMaster` (client-filter: System, Role, Users email); Material Type from `Config.NpdMaterialTypes`; Plant/Source per material type
+- [x] **T-0510a** Seed Brand options on `initializeApp` so NPD Form Brand dropdown is ready on first open
 - [x] **T-0511** Implement cascading Plant/Source — disabled until Material Type selected; Finished Products → ROCA `PlantMaster` (Factory + active); Traded Products → `Config.NpdTradedPlantSources` (Imported, Domestic)
 - [ ] **T-0512** Filter Plant/Source by Brand Material Extension
 - [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
 - [x] **T-0514** Implement Item Details grid (all BRD columns; MultiSelect options from `NPD_Lookup` by Lookup Type matching field name); paginate at 7 rows when there are more than 7 items
+- [x] **T-0514a** Prefetch Item Details lookup options on app init; selection fields single-select only (`selectionLimit={1}`)
 - [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
 - [x] **T-0516** Implement + Add Another Item Line with small inline plus icon next to label
 - [x] **T-0517** Implement Import items (Excel) — header mapping is trim + lowercase + whitespace-insensitive so template columns match Item Details fields; up to 200 rows
@@ -581,6 +588,9 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 18 Sep 2026 | Workflow Status highlights logged-in user roles; empty approver status shows Pending; BroadcastChannel Editing Restricted lock across tabs | T-0509, T-0535 |
 | 18 Sep 2026 | Save Draft uses the Submit line-item progress bar; BroadcastChannel notifies View/Edit/any action; Item Details paginate at 7 rows; Workflow is its own column (hidden on Draft); highlight only the current pending workflow role | T-0509, T-0514, T-0519, T-0535 |
 | 18 Sep 2026 | Centered DataTable empty states; Pending status shows current workflow role; Current Approver column; Item Details render memoization | T-0501, T-0508, T-0514 |
+| 21 Sep 2026 | Compact Cannot Delete; Lookup Code validation order; ApproversMaster IsDelete; Workflow full-chain save; success toast format; Brand + Item Details options on app init | T-0304a, T-0411a, T-0415d, T-0463a, T-0510a, T-0514a |
+| 21 Sep 2026 | Cannot Delete compact overrides; BME Export; Export disabled when empty; Modified order; data-driven Status filters | T-0415d, T-0453a |
+| 21 Sep 2026 | RoleMaster IsDelete; MultiValueCell for multi-value DataTable columns | T-0500b, T-0496e |
 
 ---
 

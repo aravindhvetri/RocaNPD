@@ -54,15 +54,19 @@ const ACTION_ROLES: Record<PermissionAction, UserRole[]> = {
   "mg.rework": [Consultant],
   "mg.reject": [Consultant],
   "admin.manageMasters": [Admin],
-  "reports.view": [Initiator, MisCoordinator, Consultant, Admin],
+  "reports.view": [Initiator, VerticalHead, MisCoordinator, Consultant, Admin],
 };
 
 /**
  * Nav item id → roles that can see it.
- * Visibility is the union of ApproversMaster roles for the matching System.
- * Vertical Head: All / Pending / Approved only.
- * MIS Coordinator: those NPD lists plus Reports.
- * New Request, Draft/ReWork, and Material Group require Initiator (or Consultant) for that system.
+ * Source of truth: ROCA_NPD_Project_Master.md §6 + TechnicalArchitecture §6.2.
+ *
+ * Admin (SharePoint Admins group only): NPD All Requests, MG All Requests,
+ * Administration, Reports — never New / Draft / Pending / Approved as nav items.
+ * Consultant: MG All / Pending / Completed + Reports — never NPD or MG New/Draft.
+ * Vertical Head: NPD All / Pending / Approved + Reports — never MG / Admin / New / Draft.
+ * MIS Coordinator: NPD All / Pending / Approved + Reports — never MG / Admin / New / Draft.
+ * Initiator: full NPD + full MG + Reports — never Administration.
  */
 export const NAV_ITEM_ALLOWED_ROLES: Record<string, UserRole[]> = {
   "npd-new": [Initiator],
@@ -80,11 +84,12 @@ export const NAV_ITEM_ALLOWED_ROLES: Record<string, UserRole[]> = {
   "admin-lookup": [Admin],
   "admin-workflow": [Admin],
   "admin-brand": [Admin],
-  reports: [Initiator, MisCoordinator, Consultant, Admin],
+  reports: [Initiator, VerticalHead, MisCoordinator, Consultant, Admin],
 };
 
 const ROUTE_ALLOWED_ROLES: Record<string, UserRole[]> = {
-  [Config.Routes.NpdNew]: [Initiator, VerticalHead, MisCoordinator],
+  // Admin may open the form only to View from All Requests (no create nav item).
+  [Config.Routes.NpdNew]: [Initiator, VerticalHead, MisCoordinator, Admin],
   [Config.Routes.NpdAll]: NAV_ITEM_ALLOWED_ROLES["npd-all"],
   [Config.Routes.NpdPending]: NAV_ITEM_ALLOWED_ROLES["npd-pending"],
   [Config.Routes.NpdApproved]: NAV_ITEM_ALLOWED_ROLES["npd-approved"],
@@ -140,9 +145,11 @@ export function hasPermission(
 }
 
 /**
- * True when ApproversMaster assigned this role for the given System.
- * Blank System on a matching row still counts (legacy expand). Admin is not
- * an ApproversMaster role — use hasRole(assignedRoles, Admin) for that.
+ * True when ApproversMaster assigned this role for the module System.
+ * - Initiator: any Initiator assignment unlocks both NPD and MG (Project Master §6.1).
+ * - Consultant: any Consultant assignment unlocks Material Group (stored as MG System).
+ * - VH / MIS: require New Product Development.
+ * Admin is not an ApproversMaster role — use hasRole(..., Admin).
  */
 export function hasSystemRole(
   access: IResolvedUserAccess,
@@ -150,13 +157,33 @@ export function hasSystemRole(
   system: string,
 ): boolean {
   const systemKey = system.trim().toLowerCase();
+  if (!systemKey) {
+    return false;
+  }
+
+  if (role === Initiator) {
+    return access.assignments.some(
+      (assignment) => assignment.role === Initiator,
+    );
+  }
+
+  if (role === Consultant) {
+    const mgKey = ApproverSystems.NewMaterialGroup.toLowerCase();
+    if (systemKey !== mgKey) {
+      return false;
+    }
+    return access.assignments.some(
+      (assignment) => assignment.role === Consultant,
+    );
+  }
+
   return access.assignments.some((assignment) => {
     if (assignment.role !== role) {
       return false;
     }
 
     const assignedSystem = (assignment.system ?? "").trim().toLowerCase();
-    return !assignedSystem || assignedSystem === systemKey;
+    return assignedSystem === systemKey;
   });
 }
 
@@ -184,13 +211,42 @@ function routeSystemForPath(pathname: string): string | null {
   return null;
 }
 
+/**
+ * Admin grants only when the allowed list includes Admin.
+ * ApproversMaster roles require a matching System for NPD/MG items.
+ * Reports is cross-module: grant when the role is held for its home system
+ * (NPD for Initiator/VH/MIS, MG for Consultant) or Admin group.
+ */
 function roleGrantsAccess(
   access: IResolvedUserAccess,
   role: UserRole,
   system: string | null,
+  itemOrRouteKey?: string,
 ): boolean {
   if (role === Admin) {
     return hasRole(access.assignedRoles, Admin);
+  }
+
+  if (itemOrRouteKey === "reports" || itemOrRouteKey === Config.Routes.Reports) {
+    if (role === Consultant) {
+      return hasSystemRole(
+        access,
+        Consultant,
+        ApproverSystems.NewMaterialGroup,
+      );
+    }
+    if (role === Initiator) {
+      return hasSystemRole(
+        access,
+        Initiator,
+        ApproverSystems.NewProductDevelopment,
+      );
+    }
+    return hasSystemRole(
+      access,
+      role,
+      ApproverSystems.NewProductDevelopment,
+    );
   }
 
   if (system) {
@@ -204,8 +260,11 @@ function hasAllowedAccess(
   access: IResolvedUserAccess,
   allowed: readonly UserRole[],
   system: string | null,
+  itemOrRouteKey?: string,
 ): boolean {
-  return allowed.some((role) => roleGrantsAccess(access, role, system));
+  return allowed.some((role) =>
+    roleGrantsAccess(access, role, system, itemOrRouteKey),
+  );
 }
 
 export function canAccessRoute(
@@ -218,7 +277,12 @@ export function canAccessRoute(
 
   const allowed = ROUTE_ALLOWED_ROLES[pathname];
   if (allowed) {
-    return hasAllowedAccess(access, allowed, routeSystemForPath(pathname));
+    return hasAllowedAccess(
+      access,
+      allowed,
+      routeSystemForPath(pathname),
+      pathname,
+    );
   }
 
   if (pathname.startsWith("/admin/")) {
@@ -248,7 +312,7 @@ export function canAccessNavItem(
     return false;
   }
 
-  return hasAllowedAccess(access, allowed, navSystemForItem(itemId));
+  return hasAllowedAccess(access, allowed, navSystemForItem(itemId), itemId);
 }
 
 export function filterNavigationByRoles(
@@ -268,16 +332,20 @@ export function filterNavigationByRoles(
 export function getNpdViewScope(access: IResolvedUserAccess): IRequestViewScope {
   if (
     hasRole(access.assignedRoles, Admin) ||
-    hasRole(access.assignedRoles, MisCoordinator)
+    hasSystemRole(access, MisCoordinator, ApproverSystems.NewProductDevelopment)
   ) {
     return { includeOwn: true, brandFilter: null };
   }
 
   const brands = uniqueTitles([
-    ...(hasRole(access.assignedRoles, Initiator)
+    ...(hasSystemRole(access, Initiator, ApproverSystems.NewProductDevelopment)
       ? access.npdInitiatorBrands
       : []),
-    ...(hasRole(access.assignedRoles, VerticalHead)
+    ...(hasSystemRole(
+      access,
+      VerticalHead,
+      ApproverSystems.NewProductDevelopment,
+    )
       ? access.npdVerticalHeadBrands
       : []),
   ]);
@@ -287,7 +355,11 @@ export function getNpdViewScope(access: IResolvedUserAccess): IRequestViewScope 
   }
 
   return {
-    includeOwn: hasRole(access.assignedRoles, Initiator),
+    includeOwn: hasSystemRole(
+      access,
+      Initiator,
+      ApproverSystems.NewProductDevelopment,
+    ),
     brandFilter: [],
   };
 }
@@ -297,9 +369,13 @@ export function getMgViewScope(access: IResolvedUserAccess): IRequestViewScope {
     return { includeOwn: true, brandFilter: null };
   }
 
-  const includeOwn = hasRole(access.assignedRoles, Initiator);
+  const includeOwn = hasSystemRole(
+    access,
+    Initiator,
+    ApproverSystems.NewMaterialGroup,
+  );
   const isUnscopedConsultant =
-    hasRole(access.assignedRoles, Consultant) &&
+    hasSystemRole(access, Consultant, ApproverSystems.NewMaterialGroup) &&
     access.mgConsultantBrands.length === 0;
 
   if (isUnscopedConsultant) {
@@ -352,16 +428,23 @@ export function canActOnPendingNpdStep(
 
   if (role.toLowerCase() === VerticalHead.toLowerCase()) {
     return (
-      hasRole(access.assignedRoles, VerticalHead) &&
-      brandInList(brand, access.npdVerticalHeadBrands)
+      hasSystemRole(
+        access,
+        VerticalHead,
+        ApproverSystems.NewProductDevelopment,
+      ) && brandInList(brand, access.npdVerticalHeadBrands)
     );
   }
 
   if (role.toLowerCase() === MisCoordinator.toLowerCase()) {
-    return hasRole(access.assignedRoles, MisCoordinator);
+    return hasSystemRole(
+      access,
+      MisCoordinator,
+      ApproverSystems.NewProductDevelopment,
+    );
   }
 
-  return hasPermission(access.assignedRoles, "npd.approve");
+  return false;
 }
 
 export function canActOnNpdBrand(
@@ -379,9 +462,16 @@ export function canActOnNpdBrand(
     action === "npd.reject"
   ) {
     const asVerticalHead =
-      hasRole(access.assignedRoles, VerticalHead) &&
-      brandInList(brand, access.npdVerticalHeadBrands);
-    const asMisCoordinator = hasRole(access.assignedRoles, MisCoordinator);
+      hasSystemRole(
+        access,
+        VerticalHead,
+        ApproverSystems.NewProductDevelopment,
+      ) && brandInList(brand, access.npdVerticalHeadBrands);
+    const asMisCoordinator = hasSystemRole(
+      access,
+      MisCoordinator,
+      ApproverSystems.NewProductDevelopment,
+    );
     return asVerticalHead || asMisCoordinator;
   }
 
@@ -390,14 +480,20 @@ export function canActOnNpdBrand(
     action === "npd.configureSap" ||
     action === "npd.postToSap"
   ) {
-    if (!hasRole(access.assignedRoles, MisCoordinator)) {
-      return false;
-    }
-
-    return true;
+    return hasSystemRole(
+      access,
+      MisCoordinator,
+      ApproverSystems.NewProductDevelopment,
+    );
   }
 
   if (action === "npd.create" || action === "npd.submit" || action === "npd.editDraft") {
+    if (
+      !hasSystemRole(access, Initiator, ApproverSystems.NewProductDevelopment)
+    ) {
+      return false;
+    }
+
     return (
       access.npdInitiatorBrands.length === 0 ||
       brandInList(brand, access.npdInitiatorBrands)

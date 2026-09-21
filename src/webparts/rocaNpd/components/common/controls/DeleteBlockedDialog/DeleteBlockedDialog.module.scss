@@ -1,18 +1,56 @@
-@import '../../../../styles/_form-dialog-standard.scss';
+@import '../../../../styles/_theme-import.scss';
 
+/* Compact alert dialog — paddings must beat injectRocaPrimeOverrides. */
 .blockedDialog {
-  @include roca-form-dialog-shell;
-
   :global {
+    .p-dialog-header {
+      justify-content: center;
+      padding: 0.75rem 1rem 0.125rem !important;
+      background-color: $roca-color-bg-surface;
+      border-bottom: none;
+      min-height: 0 !important;
+    }
+
+    .p-dialog-title {
+      width: 100%;
+      font-size: 1.0625rem;
+      font-weight: 600;
+      text-align: center;
+      color: $roca-color-text-primary;
+      font-family: 'Poppins', sans-serif;
+      line-height: 1.3;
+    }
+
+    .p-dialog-header-icons {
+      position: absolute;
+      right: 0.5rem;
+      top: 0.5rem;
+    }
+
+    .p-dialog-header-icon {
+      width: 1.75rem !important;
+      height: 1.75rem !important;
+      color: $roca-color-text-muted;
+
+      &:enabled:focus,
+      &:enabled:active {
+        box-shadow: none !important;
+        outline: none !important;
+      }
+    }
+
     .p-dialog-content {
       text-align: center;
-      padding-top: 0.25rem;
+      padding: 0.125rem 1rem 0.25rem !important;
+      background-color: $roca-color-bg-surface;
+      font-family: 'Poppins', sans-serif;
     }
 
     .p-dialog-footer {
       justify-content: center;
-      border-top: none;
-      padding-top: 0.5rem;
+      border-top: none !important;
+      padding: 0.5rem 1rem 0.75rem !important;
+      background-color: $roca-color-bg-surface;
     }
   }
 }
@@ -21,16 +59,41 @@
   margin: 0;
   font-size: 0.8125rem;
   color: $roca-color-text-secondary;
-  line-height: 1.5;
+  line-height: 1.4;
   font-family: 'Poppins', sans-serif;
 }
 
 .footer {
-  @include roca-form-dialog-footer;
+  display: flex;
   justify-content: center;
   width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .closeButton {
-  min-width: 5.5rem;
+  min-width: 5rem !important;
+  min-height: 1.875rem !important;
+  margin: 0 !important;
+  padding: 0.3125rem 1rem !important;
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  border-radius: $roca-radius-sm !important;
+  background: $roca-color-btn-add-new-bg !important;
+  border-color: $roca-color-btn-add-new-bg !important;
+  color: $roca-color-text-inverse !important;
+
+  &:enabled:hover {
+    background: $roca-color-btn-add-new-hover-bg !important;
+    border-color: $roca-color-btn-add-new-hover-bg !important;
+  }
+
+  &:enabled:focus,
+  &:enabled:focus-visible,
+  &:enabled:active {
+    box-shadow: none !important;
+    outline: none !important;
+  }
 }

@@ -8,7 +8,9 @@ import {
   setUserAccess,
   setUserContext,
 } from "../slices/appSlice";
+import { setNpdBrandOptions } from "../slices/npdFormSlice";
 import type { AppDispatch } from "../index";
+import { fetchNpdLookupOptions } from "./npdFormThunks";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -37,6 +39,9 @@ export const initializeApp =
     );
     dispatch(setRoleStatus("loading"));
 
+    // Prefetch Item Details lookup options as soon as the app starts.
+    void dispatch(fetchNpdLookupOptions());
+
     try {
       const access = await resolveUserAccess(
         {
@@ -48,6 +53,14 @@ export const initializeApp =
         siteUrl,
       );
       dispatch(setUserAccess(access));
+      dispatch(
+        setNpdBrandOptions(
+          access.npdInitiatorBrands.map((title) => ({
+            label: title,
+            value: title,
+          })),
+        ),
+      );
     } catch (error) {
       dispatch(setRoleError(getErrorMessage(error)));
     } finally {

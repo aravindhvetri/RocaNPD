@@ -5,6 +5,7 @@ import type {
   IWorkflowFormStep,
 } from "../../../../../External/CommonServices/Interface";
 import {
+  canAddWorkflowStep,
   getDefaultStartRole,
   getExcludedNextRolesForRequestType,
   isMgRequestType,
@@ -113,6 +114,13 @@ export function validateWorkflowConfigurationForm(
 
   if (isMgRequestType(trimmedRequestType) && steps.length !== 1) {
     return "MG Request workflow must contain exactly one step.";
+  }
+
+  if (
+    isNpdRequestType(trimmedRequestType) &&
+    canAddWorkflowStep(steps, trimmedRequestType, npdRoleOptions)
+  ) {
+    return "Select all available workflow steps before saving.";
   }
 
   return null;

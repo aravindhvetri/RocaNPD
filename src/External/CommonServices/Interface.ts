@@ -39,6 +39,7 @@ export interface ILookupImportRecord {
   lookupTypeId: number;
   lookupTypeTitle: string;
   lookupName: string;
+  lookupCode: string;
 }
 
 /** Result of parsing a Lookup import spreadsheet before persistence */
@@ -165,6 +166,7 @@ export interface INpdRequestGeneralInfo {
   AuthorEmail: string;
   AuthorTitle: string;
   Created: string;
+  Modified: string;
 }
 
 export interface INpdRequestGeneralInfoRow

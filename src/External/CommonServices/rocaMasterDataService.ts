@@ -1,5 +1,6 @@
 import { Config, NpdApproverSystems } from "./Config";
 import type { ISelectOption } from "./Interface";
+import { isDeletedYesFlag } from "./lookupFieldUtils";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import { getActiveRecordFilters } from "./softDelete";
 import SPServices from "./SPServices";
@@ -60,7 +61,7 @@ export async function fetchRocaNpdRoleOptions(
   const rows = (await SPServices.getAnotherSPReadItems({
     SiteUrl: rocaSiteUrl,
     Listname: Config.RocaMasterListNames.RoleMaster,
-    Select: "Id,Title,System/Title",
+    Select: "Id,Title,IsDelete,System/Title",
     Expand: "System",
     Filter: [
       {
@@ -80,6 +81,7 @@ export async function fetchRocaNpdRoleOptions(
   );
 
   return rows
+    .filter((row) => !isDeletedYesFlag(row.IsDelete ?? row.IsDeleted))
     .map(mapRoleOption)
     .filter((option): option is ISelectOption => option !== null)
     .filter(

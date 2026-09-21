@@ -18,7 +18,7 @@ import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
 const APPROVERS_SELECT =
-  "Id,System/Title,Role/Title,Brand/Title,Users/Id,Users/Title,Users/EMail";
+  "Id,IsDelete,System/Title,Role/Title,Brand/Title,Users/Id,Users/Title,Users/EMail";
 const APPROVERS_EXPAND = "System,Role,Brand,Users";
 
 function getRowUsers(row: Record<string, unknown>): unknown {

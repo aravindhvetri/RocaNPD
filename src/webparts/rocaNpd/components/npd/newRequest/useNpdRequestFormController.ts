@@ -2,11 +2,11 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config } from "../../../../../External/CommonServices/Config";
+import { ApproverSystems, Config } from "../../../../../External/CommonServices/Config";
 import type { NpdWorkflowAction } from "../../../../../External/CommonServices/Interface";
 import {
   canActOnPendingNpdStep,
-  hasPermission,
+  hasSystemRole,
 } from "../../../../../External/CommonServices/permissionService";
 import { resolveActorWorkflowRole } from "../../../../../External/CommonServices/npdWorkflowJsonService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
@@ -99,7 +99,11 @@ export function useNpdRequestFormController(
     requestStatus: npdForm.requestStatus,
     actorEmail,
     workflowSteps: npdForm.workflowSteps,
-    canEditDraft: hasPermission(assignedRoles, "npd.editDraft"),
+    canEditDraft: hasSystemRole(
+      access,
+      Config.Roles.Initiator,
+      ApproverSystems.NewProductDevelopment,
+    ),
     assignedRoles,
     canActOnPendingStep: canActOnPendingNpdStep(
       access,
@@ -133,9 +137,8 @@ export function useNpdRequestFormController(
   }, [dispatch, editId]);
 
   React.useEffect(() => {
-    if (initialized) {
-      void dispatch(fetchNpdLookupOptions());
-    }
+    // Load Item Details options as soon as the form mounts (and again if empty).
+    void dispatch(fetchNpdLookupOptions());
   }, [dispatch, initialized]);
 
   React.useEffect(() => {

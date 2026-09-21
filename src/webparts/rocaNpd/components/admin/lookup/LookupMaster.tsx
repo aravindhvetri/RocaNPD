@@ -268,7 +268,10 @@ const LookupMaster: React.FC = () => {
             lookupName: snapshot.lookupName,
           }),
         ).unwrap();
-        showSuccessToast(toastRef, `"${snapshot.lookupName}" was deleted.`);
+        showSuccessToast(
+          toastRef,
+          `"${snapshot.lookupName}" deleted successfully.`,
+        );
       } catch {
         // Error toast handled via slice error effect.
       }
@@ -367,6 +370,7 @@ const LookupMaster: React.FC = () => {
       <LookupToolbar
         searchValue={globalFilter}
         filtersActive={Boolean(globalFilter.trim())}
+        exportDisabled={!filteredRows.length}
         onSearchChange={setGlobalFilter}
         onResetFilters={() => setGlobalFilter("")}
         onImport={handleImportClick}

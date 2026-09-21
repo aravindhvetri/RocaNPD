@@ -100,6 +100,7 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
         brandOptions={filters.brandOptions}
         filtersActive={filters.filtersActive}
         showExport
+        exportDisabled={!filters.filteredRows.length}
         onSearchChange={filters.setSearchValue}
         onStatusChange={filters.setStatusFilter}
         onBrandChange={filters.setBrandFilter}

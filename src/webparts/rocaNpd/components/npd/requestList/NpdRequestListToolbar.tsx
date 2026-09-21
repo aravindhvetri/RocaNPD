@@ -17,6 +17,7 @@ export interface INpdRequestListToolbarProps {
   brandOptions: IDropdownOption[];
   filtersActive: boolean;
   showExport?: boolean;
+  exportDisabled?: boolean;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onBrandChange: (value: string) => void;
@@ -37,6 +38,7 @@ const NpdRequestListToolbar: React.FC<INpdRequestListToolbarProps> = ({
   brandOptions,
   filtersActive,
   showExport = false,
+  exportDisabled = false,
   onSearchChange,
   onStatusChange,
   onBrandChange,
@@ -78,6 +80,7 @@ const NpdRequestListToolbar: React.FC<INpdRequestListToolbarProps> = ({
           icon="pi pi-download"
           size="sm"
           className={styles.exportButton}
+          disabled={exportDisabled}
           onClick={onExport}
         />
       ) : null}

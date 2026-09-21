@@ -21,6 +21,7 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
   filter = true,
   display = "comma",
   selectAll = false,
+  selectionLimit,
   emptyMessage = "No available options",
   "data-testid": testId,
 }) => (
@@ -41,7 +42,8 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
       placeholder={placeholder}
       filter={filter}
       display={display}
-      showSelectAll={selectAll}
+      showSelectAll={selectAll && selectionLimit !== 1}
+      selectionLimit={selectionLimit}
       disabled={disabled || readOnly}
       appendTo={getAppRootElement()}
       panelClassName={styles.panel}
@@ -59,7 +61,18 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
         },
       }}
       data-testid={testId}
-      onChange={(event) => onChange(event.value ?? [])}
+      onChange={(event) => {
+        const next = event.value ?? [];
+        if (
+          typeof selectionLimit === "number" &&
+          selectionLimit > 0 &&
+          next.length > selectionLimit
+        ) {
+          onChange(next.slice(-selectionLimit));
+          return;
+        }
+        onChange(next);
+      }}
     />
   </ControlField>
 );

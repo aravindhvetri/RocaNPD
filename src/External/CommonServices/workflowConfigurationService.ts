@@ -14,7 +14,7 @@ import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.WorkflowConfig;
 
-const SELECT_FIELDS = "Id,Title,CurrentRole,NextRole,IsDeleted";
+const SELECT_FIELDS = "Id,Title,CurrentRole,NextRole,IsDeleted,Modified";
 
 function mapWorkflowStep(item: Record<string, unknown>): IWorkflowConfigStep {
   return {
@@ -31,8 +31,8 @@ export async function fetchActiveWorkflowSteps(): Promise<IWorkflowConfigStep[]>
     Listname: LIST_NAME(),
     Select: SELECT_FIELDS,
     Filter: getActiveRecordFilters(),
-    Orderby: "Id",
-    Orderbydecorasc: true,
+    Orderby: "Modified",
+    Orderbydecorasc: false,
   })) as Record<string, unknown>[];
 
   return rows.map(mapWorkflowStep).filter(isActiveRecord);

@@ -114,10 +114,10 @@ export const fetchNpdLookupOptions = createAsyncThunk<
   {
     condition: (_, { getState }) => {
       const form = getState().npdForm;
-      return (
-        form.lookupOptionsStatus !== "loading" &&
-        Object.keys(form.lookupOptionsByType).length === 0
-      );
+      if (form.lookupOptionsStatus === "loading") {
+        return false;
+      }
+      return Object.keys(form.lookupOptionsByType).length === 0;
     },
   },
 );

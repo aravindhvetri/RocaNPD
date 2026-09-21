@@ -76,6 +76,22 @@ export function injectRocaPrimeOverrides(): void {
       margin: 0 !important;
     }
 
+    /* Compact Cannot Delete alert — overrides shared dialog padding above. */
+    [data-roca-npd-root] .roca-delete-blocked-dialog.p-dialog .p-dialog-header {
+      padding: 0.75rem 1rem 0.125rem !important;
+      min-height: 0 !important;
+      border-bottom: none !important;
+    }
+
+    [data-roca-npd-root] .roca-delete-blocked-dialog.p-dialog .p-dialog-content {
+      padding: 0.125rem 1rem 0.25rem !important;
+    }
+
+    [data-roca-npd-root] .roca-delete-blocked-dialog.p-dialog .p-dialog-footer {
+      padding: 0.5rem 1rem 0.75rem !important;
+      border-top: none !important;
+    }
+
     [data-roca-npd-root] [data-roca-npd-nav] a {
       color: #ffffff;
     }

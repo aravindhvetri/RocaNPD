@@ -24,7 +24,7 @@ import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.LookupType;
 
-const SELECT_FIELDS = "Id,Title,IsDeleted";
+const SELECT_FIELDS = "Id,Title,IsDeleted,Modified";
 
 function mapLookupType(item: Record<string, unknown>): ILookupType {
   return {
@@ -39,8 +39,8 @@ export async function fetchActiveLookupTypes(): Promise<ILookupType[]> {
     Listname: LIST_NAME(),
     Select: SELECT_FIELDS,
     Filter: getActiveRecordFilters(),
-    Orderby: "Title",
-    Orderbydecorasc: true,
+    Orderby: "Modified",
+    Orderbydecorasc: false,
   })) as Record<string, unknown>[];
 
   return rows.map(mapLookupType).filter(isActiveRecord);

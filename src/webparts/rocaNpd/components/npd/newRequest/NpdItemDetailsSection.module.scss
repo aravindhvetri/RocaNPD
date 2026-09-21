@@ -47,7 +47,7 @@
     vertical-align: middle !important;
     padding: 0.375rem 0.5rem !important;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 400;
     background-color: $roca-color-master-table-header;
     color: $roca-color-text-inverse;
     border: none !important;
@@ -95,7 +95,7 @@
     vertical-align: top !important;
     white-space: normal !important;
     height: auto !important;
-    padding: 2.5rem 0.75rem 4.25rem !important;
+    padding: 12px !important;
   }
 
   :global(.p-paginator) {

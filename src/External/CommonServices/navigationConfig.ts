@@ -29,7 +29,7 @@ export interface INavSectionConfig {
   items: INavItemConfig[];
 }
 
-/** Role-filtered side navigation — visibility is the union of ApproversMaster roles. */
+/** Role-filtered side navigation — see Project Master §6 / R-SEC03. */
 export const NAV_SECTIONS: INavSectionConfig[] = [
   {
     id: "npd-request",
