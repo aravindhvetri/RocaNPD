@@ -37,7 +37,13 @@ export function useNpdRequestTabLock(options: {
 
   const publish = React.useCallback(
     (
-      type: "query" | "claim" | "heartbeat" | "release" | "draft-saved" | "submitted",
+      type:
+        | "query"
+        | "claim"
+        | "heartbeat"
+        | "release"
+        | "draft-saved"
+        | "submitted",
       kind?: INpdTabRestriction["kind"],
       overrideId?: number,
       overrideTitle?: string,
@@ -68,7 +74,9 @@ export function useNpdRequestTabLock(options: {
         return;
       }
 
-      if (isTabActive()) {
+      // Action locks (draft/submit) and editing conflicts: show as soon as this
+      // tab is visible — no click required. If hidden, queue until focus/visibility.
+      if (isTabVisible()) {
         pendingRestrictionRef.current = null;
         setRestriction(foreign);
         return;
@@ -80,20 +88,35 @@ export function useNpdRequestTabLock(options: {
   );
 
   const flushPendingRestriction = React.useCallback((): void => {
-    if (holdingRef.current) {
+    if (!isTabVisible()) {
       return;
     }
+
     const pending = pendingRestrictionRef.current;
-    if (pending) {
-      pendingRestrictionRef.current = null;
-      setRestriction(pending);
+    const foreign =
+      pending ?? getForeignNpdTabLock(requestIdRef.current);
+
+    if (!foreign) {
       return;
     }
-    const foreign = getForeignNpdTabLock(requestIdRef.current);
-    if (foreign) {
-      setRestriction(foreign);
+
+    // Draft saved / submitted from another tab always wins over a local edit claim.
+    if (
+      holdingRef.current &&
+      (foreign.kind === "draft-saved" || foreign.kind === "submitted")
+    ) {
+      holdingRef.current = false;
+      setLocalNpdTabClaim(null);
+      skipReleaseRef.current = true;
+      publish("release");
+    } else if (holdingRef.current && foreign.kind === "editing") {
+      // Still holding a live edit — only yield if the other tab wins.
+      return;
     }
-  }, []);
+
+    pendingRestrictionRef.current = null;
+    setRestriction(foreign);
+  }, [publish]);
 
   React.useEffect(() => {
     return subscribeNpdTabLocks(() => {
@@ -111,6 +134,16 @@ export function useNpdRequestTabLock(options: {
           presentRestriction(foreign);
         }
         return;
+      }
+
+      if (
+        holdingRef.current &&
+        (foreign.kind === "draft-saved" || foreign.kind === "submitted")
+      ) {
+        holdingRef.current = false;
+        setLocalNpdTabClaim(null);
+        skipReleaseRef.current = true;
+        publish("release");
       }
 
       presentRestriction(foreign);
@@ -132,7 +165,9 @@ export function useNpdRequestTabLock(options: {
         return;
       }
       const foreign = getForeignNpdTabLock(requestId);
-      if (foreign) {
+      // Fresh open: only a live editing claim blocks. Stale submitted/draft-saved
+      // left in storage after the acting tab navigated away must not block View.
+      if (foreign && foreign.kind === "editing") {
         holdingRef.current = false;
         presentRestriction(foreign);
         return;
@@ -190,24 +225,28 @@ export function useNpdRequestTabLock(options: {
   }, [isOpen, publish, requestId]);
 
   React.useEffect(() => {
-    const onInteract = (): void => {
+    const onVisible = (): void => {
+      if (document.visibilityState === "visible") {
+        flushPendingRestriction();
+      }
+    };
+    const onFocus = (): void => {
       flushPendingRestriction();
     };
-    window.addEventListener("focus", onInteract);
-    window.addEventListener("focusin", onInteract, true);
-    window.addEventListener("pointerdown", onInteract, true);
-    window.addEventListener("click", onInteract, true);
-    document.addEventListener("visibilitychange", onInteract);
-    const removeTopFocus = addSameOriginTopListener("focus", onInteract);
-    const removeTopPointer = addSameOriginTopListener("pointerdown", onInteract, true);
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    const removeTopFocus = addSameOriginTopListener("focus", onFocus);
+    const removeTopVisibility = addSameOriginTopListener(
+      "visibilitychange",
+      onVisible,
+    );
+
     return () => {
-      window.removeEventListener("focus", onInteract);
-      window.removeEventListener("focusin", onInteract, true);
-      window.removeEventListener("pointerdown", onInteract, true);
-      window.removeEventListener("click", onInteract, true);
-      document.removeEventListener("visibilitychange", onInteract);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
       removeTopFocus();
-      removeTopPointer();
+      removeTopVisibility();
     };
   }, [flushPendingRestriction]);
 
@@ -252,7 +291,7 @@ export function useNpdRequestTabLock(options: {
   return { restriction, notifyDraftSaved, notifySubmitted, consumeIfRestricted };
 }
 
-function isTabActive(): boolean {
+function isTabVisible(): boolean {
   return document.visibilityState === "visible";
 }
 

@@ -12,14 +12,19 @@ const NavPrimaryAction: React.FC<INavPrimaryActionProps> = ({ item, onNavigate }
   <NavLink
     to={item.route}
     end
-    className={({ isActive }) =>
-      `${styles.action} ${isActive ? styles.actionActive : ""}`
-    }
-    onClick={() => onNavigate(item.id)}
+    className={() => styles.action}
+    onClick={(e) => {
+      (e.currentTarget as HTMLElement).blur();
+      onNavigate(item.id);
+    }}
   >
-    <i className={`${item.icon} ${styles.icon}`} aria-hidden="true" />
-    <span>{item.label}</span>
+    <span className={styles.iconWrap}>
+      <i className={`${item.icon} ${styles.icon}`} aria-hidden="true" />
+    </span>
+    <span className={styles.label}>{item.label}</span>
   </NavLink>
 );
+
+
 
 export default NavPrimaryAction;

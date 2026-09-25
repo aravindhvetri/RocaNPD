@@ -20,6 +20,7 @@ export interface INpdItemDetailsSectionProps {
   rows: INpdItemDetailRow[];
   lookupOptionsByType: Record<string, ISelectOption[]>;
   readOnly?: boolean;
+  isMisCoordinatorActing?: boolean;
   onRowsChange: React.Dispatch<React.SetStateAction<INpdItemDetailRow[]>>;
   onImportClick?: () => void;
 }
@@ -29,6 +30,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   rows,
   lookupOptionsByType,
   readOnly = false,
+  isMisCoordinatorActing = false,
   onRowsChange,
   onImportClick,
 }) => {
@@ -55,10 +57,10 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     }
     onRowsChange((currentRows) => [
       ...currentRows,
-      createEmptyNpdItemDetailRow(),
+      createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing)),
     ]);
     setFirst(Math.floor(rows.length / pageSize) * pageSize);
-  }, [onRowsChange, pageSize, readOnly, rows.length]);
+  }, [isMisCoordinatorActing, onRowsChange, pageSize, readOnly, rows.length]);
 
   const handleFieldChange = React.useCallback(
     (
@@ -140,6 +142,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         paginatorPosition="bottom"
         paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
         className={styles.itemDetailsTable}
+        rowClassName={(row) => (row.isMisAdded ? styles.misAddedRow : undefined)}
         emptyMessage={Config.FieldLabels.NoItemsFound}
       />
 

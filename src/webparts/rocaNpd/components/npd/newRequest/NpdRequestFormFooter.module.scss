@@ -1,4 +1,5 @@
 @import '../../../styles/_theme-import.scss';
+@import '../../../styles/_action-buttons.scss';
 
 .footer {
   display: flex;
@@ -15,18 +16,29 @@
 .primaryActions {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.75rem;
 }
 
-.cancelButton,
-.saveButton,
-.submitButton {
+.cancelButton {
+  @include roca-action-cancel-btn;
+}
+
+.reworkButton {
+  @include roca-action-rework-btn;
+}
+
+.rejectButton {
+  @include roca-action-reject-btn;
+}
+
+.approveButton {
+  @include roca-action-approve-btn;
+}
+
+.saveButton {
   min-width: 5.5rem;
   font-weight: 600;
-}
 
-.cancelButton,
-.saveButton {
   :global(.p-button) {
     background: $roca-color-bg-surface;
     border-color: $roca-color-border-light;
@@ -35,6 +47,9 @@
 }
 
 .submitButton {
+  min-width: 5.5rem;
+  font-weight: 600;
+
   :global(.p-button) {
     background: $roca-color-btn-primary-bg;
     border-color: $roca-color-btn-primary-bg;

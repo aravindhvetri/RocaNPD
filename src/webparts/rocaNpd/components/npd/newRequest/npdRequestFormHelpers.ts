@@ -240,5 +240,5 @@ export function defaultEmailActionComments(action: NpdWorkflowAction): string {
 export function workflowActionRequiresComments(
   action: NpdWorkflowAction,
 ): boolean {
-  return action === "Rework" || action === "Reject";
+  return action === "Rework" || action === "Reject" || action === "Approve";
 }

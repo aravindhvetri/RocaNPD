@@ -12,6 +12,15 @@
   :global(.p-dropdown-label) {
     font-size: 0.8125rem;
     color: $roca-color-text-primary;
+    text-align: left;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.p-dropdown-trigger) {
+    flex-shrink: 0;
   }
 }
 

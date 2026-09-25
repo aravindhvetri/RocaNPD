@@ -32,19 +32,18 @@ export function resolveCurrentSiteUrl(contextSiteUrl?: string): string {
  */
 export function resolveRocaMasterSiteUrl(currentSiteUrl?: string): string {
   const siteUrl = resolveCurrentSiteUrl(currentSiteUrl);
-  const pageHref =
-    typeof window !== "undefined" ? window.location.href : "";
+  const pageHref = typeof window !== "undefined" ? window.location.href : "";
   const mappingHaystack = `${siteUrl} ${pageHref}`.toLowerCase();
 
   if (mappingHaystack.includes("chandrudemo")) {
     return "https://chandrudemo.sharepoint.com/sites/ROCA";
   }
 
-  if (mappingHaystack.includes("rinanpdev")) {
+  if (mappingHaystack.includes("rinnpddev")) {
     return "https://rocasanitario.sharepoint.com/sites/RINMASTERDEV";
   }
 
-  if (mappingHaystack.includes("rinanp")) {
+  if (mappingHaystack.includes("rinpd")) {
     return "https://rocasanitario.sharepoint.com/sites/RBPPLWOW";
   }
 

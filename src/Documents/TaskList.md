@@ -16,10 +16,10 @@
 | Phase 3 — Security & Role Management | 14 | 13 | In Progress |
 | Phase 4 — Admin Module | 54 | 24 | In Progress |
 | Phase 5 — NPD Initiator Module | 34 | 28 | In Progress |
-| Phase 6 — NPD Vertical Head Module | 16 | 12 | In Progress |
-| Phase 7 — NPD MIS Coordinator Module | 22 | 6 | In Progress |
-| Phase 8 — Material Group Initiator Module | 20 | 0 | Not Started |
-| Phase 9 — Material Group Consultant Module | 14 | 0 | Not Started |
+| Phase 6 — NPD Vertical Head Module | 17 | 13 | In Progress |
+| Phase 7 — NPD MIS Coordinator Module | 24 | 16 | In Progress |
+| Phase 8 — Material Group Initiator Module | 20 | 16 | In Progress |
+| Phase 9 — Material Group Consultant Module | 14 | 13 | In Progress |
 | Phase 10 — Workflow Automation | 18 | 7 | In Progress |
 | Phase 11 — SAP Integration | 12 | 0 | Not Started |
 | Phase 12 — Material Master Integration | 8 | 0 | Not Started |
@@ -28,9 +28,9 @@
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **376** | **137** | **In Progress** |
+| **TOTAL** | **379** | **148** | **In Progress** |
 
-**Last Updated:** 18 September 2026
+**Last Updated:** 23 September 2026
 
 ---
 
@@ -358,6 +358,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [ ] **T-0612** Verify VH cannot access Material Group module
 - [ ] **T-0613** Verify VH cannot perform MIS Coordinator actions
 - [x] **T-0614** Verify brand-scoped data filtering
+- [x] **T-0615** NPDApproverMail web part: VH email Approve/Reject/Rework via `RequestID` + `Action` URL; updates `NPD_Request` + `NPD_ApproverComments`
+- [x] **T-0616** NPDApproverMail condition-based single-line messages with no icon/title: exact messages from WorkFlowJSON and isSubmittedRef
 
 ---
 
@@ -367,57 +369,63 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0702** Implement MIS Pending Approval table
 - [x] **T-0703** Implement MIS Approved Requests table (posted to SAP by self)
 - [x] **T-0704** Implement MIS Request Detail — read-only General Information
-- [ ] **T-0705** Implement editable Item Details grid
-- [ ] **T-0706** Implement Add Line Item
-- [ ] **T-0707** Implement Other Details section (SAP fields)
-- [ ] **T-0708** Auto-populate Storage Location, MRP Group, MRP Controller from ROCA `PlantMaster`
-- [ ] **T-0709** Auto-populate Material Extension from Brand Material Extension Master
-- [ ] **T-0710** Implement conditional Plant Code / Valuation Class logic
-- [ ] **T-0711** Set Class Type = 001 always
+- [x] **T-0705** Implement editable Item Details grid
+- [x] **T-0706** Implement Add Line Item
+- [x] **T-0707** Implement Other Details section (SAP fields)
+- [x] **T-0708** Auto-populate Storage Location, MRP Group, MRP Controller from ROCA `PlantMaster`
+- [x] **T-0709** Auto-populate Material Extension from Brand Material Extension Master
+- [x] **T-0710** Implement conditional Plant Code / Valuation Class logic
+- [x] **T-0711** Set Class Type = 001 always
 - [ ] **T-0712** Implement Post to SAP action with confirmation
 - [x] **T-0713** Implement Rework action with comments
 - [x] **T-0714** Implement Reject action with comments
-- [ ] **T-0715** Implement `misCoordinatorAction` thunk
+- [x] **T-0715** Implement `misCoordinatorAction` thunk (via `applyNpdWorkflowAction` + Other Details payload)
 - [ ] **T-0716** Verify MIS cannot access Material Group module
+- [x] **T-0717** Inline Approver Remarks (no popup) + Audit Log from `NPD_ApproverComments` (MG pattern)
+- [x] **T-0718** Fix MIS Rework/Reject: update `NPD_Request` Status/WorkFlowJSON + write Approver Comments; no Item-added overlay
+- [x] **T-0719** Highlight only MIS Coordinator-added rows in NPD Item Details (yellow background `#fefce8` + amber accent `#eab308`); persist across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
 
 ---
 
 ## Phase 8 — Material Group Initiator Module
 
-- [ ] **T-0801** Implement MG All Requests table
-- [ ] **T-0802** Implement MG Pending Request table (view-only)
-- [ ] **T-0803** Implement MG Completed Request table (view-only)
-- [ ] **T-0804** Implement MG Draft / ReWork table (edit + resubmit)
-- [ ] **T-0805** Implement New Material Group Request form — Select Masters (multi-select)
-- [ ] **T-0806** Implement Select All / Clear All for masters
-- [ ] **T-0807** Implement Master Details section (Code optional, Description required)
-- [ ] **T-0808** Implement Add Row / Delete Row per master group
-- [ ] **T-0809** Implement Cancel, Save as Draft, Submit to Consultant
-- [ ] **T-0810** Validate at least one master selected
-- [ ] **T-0811** Validate Description mandatory per row
-- [ ] **T-0812** Create `materialGroupSlice.ts` and `materialGroupThunks.ts`
-- [ ] **T-0813** Create `materialGroupService.ts`
-- [ ] **T-0814** Implement batch save for header + items
-- [ ] **T-0815** Implement view-only detail for Pending / Completed
-- [ ] **T-0816** Implement edit + resubmit for Draft / Rework
+- [x] **T-0801** Implement MG All Requests table
+- [x] **T-0802** Implement MG Pending Request table (view-only)
+- [x] **T-0803** Implement MG Completed Request table (view-only)
+- [x] **T-0804** Implement MG Draft / ReWork table (edit + resubmit)
+- [x] **T-0805** Implement New Material Group Request form — Select Masters (multi-select)
+- [x] **T-0806** Implement Select All / Clear All for masters
+- [x] **T-0807** Implement Master Details section (Code optional, Description required)
+- [x] **T-0808** Implement Add Row / Delete Row per master group
+- [x] **T-0809** Implement Cancel, Save as Draft, Submit to Consultant
+- [x] **T-0810** Validate at least one master selected
+- [x] **T-0811** Validate Description mandatory per row
+- [x] **T-0812** Create `materialGroupSlice.ts` and `materialGroupThunks.ts`
+- [x] **T-0813** Create `materialGroupService.ts`
+- [x] **T-0814** Implement batch save for header + items
+- [x] **T-0815** Implement view-only detail for Pending / Completed
+- [x] **T-0816** Implement edit + resubmit for Draft / Rework
 
 ---
 
 ## Phase 9 — Material Group Consultant Module
 
-- [ ] **T-0901** Implement Consultant All Requests table (dynamic total count)
-- [ ] **T-0902** Implement Consultant Pending Request table (Edit only)
-- [ ] **T-0903** Implement Consultant Completed Request table (View only)
-- [ ] **T-0904** Implement Consultant Review & Edit screen
-- [ ] **T-0905** Display read-only configured master badges
-- [ ] **T-0906** Implement editable Code (mandatory) and Description per master
-- [ ] **T-0907** Implement Consultant Remarks / SAP Configuration Note
-- [ ] **T-0908** Implement Complete Request action
-- [ ] **T-0909** Implement Send Back for ReWork action
-- [ ] **T-0910** Implement Reject action
-- [ ] **T-0911** Implement Cancel (discard changes)
-- [ ] **T-0912** Implement `consultantAction` thunk
-- [ ] **T-0913** On Complete — update Lookup Master with new codes
+- [x] **T-0901** Implement Consultant All Requests table (dynamic total count)
+- [x] **T-0902** Implement Consultant Pending Request table (Edit only)
+- [x] **T-0903** Implement Consultant Completed Request table (View only)
+- [x] **T-0904** Implement Consultant Review & Edit screen
+- [x] **T-0905** Display read-only configured master badges (hover/cursor suppressed in view mode)
+- [x] **T-0906** Implement editable Code (mandatory) and Description per master
+- [x] **T-0907** Implement Consultant Remarks / SAP Configuration Note
+- [x] **T-0908** Implement Complete Request action
+- [x] **T-0909** Implement Send Back for ReWork action
+- [x] **T-0910** Implement Reject action
+- [x] **T-0911** Implement Cancel (discard changes)
+- [x] **T-0912** Implement `consultantAction` thunk
+- [x] **T-0917** Fix Consultant Access Denied on `/mg/new` route — allow Consultant in `ROUTE_ALLOWED_ROLES` for form route while keeping nav item Initiator-only
+- [x] **T-0918** Role-based DataTable column: Initiator sees Current Approver; Consultant sees Initiator column
+- [x] **T-0919** Fix default navigation / initial landing page — `NavRouteSync` redirects to correct default route after roles resolve; remove hardcoded `activeNavItemId` from `uiSlice`
+- [x] **T-0913** On Complete — update Lookup Master with new codes
 - [ ] **T-0914** Verify Consultant cannot access NPD module
 
 ---
@@ -427,6 +435,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [ ] **T-1001** Implement NPD request creation trigger
 - [x] **T-1002** Implement NPD Request ID generation (`NPD-YYYY-###`)
 - [x] **T-1003** Implement NPD Draft save handling — General Information → `NPD_Request` with `WorkFlowJSON`
+- [x] **T-1003a** Empty Title on spAddItem for NPD_Request (Drafts), NPD_ApproverComments, NPD_MaterialGroupAuditLogs; existing Request ID generation logic preserved on submit
 - [x] **T-1004** Implement NPD Submit → route to Vertical Head
 - [x] **T-1005** Implement VH Approve → route to MIS Coordinator
 - [x] **T-1006** Implement VH / MIS Rework → route to Initiator
@@ -436,10 +445,10 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [ ] **T-1010** Implement MG request creation trigger
 - [ ] **T-1011** Implement MG Request ID generation
 - [ ] **T-1012** Implement MG Submit → route to Consultant
-- [ ] **T-1013** Implement Consultant Complete → Completed
-- [ ] **T-1014** Implement MG Rework → route to Initiator
-- [ ] **T-1015** Implement MG Reject → permanently closed
-- [ ] **T-1016** Implement MG resubmission after Rework
+- [x] **T-1013** Implement Consultant Complete → Completed
+- [x] **T-1014** Implement MG Rework → route to Initiator
+- [x] **T-1015** Implement MG Reject → permanently closed
+- [x] **T-1016** Implement MG resubmission after Rework
 - [ ] **T-1017** Configure Power Automate flows (or in-app routing — confirm OPEN-006)
 - [ ] **T-1018** Test all workflow paths end-to-end
 
@@ -591,6 +600,13 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 21 Sep 2026 | Compact Cannot Delete; Lookup Code validation order; ApproversMaster IsDelete; Workflow full-chain save; success toast format; Brand + Item Details options on app init | T-0304a, T-0411a, T-0415d, T-0463a, T-0510a, T-0514a |
 | 21 Sep 2026 | Cannot Delete compact overrides; BME Export; Export disabled when empty; Modified order; data-driven Status filters | T-0415d, T-0453a |
 | 21 Sep 2026 | RoleMaster IsDelete; MultiValueCell for multi-value DataTable columns | T-0500b, T-0496e |
+| 22 Sep 2026 | MIS Other Details section (Plant Code / Storage / MRP / Profit Center / Valuation / Class Type / Material Extension); save on MIS Rework/Reject/Post; form scroll + Brand display for non-Initiator roles | T-0705–T-0711, T-0715 |
+| 22 Sep 2026 | MIS Rework/Reject persist Status + NPD_ApproverComments; inline Approver Remarks + Audit Log; Profit Center label-only dropdown; remove Item-added overlay on workflow | T-0713–T-0715, T-0717, T-0718 |
+| 23 Sep 2026 | VH email Approve/Reject/Rework open NPDApproverMail page (`RequestID` + `Action`); confirm UI writes NPD_Request + Approver Comments | T-0615 |
+| 24 Sep 2026 | NPD Item Details: highlight only rows added by MIS Coordinator (yellow + amber border); persist for Initiator & VH views; Initiator rows unhighlighted; fix MG Initiator row highlight | T-0719 |
+| 24 Sep 2026 | NPDApproverMail: condition-based single-line messages with no icon/title; exact success, already submitted, not required, and not part of workflow messages | T-0616 |
+| 24 Sep 2026 | Empty Title on spAddItem for NPD_Request (Drafts), NPD_ApproverComments, NPD_MaterialGroupAuditLogs; existing Request ID generation logic preserved on submit | T-1003a |
+| 24 Sep 2026 | Keep SharePoint default suite bar visible; add Action Via column to audit log tables (System/Mail); format Action On as DD/MM/YYYY hh:mm A; remove CC on emails (To only); email header background #774dec | T-0617 |
 
 ---
 

@@ -14,13 +14,18 @@ const NavCompactPrimary: React.FC<INavCompactPrimaryProps> = ({ item, onNavigate
     end
     title={item.label}
     aria-label={item.label}
-    className={({ isActive }) =>
-      `${styles.link} ${isActive ? styles.linkActive : ""}`
-    }
-    onClick={() => onNavigate(item.id)}
+    className={() => styles.link}
+    onClick={(e) => {
+      (e.currentTarget as HTMLElement).blur();
+      onNavigate(item.id);
+    }}
   >
-    <i className={`${item.icon} ${styles.icon}`} aria-hidden="true" />
+    <span className={styles.iconWrap}>
+      <i className={`${item.icon} ${styles.icon}`} aria-hidden="true" />
+    </span>
   </NavLink>
 );
+
+
 
 export default NavCompactPrimary;

@@ -1,10 +1,9 @@
 import { Config, FieldLabels } from "./Config";
 import type { INpdRequestGeneralInfo, NpdWorkflowAction } from "./Interface";
 import {
-  buildNpdDraftReworkUrl,
   buildNpdEmailActionUrl,
+  buildNpdEmailLoginUrl,
   buildNpdPendingUrl,
-  buildNpdRequestFormUrl,
 } from "./npdAppUrl";
 
 function escapeHtml(value: string): string {
@@ -48,24 +47,27 @@ export function buildNpdApprovalEmailHtml(params: {
   introText: string;
   includeActionButtons: boolean;
   loginUrl: string;
+  /** Current NPD web absolute URL — keeps ApproverMail links on the correct site. */
+  siteUrl?: string;
 }): string {
   const { request } = params;
   const requestId = request.Title.trim() || "NPD Request";
   const theme = Config.NpdEmail;
   const logoCid = theme.LogoContentId;
+  const siteUrl = params.siteUrl;
 
   const actionButtons = params.includeActionButtons
     ? `<p style="margin:20px 0;">${actionButton(
         "Approve",
-        buildNpdEmailActionUrl(request.Id, "Approve"),
+        buildNpdEmailActionUrl(request.Id, "Approve", siteUrl),
         theme.ApproveBackground,
       )}${actionButton(
         "Re-work",
-        buildNpdEmailActionUrl(request.Id, "Rework"),
+        buildNpdEmailActionUrl(request.Id, "Rework", siteUrl),
         theme.ReworkBackground,
       )}${actionButton(
         "Reject",
-        buildNpdEmailActionUrl(request.Id, "Reject"),
+        buildNpdEmailActionUrl(request.Id, "Reject", siteUrl),
         theme.RejectBackground,
       )}</p>`
     : "";
@@ -151,17 +153,12 @@ export function getNpdEmailLoginUrl(
   action: string,
   requestId: number,
   includeActionButtons: boolean,
+  siteUrl?: string,
 ): string {
-  if (action === "Rework") {
-    return buildNpdDraftReworkUrl();
+  if (requestId && requestId > 0) {
+    return buildNpdEmailLoginUrl(requestId, "edit", siteUrl);
   }
-  if (includeActionButtons) {
-    return buildNpdRequestFormUrl(requestId);
-  }
-  if (action === "Approve" || action === "Submitted") {
-    return buildNpdRequestFormUrl(requestId);
-  }
-  return buildNpdPendingUrl();
+  return buildNpdPendingUrl(siteUrl);
 }
 
 export function greetingNameFromEmail(email: string): string {

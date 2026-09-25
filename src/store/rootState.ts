@@ -2,6 +2,7 @@ import type { IAdminState } from "./slices/adminState.types";
 import type { IAppState } from "./slices/appSlice";
 import type { INpdFormState } from "./slices/npdFormState.types";
 import type { INpdRequestListState } from "./slices/npdRequestState.types";
+import type { IMaterialGroupState } from "./slices/materialGroupSlice";
 import type { IUiState } from "./slices/uiSlice";
 
 export type RootState = {
@@ -10,4 +11,5 @@ export type RootState = {
   admin: IAdminState;
   npdForm: INpdFormState;
   npdRequest: INpdRequestListState;
+  materialGroup: IMaterialGroupState;
 };

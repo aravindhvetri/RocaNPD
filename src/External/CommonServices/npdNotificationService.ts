@@ -6,6 +6,7 @@ import {
   getNpdEmailLoginUrl,
   greetingNameFromEmail,
 } from "./npdApprovalEmailTemplate";
+import { resolveNpdWebAbsoluteUrl } from "./npdAppUrl";
 import { getRocaLogoInlineAttachment } from "./npdEmailLogo";
 import SPServices from "./SPServices";
 
@@ -16,6 +17,11 @@ export interface INpdNotificationPayload {
   role?: string;
   to: string[];
   includeActionButtons?: boolean;
+  /**
+   * SPFx web absolute URL (from Redux `app.siteUrl` / pageContext.web.absoluteUrl).
+   * Required for correct ApproverMail links — do not omit when available.
+   */
+  siteUrl?: string;
 }
 
 export async function sendNpdApprovalNotification(
@@ -33,11 +39,20 @@ export async function sendNpdApprovalNotification(
   const includeActionButtons = Boolean(payload.includeActionButtons);
   const greetingName = greetingNameFromEmail(recipients[0]);
   const introText = getNpdEmailIntro(payload.action, includeActionButtons);
+  const siteUrl = resolveNpdWebAbsoluteUrl(
+    payload.siteUrl || SPServices.getSpfxWebAbsoluteUrl(),
+  );
   const loginUrl = getNpdEmailLoginUrl(
     payload.action,
     payload.request.Id,
     includeActionButtons,
+    siteUrl,
   );
+  if (includeActionButtons && !siteUrl) {
+    console.error(
+      "NPD ApproverMail links: web absolute URL could not be resolved; action buttons may be invalid.",
+    );
+  }
   const subject = `${requestId} — ${
     includeActionButtons ? "Approval Required" : payload.action
   }`;
@@ -47,6 +62,7 @@ export async function sendNpdApprovalNotification(
     introText,
     includeActionButtons,
     loginUrl,
+    siteUrl,
   });
   const logo = await getRocaLogoInlineAttachment();
 

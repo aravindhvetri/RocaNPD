@@ -9,10 +9,19 @@
           "manifest": "./src/webparts/rocaNpd/RocaNpdWebPart.manifest.json"
         }
       ]
+    },
+    "npd-approver-mail-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/npdApproverMail/NpdApproverMailWebPart.js",
+          "manifest": "./src/webparts/npdApproverMail/NpdApproverMailWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
-    "RocaNpdWebPartStrings": "lib/webparts/rocaNpd/loc/{locale}.js"
+    "RocaNpdWebPartStrings": "lib/webparts/rocaNpd/loc/{locale}.js",
+    "NpdApproverMailWebPartStrings": "lib/webparts/npdApproverMail/loc/{locale}.js"
   }
 }

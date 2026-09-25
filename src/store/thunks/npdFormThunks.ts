@@ -1,13 +1,16 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type {
   INpdItemDetailRecord,
+  INpdOtherDetails,
   INpdRequestGeneralInfo,
   ISelectOption,
   NpdWorkflowAction,
 } from "../../External/CommonServices/Interface";
+import { Config } from "../../External/CommonServices/Config";
 import * as lookupOptionUtils from "../../External/CommonServices/lookupOptionUtils";
 import * as npdFormDataService from "../../External/CommonServices/npdFormDataService";
 import * as npdItemDetailsService from "../../External/CommonServices/npdItemDetailsService";
+import * as npdOtherDetailsService from "../../External/CommonServices/npdOtherDetailsService";
 import * as npdRequestGeneralInfoService from "../../External/CommonServices/npdRequestGeneralInfoService";
 import { selectResolvedAccess } from "../slices/appSlice";
 import type { RootState } from "../rootState";
@@ -69,12 +72,12 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
   },
   {
     condition: (_, { getState }) => {
-      const { npdForm, app } = getState();
+      const { npdForm } = getState();
       if (npdForm.brandOptionsStatus === "loading") {
         return false;
       }
 
-      return !(npdForm.brandOptions.length && app.roleStatus === "succeeded");
+      return true;
     },
   },
 );
@@ -117,10 +120,64 @@ export const fetchNpdLookupOptions = createAsyncThunk<
       if (form.lookupOptionsStatus === "loading") {
         return false;
       }
-      return Object.keys(form.lookupOptionsByType).length === 0;
+      return true;
     },
   },
 );
+
+/**
+ * Auto-populates MIS Other Details from PlantMaster / Brand Extension / valuation rules.
+ */
+export const populateNpdOtherDetails = createAsyncThunk<
+  { otherDetails: INpdOtherDetails; profitCenterOptions: ISelectOption[] },
+  void,
+  { rejectValue: string; state: RootState }
+>("npdForm/populateOtherDetails", async (_, { getState, rejectWithValue }) => {
+  try {
+    const state = getState();
+    const { brand, materialType, plantSource } = state.npdForm.generalInfo;
+    const existing = state.npdForm.otherDetails;
+    const siteUrl = state.app.siteUrl || undefined;
+
+    const plantCode = npdOtherDetailsService.resolveMisPlantCode(
+      materialType,
+      plantSource,
+    );
+
+    const [plantDetails, materialExtension, profitCenterOptions] =
+      await Promise.all([
+        plantCode
+          ? npdOtherDetailsService
+              .fetchPlantMasterSapDetails(plantCode, siteUrl)
+              .catch(() => null)
+          : Promise.resolve(null),
+        npdOtherDetailsService
+          .fetchMaterialExtensionForBrand(brand)
+          .catch(() => ""),
+        npdOtherDetailsService.fetchProfitCenterOptions().catch(() => []),
+      ]);
+
+    const otherDetails = npdOtherDetailsService.buildMisOtherDetails({
+      materialType,
+      plantSource,
+      brand,
+      plantDetails,
+      materialExtension,
+      existing: {
+        profitCenter: existing.profitCenter,
+        materialExtension: existing.materialExtension || undefined,
+      },
+    });
+
+    if (!otherDetails.materialExtension && existing.materialExtension) {
+      otherDetails.materialExtension = existing.materialExtension;
+    }
+
+    return { otherDetails, profitCenterOptions };
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error));
+  }
+});
 
 export const saveNpdDraft = createAsyncThunk<
   INpdRequestGeneralInfo,
@@ -179,6 +236,8 @@ export const applyNpdWorkflowAction = createAsyncThunk<
     comments: string;
     actorRole: string;
     items?: INpdItemDetailRecord[];
+    includeOtherDetails?: boolean;
+    actionVia?: "System" | "Mail" | string;
   },
   { rejectValue: string; state: RootState }
 >("npdForm/workflowAction", async (input, { getState, rejectWithValue }) => {
@@ -187,6 +246,11 @@ export const applyNpdWorkflowAction = createAsyncThunk<
     if (!state.npdForm.requestId) {
       return rejectWithValue("The request could not be found.");
     }
+
+    const isMisActor =
+      (input.actorRole || "").trim().toLowerCase() ===
+        Config.Roles.MisCoordinator.toLowerCase() ||
+      Boolean(input.includeOtherDetails);
 
     return await npdRequestGeneralInfoService.applyNpdWorkflowAction({
       requestId: state.npdForm.requestId,
@@ -197,6 +261,9 @@ export const applyNpdWorkflowAction = createAsyncThunk<
       actorUserId: state.app.userId,
       access: selectResolvedAccess(state),
       items: input.items,
+      otherDetails: isMisActor ? state.npdForm.otherDetails : undefined,
+      siteUrl: state.app.siteUrl || undefined,
+      actionVia: input.actionVia || "System",
     });
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));

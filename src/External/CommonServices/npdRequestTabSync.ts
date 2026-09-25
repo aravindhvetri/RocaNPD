@@ -1,5 +1,6 @@
 import { Config, FieldLabels } from "./Config";
 import { isNpdRequestIdTitle } from "./npdRequestIdService";
+import { normalizeEmail } from "./personFieldUtils";
 
 export type NpdTabLockKind = "editing" | "draft-saved" | "submitted";
 
@@ -16,9 +17,13 @@ export interface INpdTabSyncMessage {
   type: NpdTabSyncType;
   requestId: number;
   tabId: string;
+  /** Normalized login email — locks only apply across tabs of the same user. */
+  userKey: string;
   requestTitle?: string;
   at?: string;
   kind?: NpdTabLockKind;
+  /** Epoch ms when the message was published. */
+  ts?: number;
 }
 
 export interface INpdTabRestriction {
@@ -29,12 +34,17 @@ export interface INpdTabRestriction {
   tabId: string;
 }
 
-const CHANNEL_NAME = "roca-npd-request-tab-sync";
-const STORAGE_KEY = "roca-npd-request-tab-sync";
+const CHANNEL_NAME = "roca-npd-request-tab-sync-v2";
+const STORAGE_KEY = "roca-npd-request-tab-sync-v2";
 const QUERY_WAIT_MS = 450;
 const HEARTBEAT_MS = 2000;
-const LOCK_STALE_MS = 5000;
-const STORAGE_POLL_MS = 200;
+/** Live edit claims expire when heartbeats stop. */
+const EDITING_STALE_MS = 5000;
+/** Persist action locks long enough for background duplicate tabs to surface them. */
+const ACTION_STALE_MS = 120000;
+const STORAGE_POLL_MS = 250;
+/** Ignore envelopes older than this (stale localStorage after reload). */
+const ENVELOPE_MAX_AGE_MS = 120000;
 
 type TabLockListener = () => void;
 type TabSyncEnvelope = INpdTabSyncMessage & { nonce?: number };
@@ -47,6 +57,7 @@ let pollTimer = 0;
 let lastNonce = 0;
 let runtimeTabId = "";
 let localClaim: INpdTabRestriction | null = null;
+let currentUserKey = "";
 
 export const NPD_TAB_QUERY_WAIT_MS = QUERY_WAIT_MS;
 export const NPD_TAB_HEARTBEAT_MS = HEARTBEAT_MS;
@@ -77,7 +88,10 @@ export function formatNpdTabRequestLabel(
 }
 
 export function formatNpdTabLockMessage(
-  restriction: Pick<INpdTabRestriction, "kind" | "requestId" | "requestTitle" | "at">,
+  restriction: Pick<
+    INpdTabRestriction,
+    "kind" | "requestId" | "requestTitle" | "at"
+  >,
 ): string {
   const label = formatNpdTabRequestLabel(
     restriction.requestId,
@@ -93,6 +107,23 @@ export function formatNpdTabLockMessage(
   return `${prefix} is being edited in another tab.`;
 }
 
+/**
+ * Active editing claim from another same-user tab (list View/Edit guard).
+ * Does not use draft-saved / submitted — those must not block a fresh View click
+ * after the acting tab already navigated away.
+ */
+export function getForeignEditingLock(
+  requestId: number,
+): INpdTabRestriction | null {
+  expireStaleLocks();
+  const lock = foreignLocks.get(requestId);
+  if (!lock || lock.kind !== "editing") {
+    return null;
+  }
+  return toRestriction(lock);
+}
+
+/** Any foreign lock (editing / draft-saved / submitted) for an open form tab. */
 export function getForeignNpdTabLock(
   requestId: number,
 ): INpdTabRestriction | null {
@@ -101,8 +132,28 @@ export function getForeignNpdTabLock(
   return lock ? toRestriction(lock) : null;
 }
 
-export function initNpdTabSync(): void {
+/** @deprecated Prefer initNpdTabSync(userEmail). */
+export function initNpdTabSync(userEmail?: string): void {
+  if (userEmail !== undefined) {
+    setNpdTabSyncUser(userEmail);
+  }
   ensureChannel();
+}
+
+export function setNpdTabSyncUser(userEmail: string): void {
+  const next = normalizeEmail(userEmail || "");
+  if (next === currentUserKey) {
+    return;
+  }
+  currentUserKey = next;
+  foreignLocks.clear();
+  localClaim = null;
+  notifyListeners();
+  ensureChannel();
+}
+
+export function getNpdTabSyncUserKey(): string {
+  return currentUserKey;
 }
 
 export function subscribeNpdTabLocks(listener: TabLockListener): () => void {
@@ -117,10 +168,14 @@ export function setLocalNpdTabClaim(claim: INpdTabRestriction | null): void {
   localClaim = claim;
 }
 
-export function publishNpdTabSync(message: INpdTabSyncMessage): void {
+export function publishNpdTabSync(
+  message: Omit<INpdTabSyncMessage, "userKey"> & { userKey?: string },
+): void {
   ensureChannel();
   const envelope: TabSyncEnvelope = {
     ...message,
+    userKey: message.userKey || currentUserKey,
+    ts: Date.now(),
     nonce: Date.now() * 1000 + Math.floor(Math.random() * 1000),
   };
   lastNonce = envelope.nonce ?? 0;
@@ -233,6 +288,21 @@ function handleIncoming(message: INpdTabSyncMessage | null): void {
     return;
   }
 
+  // Different SharePoint login → ignore (Kali vs Leo must not lock each other).
+  const messageUser = normalizeEmail(message.userKey || "");
+  if (currentUserKey && messageUser && messageUser !== currentUserKey) {
+    return;
+  }
+  if (currentUserKey && !messageUser) {
+    // Legacy/empty envelopes: ignore once we know who we are.
+    return;
+  }
+
+  const age = Date.now() - Number(message.ts || 0);
+  if (message.ts && age > ENVELOPE_MAX_AGE_MS) {
+    return;
+  }
+
   if (
     message.type === "claim" ||
     message.type === "heartbeat" ||
@@ -276,6 +346,7 @@ function handleIncoming(message: INpdTabSyncMessage | null): void {
 
   if (message.type === "release") {
     const current = foreignLocks.get(message.requestId);
+    // Never clear action locks via release — only editing claims.
     if (current && current.kind !== "editing") {
       return;
     }
@@ -287,10 +358,9 @@ function expireStaleLocks(): void {
   const now = Date.now();
   let changed = false;
   foreignLocks.forEach((lock, requestId) => {
-    if (lock.kind !== "editing") {
-      return;
-    }
-    if (now - lock.lastSeen > LOCK_STALE_MS) {
+    const ttl =
+      lock.kind === "editing" ? EDITING_STALE_MS : ACTION_STALE_MS;
+    if (now - lock.lastSeen > ttl) {
       foreignLocks.delete(requestId);
       changed = true;
     }

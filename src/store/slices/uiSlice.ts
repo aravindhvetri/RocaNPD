@@ -18,7 +18,7 @@ export interface IUiState {
 const initialState: IUiState = {
   sidebarCollapsed: false,
   expandedSections: defaultExpanded,
-  activeNavItemId: "npd-all",
+  activeNavItemId: "",
 };
 
 const uiSlice = createSlice({

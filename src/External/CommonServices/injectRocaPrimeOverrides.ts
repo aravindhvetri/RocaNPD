@@ -64,6 +64,16 @@ export function injectRocaPrimeOverrides(): void {
       font-family: 'Poppins', sans-serif !important;
     }
 
+    .p-toast.p-toast-top-right,
+    .p-toast.p-toast-top-left,
+    .p-toast.p-toast-top-center,
+    [data-roca-npd-root] .p-toast.p-toast-top-right,
+    [data-roca-npd-root] .p-toast.p-toast-top-left,
+    [data-roca-npd-root] .p-toast.p-toast-top-center {
+      top: 68px !important;
+      z-index: 100001 !important;
+    }
+
     [data-roca-npd-root] .p-dialog-content {
       padding: 0.5rem 1.25rem 1rem !important;
     }

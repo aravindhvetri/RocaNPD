@@ -30,14 +30,15 @@ const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
   onRework,
 }) => (
   <div className={styles.footer}>
-    <Button
-      label="Cancel / Back"
-      variant="secondary"
-      size="sm"
-      className={styles.cancelButton}
-      disabled={saving}
-      onClick={onCancel}
-    />
+    <div className={styles.cancelButton}>
+      <Button
+        label="Cancel"
+        variant="secondary"
+        size="sm"
+        disabled={saving}
+        onClick={onCancel}
+      />
+    </div>
     {mode === "initiator-edit" ? (
       <div className={styles.primaryActions}>
         <Button
@@ -63,56 +64,58 @@ const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
     ) : null}
     {mode === "vertical-head-pending" ? (
       <div className={styles.primaryActions}>
-        <Button
-          label="Rework"
-          variant="secondary"
-          size="sm"
-          className={styles.saveButton}
-          disabled={saving}
-          onClick={onRework}
-        />
-        <Button
-          label="Reject"
-          variant="secondary"
-          size="sm"
-          className={styles.saveButton}
-          disabled={saving}
-          onClick={onReject}
-        />
-        <Button
-          label="Approve"
-          size="sm"
-          className={styles.submitButton}
-          disabled={saving}
-          onClick={onApprove}
-        />
+        <div className={styles.reworkButton}>
+          <Button
+            label="Rework"
+            size="sm"
+            disabled={saving}
+            onClick={onRework}
+          />
+        </div>
+        <div className={styles.rejectButton}>
+          <Button
+            label="Reject"
+            size="sm"
+            disabled={saving}
+            onClick={onReject}
+          />
+        </div>
+        <div className={styles.approveButton}>
+          <Button
+            label="Approve"
+            size="sm"
+            disabled={saving}
+            onClick={onApprove}
+          />
+        </div>
       </div>
     ) : null}
     {mode === "mis-pending" ? (
       <div className={styles.primaryActions}>
-        <Button
-          label="Rework"
-          variant="secondary"
-          size="sm"
-          className={styles.saveButton}
-          disabled={saving}
-          onClick={onRework}
-        />
-        <Button
-          label="Reject"
-          variant="secondary"
-          size="sm"
-          className={styles.saveButton}
-          disabled={saving}
-          onClick={onReject}
-        />
-        <Button
-          label="Post to SAP"
-          size="sm"
-          className={styles.submitButton}
-          disabled={saving}
-          onClick={onApprove}
-        />
+        <div className={styles.reworkButton}>
+          <Button
+            label="Rework"
+            size="sm"
+            disabled={saving}
+            onClick={onRework}
+          />
+        </div>
+        <div className={styles.rejectButton}>
+          <Button
+            label="Reject"
+            size="sm"
+            disabled={saving}
+            onClick={onReject}
+          />
+        </div>
+        <div className={styles.approveButton}>
+          <Button
+            label="Post to SAP"
+            size="sm"
+            disabled={saving}
+            onClick={onApprove}
+          />
+        </div>
       </div>
     ) : null}
   </div>

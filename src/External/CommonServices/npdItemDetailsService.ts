@@ -83,6 +83,7 @@ function mapItem(item: Record<string, unknown>): INpdItemDetailRecord {
           : null,
     uom: splitMultiValue(item[FIELDS.UOM]),
     minQtyBoxQty: readText(item, FIELDS.MinQty),
+    isMisAdded: readText(item, FIELDS.Title) === "MIS_ADDED",
   };
 }
 
@@ -91,7 +92,7 @@ function toSharePointPayload(
   requestId: number,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    [FIELDS.Title]: "",
+    [FIELDS.Title]: record.isMisAdded ? "MIS_ADDED" : "",
     [FIELDS.RocaGlobalCode]: record.rocaGlobalCode.trim(),
     [FIELDS.MaterialCode]: record.materialCode.trim(),
     [FIELDS.MaterialDescription]: record.materialDescription.trim(),

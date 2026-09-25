@@ -8,6 +8,8 @@ import BrandMaterialExtensionMaster from "../admin/brandMaterialExtension/BrandM
 import LookupMaster from "../admin/lookup/LookupMaster";
 import LookupTypeMaster from "../admin/lookupType/LookupTypeMaster";
 import WorkflowConfigurationMaster from "../admin/workflowConfig/WorkflowConfigurationMaster";
+import MaterialGroupDashboard from "../materialGroup/dashboard/MaterialGroupDashboard";
+import MaterialGroupRequestForm from "../materialGroup/newRequest/MaterialGroupRequestForm";
 import NpdDraftRework from "../npd/draftRework/NpdDraftRework";
 import NpdRequestForm from "../npd/newRequest/NpdRequestForm";
 import NpdRequestDashboard from "../npd/requestList/NpdRequestDashboard";
@@ -22,6 +24,11 @@ const IMPLEMENTED_ROUTES: Record<string, React.ReactElement> = {
   "/npd/pending": <NpdDraftRework />,
   "/npd/all": <NpdRequestDashboard variant="all" />,
   "/npd/approved": <NpdRequestDashboard variant="approved" />,
+  "/mg/new": <MaterialGroupRequestForm />,
+  "/mg/all": <MaterialGroupDashboard variant="all" />,
+  "/mg/draft-rework": <MaterialGroupDashboard variant="draft-rework" />,
+  "/mg/pending": <MaterialGroupDashboard variant="pending" />,
+  "/mg/completed": <MaterialGroupDashboard variant="completed" />,
   "/admin/lookup-type": <LookupTypeMaster />,
   "/admin/lookup": <LookupMaster />,
   "/admin/brand-extension": <BrandMaterialExtensionMaster />,

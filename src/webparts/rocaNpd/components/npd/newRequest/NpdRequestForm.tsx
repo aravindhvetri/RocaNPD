@@ -4,13 +4,17 @@ import { useAppDispatch } from "../../../../../store/hooks";
 import {
   setNpdBrand,
   setNpdMaterialType,
+  setNpdOtherDetailsMaterialExtension,
+  setNpdOtherDetailsProfitCenter,
   setNpdPlantSource,
 } from "../../../../../store/slices/npdFormSlice";
 import { LoaderOverlay, Toast } from "../../common/controls";
-import NpdApproverCommentDialog from "./NpdApproverCommentDialog";
+import NpdApproverRemarks from "./NpdApproverRemarks";
+import NpdAuditLogTable from "./NpdAuditLogTable";
 import NpdGeneralInfoSection from "./NpdGeneralInfoSection";
 import NpdItemDetailsImport from "./NpdItemDetailsImport";
 import NpdItemDetailsSection from "./NpdItemDetailsSection";
+import NpdOtherDetailsSection from "./NpdOtherDetailsSection";
 import NpdRequestFormFooter from "./NpdRequestFormFooter";
 import NpdEditingRestrictedDialog from "../tabLock/NpdEditingRestrictedDialog";
 import { useNpdRequestFormController } from "./useNpdRequestFormController";
@@ -26,8 +30,11 @@ const NpdRequestForm: React.FC = () => {
     npdForm,
     importVisible,
     setImportVisible,
-    commentAction,
-    setCommentAction,
+    approverRemarks,
+    setApproverRemarks,
+    auditLogs,
+    showApproverRemarks,
+    showAuditLog,
     successMessage,
     submitProgress,
     formTitle,
@@ -35,10 +42,12 @@ const NpdRequestForm: React.FC = () => {
     footerMode,
     generalInfoReadOnly,
     itemDetailsReadOnly,
+    isMisCoordinatorActing,
+    showOtherDetails,
+    otherDetailsReadOnly,
     handleCancel,
     handleSaveDraft,
     handleSubmit,
-    handleWorkflowAction,
     requestAction,
     tabRestriction,
     handleTabLockDashboard,
@@ -106,9 +115,38 @@ const NpdRequestForm: React.FC = () => {
           rows={itemRows}
           lookupOptionsByType={npdForm.lookupOptionsByType}
           readOnly={itemDetailsReadOnly}
+          isMisCoordinatorActing={isMisCoordinatorActing}
           onRowsChange={setItemRows}
           onImportClick={() => setImportVisible(true)}
         />
+        {showOtherDetails ? (
+          <NpdOtherDetailsSection
+            details={npdForm.otherDetails}
+            profitCenterOptions={npdForm.profitCenterOptions}
+            loading={npdForm.otherDetailsStatus === "loading"}
+            readOnly={otherDetailsReadOnly}
+            onProfitCenterChange={(value) =>
+              dispatch(setNpdOtherDetailsProfitCenter(value))
+            }
+            onMaterialExtensionChange={(value) =>
+              dispatch(setNpdOtherDetailsMaterialExtension(value))
+            }
+          />
+        ) : null}
+        {showApproverRemarks ? (
+          <NpdApproverRemarks
+            value={approverRemarks}
+            disabled={isSaving}
+            onChange={setApproverRemarks}
+          />
+        ) : null}
+        {showAuditLog ? (
+          <NpdAuditLogTable
+            rows={auditLogs}
+            requestStatus={npdForm.requestStatus}
+            workflowSteps={npdForm.workflowSteps}
+          />
+        ) : null}
       </div>
       <NpdRequestFormFooter
         saving={isSaving}
@@ -125,16 +163,10 @@ const NpdRequestForm: React.FC = () => {
         brand={generalInfo.brand}
         rows={itemRows}
         lookupOptionsByType={npdForm.lookupOptionsByType}
+        isMisCoordinatorActing={isMisCoordinatorActing}
         toastRef={toastRef}
         onHide={() => setImportVisible(false)}
         onRowsChange={setItemRows}
-      />
-      <NpdApproverCommentDialog
-        visible={Boolean(commentAction)}
-        action={commentAction}
-        saving={isSaving}
-        onHide={() => setCommentAction(null)}
-        onSubmit={handleWorkflowAction}
       />
       <NpdEditingRestrictedDialog
         restriction={tabRestriction}

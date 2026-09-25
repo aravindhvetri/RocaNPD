@@ -1,14 +1,23 @@
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { ApproverSystems, Config } from "../../../../../External/CommonServices/Config";
-import type { NpdWorkflowAction } from "../../../../../External/CommonServices/Interface";
+import type {
+  INpdApproverCommentRow,
+  NpdWorkflowAction,
+} from "../../../../../External/CommonServices/Interface";
+import { fetchNpdApproverComments } from "../../../../../External/CommonServices/npdApproverCommentsService";
 import {
   canActOnPendingNpdStep,
   hasSystemRole,
 } from "../../../../../External/CommonServices/permissionService";
-import { resolveActorWorkflowRole } from "../../../../../External/CommonServices/npdWorkflowJsonService";
+import {
+  getFirstPendingApproverRole,
+  isMisCoordinatorWorkflowRole,
+  isVerticalHeadWorkflowRole,
+  resolveActorWorkflowRole,
+} from "../../../../../External/CommonServices/npdWorkflowJsonService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import { selectResolvedAccess } from "../../../../../store/slices/appSlice";
 import {
@@ -22,10 +31,15 @@ import {
   fetchNpdLookupOptions,
   fetchNpdPlantSourceOptions,
   hydrateNpdRequestForm,
+  populateNpdOtherDetails,
   saveNpdDraft,
   submitNpdRequest,
 } from "../../../../../store/thunks/npdFormThunks";
-import { showErrorToast } from "../../common/controls";
+import {
+  showActionValidationToast,
+  showErrorToast,
+  showWarningToast,
+} from "../../common/controls";
 import {
   createEmptyNpdItemDetailRow,
   isEmptyItemDetailRow,
@@ -56,6 +70,7 @@ export function useNpdRequestFormController(
 ) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const editId = parseEditId(searchParams.get("id"));
   const emailAction = parseNpdWorkflowAction(
@@ -78,8 +93,10 @@ export function useNpdRequestFormController(
   ]);
   const [recordReady, setRecordReady] = React.useState(!editId);
   const [importVisible, setImportVisible] = React.useState(false);
-  const [commentAction, setCommentAction] =
-    React.useState<NpdWorkflowAction | null>(null);
+  const [approverRemarks, setApproverRemarks] = React.useState("");
+  const [auditLogs, setAuditLogs] = React.useState<INpdApproverCommentRow[]>(
+    [],
+  );
   const [successMessage, setSuccessMessage] = React.useState("");
   const [submitProgress, setSubmitProgress] =
     React.useState<INpdSubmitProgress | null>(null);
@@ -125,11 +142,91 @@ export function useNpdRequestFormController(
   });
   const isTabLocked = Boolean(tabLock.restriction);
   const lockedFooterMode = isTabLocked ? "read-only" : footerMode;
+  const isVerticalHead = hasSystemRole(
+    access,
+    Config.Roles.VerticalHead,
+    ApproverSystems.NewProductDevelopment,
+  );
+  const isMisCoordinator = hasSystemRole(
+    access,
+    Config.Roles.MisCoordinator,
+    ApproverSystems.NewProductDevelopment,
+  );
+
+  const pendingApproverRole = getFirstPendingApproverRole(npdForm.workflowSteps);
+  const isPendingWithVh =
+    isVerticalHeadWorkflowRole(pendingApproverRole) ||
+    lockedFooterMode === "vertical-head-pending";
+
+  const vhStep = npdForm.workflowSteps.find((s) =>
+    isVerticalHeadWorkflowRole(s.Role),
+  );
+  const isApprovedByVh = Boolean(
+    vhStep &&
+      vhStep.Status.trim().toLowerCase() ===
+        Config.WorkflowStepStatus.Approved.toLowerCase(),
+  );
+
+  const hasReachedMis =
+    isMisCoordinatorWorkflowRole(pendingApproverRole) ||
+    lockedFooterMode === "mis-pending" ||
+    isApprovedByVh ||
+    Boolean(
+      npdForm.workflowSteps.find(
+        (s) =>
+          isMisCoordinatorWorkflowRole(s.Role) &&
+          (s.Status.trim().toLowerCase() ===
+            Config.WorkflowStepStatus.Pending.toLowerCase() ||
+            s.Status.trim().toLowerCase() ===
+              Config.WorkflowStepStatus.Approved.toLowerCase()),
+      ),
+    );
+
+  const isRequestApproved = Boolean(
+    npdForm.requestStatus &&
+      (npdForm.requestStatus.trim().toLowerCase() ===
+        Config.RequestStatus.Approved.toLowerCase() ||
+        npdForm.requestStatus.trim().toLowerCase() ===
+          Config.RequestStatus.Completed.toLowerCase()),
+  );
+
+  // Dynamic Other Details visibility:
+  // Before Approved / Post to SAP: Only MIS Coordinator can see Other Details.
+  // After Approved / Post to SAP: Initiator, Vertical Head, and MIS Coordinator can all see Other Details.
+  const showOtherDetails =
+    Boolean(editId || npdForm.requestId) &&
+    (isRequestApproved ||
+      (isMisCoordinator && !isPendingWithVh && hasReachedMis));
+  const otherDetailsReadOnly = lockedFooterMode !== "mis-pending";
+  const showApproverRemarks =
+    lockedFooterMode === "vertical-head-pending" ||
+    lockedFooterMode === "mis-pending";
+  const showAuditLog = Boolean(editId || npdForm.requestId);
+
+  React.useEffect(() => {
+    if (!showOtherDetails || !recordReady || npdForm.loadStatus === "loading") {
+      return;
+    }
+    if (!npdForm.generalInfo.materialType || !npdForm.generalInfo.plantSource) {
+      return;
+    }
+    void dispatch(populateNpdOtherDetails());
+  }, [
+    dispatch,
+    showOtherDetails,
+    recordReady,
+    npdForm.loadStatus,
+    npdForm.generalInfo.brand,
+    npdForm.generalInfo.materialType,
+    npdForm.generalInfo.plantSource,
+  ]);
 
   React.useEffect(() => {
     if (!editId) {
       dispatch(resetNpdFormState());
       setItemRows([createEmptyNpdItemDetailRow()]);
+      setApproverRemarks("");
+      setAuditLogs([]);
       setRecordReady(true);
     } else {
       setRecordReady(false);
@@ -137,16 +234,24 @@ export function useNpdRequestFormController(
   }, [dispatch, editId]);
 
   React.useEffect(() => {
-    // Load Item Details options as soon as the form mounts (and again if empty).
+    // Load Item Details options as soon as the form mounts or navigation occurs.
     void dispatch(fetchNpdLookupOptions());
-  }, [dispatch, initialized]);
+  }, [dispatch, initialized, location.key, location.pathname]);
 
   React.useEffect(() => {
     if (!initialized || roleStatus === "loading" || (!userEmail && !userLoginName)) {
       return;
     }
     void dispatch(fetchNpdInitiatorBrandOptions());
-  }, [dispatch, initialized, roleStatus, userEmail, userLoginName]);
+  }, [
+    dispatch,
+    initialized,
+    roleStatus,
+    userEmail,
+    userLoginName,
+    location.key,
+    location.pathname,
+  ]);
 
   React.useEffect(() => {
     if (!initialized || !editId) {
@@ -166,6 +271,10 @@ export function useNpdRequestFormController(
       .catch(() => {
         setRecordReady(true);
       });
+
+    void fetchNpdApproverComments(editId)
+      .then(setAuditLogs)
+      .catch(() => setAuditLogs([]));
   }, [dispatch, editId, initialized]);
 
   React.useEffect(() => {
@@ -216,8 +325,9 @@ export function useNpdRequestFormController(
     (
       route: string,
       state?: Record<string, boolean>,
-      keepSubmitProgress = false,
+      options?: { keepSubmitProgress?: boolean; successMessage?: string },
     ): void => {
+      const keepSubmitProgress = Boolean(options?.keepSubmitProgress);
       stopSubmitProgress();
       if (keepSubmitProgress) {
         setSubmitProgress((current) =>
@@ -225,16 +335,18 @@ export function useNpdRequestFormController(
             ? { current: current.total, total: current.total, percent: 100 }
             : current,
         );
-      } else {
-        setSuccessMessage("Item added successfully.");
+      } else if (options?.successMessage) {
+        setSuccessMessage(options.successMessage);
       }
       window.setTimeout(() => {
         dispatch(resetNpdFormState());
         setItemRows([createEmptyNpdItemDetailRow()]);
+        setApproverRemarks("");
+        setAuditLogs([]);
         setSuccessMessage("");
         setSubmitProgress(null);
         navigate(route, { state });
-      }, keepSubmitProgress ? 750 : 900);
+      }, keepSubmitProgress || options?.successMessage ? 750 : 200);
     },
     [dispatch, navigate, stopSubmitProgress],
   );
@@ -242,6 +354,10 @@ export function useNpdRequestFormController(
   const dispatchWorkflowAction = React.useCallback(
     (action: NpdWorkflowAction, comments: string, persistItems = true): void => {
       if (!pendingRole) {
+        showErrorToast(
+          toastRef,
+          "You do not have a pending approval action on this request.",
+        );
         return;
       }
 
@@ -253,17 +369,27 @@ export function useNpdRequestFormController(
           items: persistItems
             ? toPersistableItemRecords(itemRows)
             : undefined,
+          includeOtherDetails: lockedFooterMode === "mis-pending",
+          actionVia: "System",
         }),
       )
         .unwrap()
         .then((saved) => {
-          setCommentAction(null);
           tabLock.notifySubmitted(saved.Id, saved.Title);
+          // No "Item added successfully" overlay — that message is Item Details only.
           finishWithSuccess(Config.Routes.NpdPending, { actionSaved: true });
         })
         .catch(() => undefined);
     },
-    [dispatch, finishWithSuccess, itemRows, pendingRole, tabLock],
+    [
+      dispatch,
+      finishWithSuccess,
+      itemRows,
+      lockedFooterMode,
+      pendingRole,
+      tabLock,
+      toastRef,
+    ],
   );
 
   useNpdEmailAction({
@@ -304,7 +430,9 @@ export function useNpdRequestFormController(
         .unwrap()
         .then((saved) => {
           tabLock.notifyDraftSaved(saved.Id, saved.Title);
-          finishWithSuccess(Config.Routes.NpdDraftRework, { draftSaved: true }, true);
+          finishWithSuccess(Config.Routes.NpdDraftRework, { draftSaved: true }, {
+            keepSubmitProgress: true,
+          });
         })
         .catch(() => {
           stopSubmitProgress();
@@ -339,7 +467,9 @@ export function useNpdRequestFormController(
         .unwrap()
         .then((saved) => {
           tabLock.notifySubmitted(saved.Id, saved.Title);
-          finishWithSuccess(Config.Routes.NpdPending, { requestSubmitted: true }, true);
+          finishWithSuccess(Config.Routes.NpdPending, { requestSubmitted: true }, {
+            keepSubmitProgress: true,
+          });
         })
         .catch(() => {
           stopSubmitProgress();
@@ -362,11 +492,27 @@ export function useNpdRequestFormController(
       }
     }
 
-    if (workflowActionRequiresComments(action)) {
-      setCommentAction(action);
+    const remarks = approverRemarks.trim();
+    if (workflowActionRequiresComments(action) && !remarks) {
+      const actionText =
+        action === "Rework"
+          ? "sending back for rework"
+          : action === "Reject"
+            ? "rejecting"
+            : "approving";
+      showActionValidationToast(
+        toastRef,
+        action,
+        `Please enter approver remarks before ${actionText}.`,
+        "Validation",
+      );
       return;
     }
-    dispatchWorkflowAction(action, "Approved");
+
+    dispatchWorkflowAction(
+      action,
+      remarks,
+    );
   };
 
   return {
@@ -376,8 +522,11 @@ export function useNpdRequestFormController(
     npdForm,
     importVisible,
     setImportVisible,
-    commentAction,
-    setCommentAction,
+    approverRemarks,
+    setApproverRemarks,
+    auditLogs,
+    showApproverRemarks,
+    showAuditLog,
     successMessage,
     submitProgress,
     isRecordLoading:
@@ -385,11 +534,17 @@ export function useNpdRequestFormController(
     footerMode: lockedFooterMode,
     formTitle: !editId
       ? "New NPD Request"
-      : isViewMode || isTabLocked
+      : isViewMode ||
+          isTabLocked ||
+          (npdForm.requestStatus || "").trim().toLowerCase() === "completed" ||
+          (npdForm.requestStatus || "").trim().toLowerCase() === "approved"
         ? "View NPD Request"
         : "Edit NPD Request",
     generalInfoReadOnly: lockedFooterMode !== "initiator-edit",
     itemDetailsReadOnly: isTabLocked || itemDetailsReadOnly,
+    isMisCoordinatorActing: lockedFooterMode === "mis-pending",
+    showOtherDetails,
+    otherDetailsReadOnly,
     tabRestriction: tabLock.restriction,
     handleCancel: () =>
       navigate(
@@ -401,11 +556,6 @@ export function useNpdRequestFormController(
     },
     handleSaveDraft,
     handleSubmit,
-    handleWorkflowAction: (comments: string) => {
-      if (commentAction) {
-        dispatchWorkflowAction(commentAction, comments);
-      }
-    },
     requestAction,
   };
 }

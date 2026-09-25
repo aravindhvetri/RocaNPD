@@ -42,6 +42,7 @@ export {
   fetchNpdLookupOptions,
   fetchNpdPlantSourceOptions,
   hydrateNpdRequestForm,
+  populateNpdOtherDetails,
   saveNpdDraft,
   submitNpdRequest,
 } from "./npdFormThunks";

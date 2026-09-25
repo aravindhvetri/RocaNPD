@@ -7,20 +7,18 @@ import SideNavigation from "../SideNavigation/SideNavigation";
 import NavRouteSync from "./NavRouteSync";
 import styles from "./AppShell.module.scss";
 
-if (typeof window !== "undefined") {
-  initNpdTabSync();
-}
-
 export interface IAppShellProps {
   children: React.ReactNode;
 }
 
 const AppShell: React.FC<IAppShellProps> = ({ children }) => {
   const sidebarCollapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
+  const userEmail = useAppSelector((state) => state.app.userEmail);
+  const userLoginName = useAppSelector((state) => state.app.userLoginName);
 
   React.useEffect(() => {
-    initNpdTabSync();
-  }, []);
+    initNpdTabSync(userEmail || userLoginName || "");
+  }, [userEmail, userLoginName]);
 
   return (
     <div

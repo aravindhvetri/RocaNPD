@@ -13,6 +13,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem 1.25rem;
   align-items: start;
+  margin-bottom: 0.9rem;
 
   :global(.field) {
     margin-bottom: 0 !important;
@@ -45,17 +46,27 @@
   }
 
   :global(.p-dropdown-label) {
+    flex: 1 1 auto;
+    min-width: 0;
     padding: 0.4375rem 0.75rem;
     font-size: 0.8125rem;
     line-height: 1.25;
     font-family: "Poppins", sans-serif;
     color: $roca-color-text-primary;
-    display: flex;
-    align-items: center;
+    text-align: left;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.p-dropdown-label.p-placeholder) {
+    color: $roca-color-text-placeholder;
   }
 
   :global(.p-dropdown-trigger) {
     width: 2.25rem;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;

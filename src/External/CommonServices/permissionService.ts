@@ -94,7 +94,11 @@ const ROUTE_ALLOWED_ROLES: Record<string, UserRole[]> = {
   [Config.Routes.NpdPending]: NAV_ITEM_ALLOWED_ROLES["npd-pending"],
   [Config.Routes.NpdApproved]: NAV_ITEM_ALLOWED_ROLES["npd-approved"],
   [Config.Routes.NpdDraftRework]: NAV_ITEM_ALLOWED_ROLES["npd-draft"],
-  [Config.Routes.MgNew]: NAV_ITEM_ALLOWED_ROLES["mg-new"],
+  // The /mg/new route is shared for create (Initiator) AND consultant-edit / view (Consultant, Admin).
+  // NAV_ITEM_ALLOWED_ROLES["mg-new"] keeps the side-nav item Initiator-only so Consultants don't
+  // see "New Material Group" in the menu, but the route itself must allow Consultant and Admin
+  // so they can open pending requests or view any request from the table.
+  [Config.Routes.MgNew]: [Initiator, Consultant, Admin],
   [Config.Routes.MgAll]: NAV_ITEM_ALLOWED_ROLES["mg-all"],
   [Config.Routes.MgPending]: NAV_ITEM_ALLOWED_ROLES["mg-pending"],
   [Config.Routes.MgCompleted]: NAV_ITEM_ALLOWED_ROLES["mg-completed"],

@@ -13,6 +13,23 @@ import { LoaderOverlay } from "./common/controls";
 import AppShell from "./layout/AppShell/AppShell";
 import AppRoutes from "./routes/AppRoutes";
 
+/**
+ * Handle Outlook SafeLinks stripping hash fragments from email Login links.
+ * When `npdRoute` query parameter is present, restore it as the hash route
+ * before HashRouter mounts so the app navigates to the correct request.
+ */
+(function handleNpdEmailRedirect(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const npdRoute = params.get("npdRoute");
+  if (npdRoute) {
+    const route = npdRoute.startsWith("/") ? npdRoute : `/${npdRoute}`;
+    window.history.replaceState(null, "", `${window.location.pathname}#${route}`);
+  }
+})();
+
 const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
   const dispatch = useAppDispatch();
   const rootRef = React.useRef<HTMLDivElement>(null);

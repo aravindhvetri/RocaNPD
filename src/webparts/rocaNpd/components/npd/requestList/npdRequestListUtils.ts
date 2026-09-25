@@ -30,6 +30,33 @@ export function formatNpdCreatedDate(value: string): string {
   return `${day}-${month}-${date.getFullYear()}`;
 }
 
+/**
+ * Formats Audit Log Action On date and time: `DD/MM/YYYY hh:mm A` (e.g. `23/09/2026 01:05 PM`).
+ */
+export function formatAuditActionDateTime(value?: string): string {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const formattedHours = String(hours).padStart(2, "0");
+
+  return `${day}/${month}/${year} ${formattedHours}:${minutes} ${ampm}`;
+}
+
 export function formatNpdStatusLabel(status: string): string {
   const normalized = status.trim().toLowerCase();
   if (
