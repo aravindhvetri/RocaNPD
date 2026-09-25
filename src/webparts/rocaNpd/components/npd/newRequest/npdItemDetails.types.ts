@@ -20,11 +20,12 @@ export type INpdItemDetailRow = {
   weightKg: number | null;
   uom: string[];
   minQtyBoxQty: string;
+  isMisAdded?: boolean;
 } & Record<string, unknown>;
 
 export type NpdItemDetailFieldKey = Exclude<
   keyof INpdItemDetailRow,
-  "id" | "sharePointId"
+  "id" | "sharePointId" | "isMisAdded"
 >;
 
 export type NpdItemDetailFieldValue = string | string[] | number | null;

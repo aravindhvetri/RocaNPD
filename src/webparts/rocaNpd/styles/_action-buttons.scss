@@ -1,0 +1,138 @@
+// Common action button styles matching the unified action button bar (Cancel, Rework, Reject, Approve, Complete)
+@import './_theme-import.scss';
+
+@mixin roca-action-btn-base {
+  :global(.p-button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 5.5rem;
+    height: 2.25rem;
+    padding: 0.45rem 1.25rem !important;
+    border-radius: 6px !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 0.800rem !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+
+    &:focus {
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    &:disabled {
+      opacity: 0.55 !important;
+      cursor: not-allowed !important;
+    }
+  }
+}
+
+@mixin roca-action-cancel-btn {
+  @include roca-action-btn-base;
+
+  :global(.p-button) {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+    &:enabled:hover {
+      background: #f8fafc !important;
+      border-color: #94a3b8 !important;
+      color: #1e293b !important;
+    }
+
+    &:enabled:active {
+      background: #f1f5f9 !important;
+    }
+  }
+}
+
+@mixin roca-action-rework-btn {
+  @include roca-action-btn-base;
+
+  :global(.p-button) {
+    background: #f59e0b !important;
+    border: 1px solid #f59e0b !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.28);
+
+    &:enabled:hover {
+      background: #d97706 !important;
+      border-color: #d97706 !important;
+      color: #ffffff !important;
+      box-shadow: 0 3px 6px rgba(217, 119, 6, 0.35);
+    }
+
+    &:enabled:active {
+      background: #b45309 !important;
+      border-color: #b45309 !important;
+    }
+  }
+}
+
+@mixin roca-action-reject-btn {
+  @include roca-action-btn-base;
+
+  :global(.p-button) {
+    background: #e11d48 !important;
+    border: 1px solid #e11d48 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(225, 29, 72, 0.28);
+
+    &:enabled:hover {
+      background: #be123c !important;
+      border-color: #be123c !important;
+      color: #ffffff !important;
+      box-shadow: 0 3px 6px rgba(190, 18, 60, 0.35);
+    }
+
+    &:enabled:active {
+      background: #9f1239 !important;
+      border-color: #9f1239 !important;
+    }
+  }
+}
+
+@mixin roca-action-approve-btn {
+  @include roca-action-btn-base;
+
+  :global(.p-button) {
+    background: #10b981 !important;
+    border: 1px solid #10b981 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.28);
+
+    &:enabled:hover {
+      background: #059669 !important;
+      border-color: #059669 !important;
+      color: #ffffff !important;
+      box-shadow: 0 3px 6px rgba(5, 150, 105, 0.35);
+    }
+
+    &:enabled:active {
+      background: #047857 !important;
+      border-color: #047857 !important;
+    }
+  }
+}
+
+.actionCancelBtn {
+  @include roca-action-cancel-btn;
+}
+
+.actionReworkBtn {
+  @include roca-action-rework-btn;
+}
+
+.actionRejectBtn {
+  @include roca-action-reject-btn;
+}
+
+.actionApproveBtn,
+.actionCompleteBtn {
+  @include roca-action-approve-btn;
+}

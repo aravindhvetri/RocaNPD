@@ -27,4 +27,5 @@ export interface IDataTableProps<T extends Record<string, unknown>> {
   currentPageReportTemplate?: string;
   first?: number;
   onPage?: (event: { first: number; rows: number }) => void;
+  rowClassName?: (data: T) => string | undefined;
 }

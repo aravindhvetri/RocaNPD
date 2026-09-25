@@ -66,7 +66,13 @@ export const setupSpfxContext = (context: WebPartContext): void => {
   _spfxContext = context;
 };
 
-const getSP = (): SPFI => {
+/** Absolute URL of the current SPFx web (e.g. https://tenant.sharepoint.com/sites/ROCA_NPD). */
+export const getSpfxWebAbsoluteUrl = (): string => {
+  const url = (_spfxContext?.pageContext?.web?.absoluteUrl || "").trim();
+  return url.replace(/\/+$/, "");
+};
+
+export const getSP = (): SPFI => {
   if (!_sp) {
     throw new Error(
       "SharePoint has not been initialized. Call setupSP() from RocaNpd.tsx first.",
@@ -119,21 +125,35 @@ const SPReadItems = async (params: IListItems): Promise<[]> => {
     params.FilterCondition ? params.FilterCondition : "",
   );
 
-  return (await getSP()
+  let query = getSP()
     .web.lists.getByTitle(params.Listname)
-    .items.select(params.Select || "*")
-    .filter(filterValue)
-    .expand(params.Expand || "")
+    .items.select(params.Select || "*");
+
+  if (filterValue) {
+    query = query.filter(filterValue);
+  }
+  if (params.Expand) {
+    query = query.expand(params.Expand);
+  }
+
+  return (await query
     .top(params.Topcount || 0)
     .orderBy(params.Orderby || "ID", params.Orderbydecorasc)()) as [];
 };
 
 const SPReadItemUsingId = async (params: IListItemUsingId): Promise<[]> => {
-  return (await getSP()
+  let query = getSP()
     .web.lists.getByTitle(params.Listname)
-    .items.getById(params.SelectedId)
-    .select(params.Select ? params.Select : "")
-    .expand(params.Expand ? params.Expand : "")()) as [];
+    .items.getById(params.SelectedId);
+
+  if (params.Select) {
+    query = query.select(params.Select);
+  }
+  if (params.Expand) {
+    query = query.expand(params.Expand);
+  }
+
+  return (await query()) as [];
 };
 
 const SPAddAttachments = async (params: ISPAttachment) => {
@@ -326,15 +346,19 @@ const formatFilterValue = (
           params[i].Operator.toLocaleLowerCase() == "lt" ||
           params[i].Operator.toLocaleLowerCase() == "ge" ||
           params[i].Operator.toLocaleLowerCase() == "le"
-        )
+        ) {
+          const key = String(params[i].FilterKey || "");
+          const value = String(params[i].FilterValue ?? "");
+          // SharePoint Int32 keys (Id/ID) reject quoted literals: use Id eq 53 not Id eq '53'
+          const isNumericIdKey =
+            /^id$/i.test(key) && /^-?\d+(\.\d+)?$/.test(value.trim());
           strFilter +=
-            params[i].FilterKey +
+            key +
             " " +
             params[i].Operator +
-            "'" +
-            params[i].FilterValue +
-            "'";
-        else if (params[i].Operator.toLocaleLowerCase() == "substringof")
+            " " +
+            (isNumericIdKey ? value.trim() : "'" + value + "'");
+        } else if (params[i].Operator.toLocaleLowerCase() == "substringof")
           strFilter +=
             params[i].Operator +
             "('" +
@@ -808,6 +832,7 @@ const GenerateFormatId = (
 export default {
   getAllUsers,
   ensureSiteUserId,
+  getSpfxWebAbsoluteUrl,
   SPAddItem,
   GetDateFormat,
   GenerateFormatId,
@@ -844,4 +869,5 @@ export default {
   GetAzureUsersGroups,
   SPReadItemVersionHistory,
   SPDownloadFileBlob,
+  getSP,
 };

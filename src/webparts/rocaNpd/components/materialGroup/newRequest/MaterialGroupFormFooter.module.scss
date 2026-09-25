@@ -1,0 +1,79 @@
+@import '../../../styles/_theme-import.scss';
+@import '../../../styles/_action-buttons.scss';
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid $roca-color-border-light;
+  flex-shrink: 0;
+  background-color: $roca-color-bg-page;
+}
+
+.leftActions,
+.primaryActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cancelButton {
+  @include roca-action-cancel-btn;
+}
+
+.reworkButton {
+  @include roca-action-rework-btn;
+}
+
+.rejectButton {
+  @include roca-action-reject-btn;
+}
+
+.completeButton {
+  @include roca-action-approve-btn;
+}
+
+.saveButton {
+  min-width: 5.5rem;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+
+  :global(.p-button) {
+    background: $roca-color-bg-surface;
+    border-color: $roca-color-border-light;
+    color: $roca-color-text-primary;
+    font-size: 0.8125rem;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+
+    &:enabled:hover {
+      background: $roca-color-bg-hover;
+      border-color: $roca-color-accent;
+    }
+  }
+}
+
+.submitButton {
+  min-width: 5.5rem;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+
+  :global(.p-button) {
+    background: $roca-color-btn-primary-bg;
+    border-color: $roca-color-btn-primary-bg;
+    color: $roca-color-btn-primary-text;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 0.8125rem;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+
+    &:enabled:hover {
+      background: $roca-color-btn-primary-hover-bg;
+      border-color: $roca-color-btn-primary-hover-bg;
+    }
+  }
+}

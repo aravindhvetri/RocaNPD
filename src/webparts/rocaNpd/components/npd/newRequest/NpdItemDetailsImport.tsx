@@ -30,6 +30,7 @@ export interface INpdItemDetailsImportProps {
   brand: string | null;
   rows: INpdItemDetailRow[];
   lookupOptionsByType: Record<string, ISelectOption[]>;
+  isMisCoordinatorActing?: boolean;
   toastRef: React.RefObject<PrimeToast>;
   onHide: () => void;
   onRowsChange: React.Dispatch<React.SetStateAction<INpdItemDetailRow[]>>;
@@ -40,6 +41,7 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
   brand,
   rows,
   lookupOptionsByType,
+  isMisCoordinatorActing = false,
   toastRef,
   onHide,
   onRowsChange,
@@ -66,7 +68,12 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
   }, [visible]);
 
   const applyRecords = (result: INpdItemDetailsImportParseResult): void => {
-    const importedRows = result.toCreate.map(toNpdItemDetailRow);
+    const importedRows = result.toCreate.map((record) =>
+      toNpdItemDetailRow({
+        ...record,
+        isMisAdded: Boolean(isMisCoordinatorActing || record.isMisAdded),
+      }),
+    );
     onRowsChange((current) => {
       const keepExisting = current.filter((row) => !isEmptyItemDetailRow(row));
       return keepExisting.length ? [...keepExisting, ...importedRows] : importedRows;
@@ -136,10 +143,10 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         onDownloadTemplate={
           templateDocument
             ? () => {
-                void downloadTemplateFile(templateDocument).catch(() => {
-                  showErrorToast(toastRef, "Failed to download template.");
-                });
-              }
+              void downloadTemplateFile(templateDocument).catch(() => {
+                showErrorToast(toastRef, "Failed to download template.");
+              });
+            }
             : undefined
         }
         onFileRejected={(message) => showErrorToast(toastRef, message)}

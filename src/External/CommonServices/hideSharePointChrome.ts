@@ -16,9 +16,6 @@ export function hideSharePointChrome(): void {
       margin: 0px !important;
     }
 
-    #SuiteNavWrapper,
-    #O365_MainLink_NavMenu,
-    #O365_NavHeader,
     #spSiteHeader,
     #sp-appBar,
     #spCommandBar,
@@ -88,8 +85,8 @@ export function hideSharePointChrome(): void {
     [data-automation-id="contentScrollRegion"],
     #contentScrollRegion {
       overflow: hidden !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
+      height: calc(100dvh - 48px) !important;
+      max-height: calc(100dvh - 48px) !important;
     }
   `;
 
@@ -98,8 +95,8 @@ export function hideSharePointChrome(): void {
 
 /** Locks the SPFx web part host chain to the viewport so only in-app regions scroll. */
 export function lockWebPartViewport(rootElement: HTMLElement): void {
-  rootElement.style.height = "100dvh";
-  rootElement.style.maxHeight = "100dvh";
+  rootElement.style.height = "100%";
+  rootElement.style.maxHeight = "100%";
   rootElement.style.overflow = "hidden";
 
   if (document.documentElement) {
@@ -121,7 +118,7 @@ export function lockWebPartViewport(rootElement: HTMLElement): void {
 
   for (let depth = 0; depth < 12 && element && element !== document.body; depth += 1) {
     element.style.overflow = "hidden";
-    element.style.maxHeight = "100dvh";
+    element.style.maxHeight = "100%";
     element.style.height = "100%";
     element.style.boxSizing = "border-box";
     element.style.padding = "0";

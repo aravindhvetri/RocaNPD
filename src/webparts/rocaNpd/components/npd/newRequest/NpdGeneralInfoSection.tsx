@@ -50,6 +50,49 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
     ? "Select Material Type above to view applicable Plant / Source"
     : undefined;
 
+  // MIS / VH may not have Initiator brand options — keep saved Brand visible
+  const resolvedBrandOptions = React.useMemo(() => {
+    const options = [...brandOptions];
+    const current = (brand || "").trim();
+    if (!current) {
+      return options;
+    }
+
+    const existingIndex = options.findIndex(
+      (option) =>
+        String(option.value).trim().toLowerCase() === current.toLowerCase(),
+    );
+    if (existingIndex >= 0) {
+      // Normalize value casing so PrimeReact Dropdown can match the selection
+      const matched = options[existingIndex];
+      if (String(matched.value) !== current) {
+        const next = [...options];
+        next[existingIndex] = { label: current, value: current };
+        return next;
+      }
+      return options;
+    }
+
+    return [{ label: current, value: current }, ...options];
+  }, [brand, brandOptions]);
+
+  const resolvedPlantSourceOptions = React.useMemo(() => {
+    const options = [...plantSourceOptions];
+    const current = (plantSource || "").trim();
+    if (!current) {
+      return options;
+    }
+    if (
+      options.some(
+        (option) =>
+          String(option.value).trim().toLowerCase() === current.toLowerCase(),
+      )
+    ) {
+      return options;
+    }
+    return [{ label: current, value: current }, ...options];
+  }, [plantSource, plantSourceOptions]);
+
   return (
     <NpdFormSectionPanel
       title="General Information"
@@ -62,7 +105,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           label={FieldLabels.BrandMg1}
           required
           value={brand}
-          options={brandOptions}
+          options={resolvedBrandOptions}
           placeholder="Select Brand"
           disabled={brandLoading || readOnly}
           filter
@@ -87,7 +130,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           label={FieldLabels.PlantSource}
           required
           value={plantSource}
-          options={plantSourceOptions}
+          options={resolvedPlantSourceOptions}
           placeholder={
             hasPlantSourceMaterialType
               ? "Select Plant / Source"

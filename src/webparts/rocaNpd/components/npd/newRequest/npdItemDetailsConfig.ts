@@ -24,10 +24,13 @@ export function createNpdItemDetailRowId(): string {
   return `npd-item-${nextRowId}`;
 }
 
-export function createEmptyNpdItemDetailRow(): INpdItemDetailRow {
+export function createEmptyNpdItemDetailRow(
+  isMisAdded = false,
+): INpdItemDetailRow {
   return {
     id: createNpdItemDetailRowId(),
     sharePointId: 0,
+    isMisAdded,
     rocaGlobalCode: "",
     materialCode: "",
     materialDescription: "",
@@ -57,6 +60,7 @@ export function toNpdItemDetailRow(
     ...record,
     id: createNpdItemDetailRowId(),
     sharePointId: record.sharePointId || 0,
+    isMisAdded: Boolean(record.isMisAdded),
   };
 }
 
@@ -65,6 +69,7 @@ export function toNpdItemDetailRecord(
 ): INpdItemDetailRecord {
   return {
     sharePointId: row.sharePointId || 0,
+    isMisAdded: Boolean(row.isMisAdded),
     rocaGlobalCode: row.rocaGlobalCode,
     materialCode: row.materialCode,
     materialDescription: row.materialDescription,

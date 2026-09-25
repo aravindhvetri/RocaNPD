@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
-import { FieldLabels, RequestStatus } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels, RequestStatus } from "../../../../../External/CommonServices/Config";
 import type { INpdRequestListItemRow } from "../../../../../External/CommonServices/Interface";
 import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
 import { npdTabDashboardRoute } from "../../../../../External/CommonServices/npdRequestTabSync";
@@ -251,7 +251,6 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
         paginator
         paginatorPosition="bottom"
         paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-        emptyMessage={emptyMessage}
       />
       <NpdWorkflowStatusDialog
         visible={workflow.visible}

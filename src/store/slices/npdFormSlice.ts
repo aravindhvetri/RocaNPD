@@ -2,8 +2,13 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Config } from "../../External/CommonServices/Config";
 import type {
   INpdGeneralInfo,
+  INpdOtherDetails,
   ISelectOption,
 } from "../../External/CommonServices/Interface";
+import {
+  createEmptyNpdOtherDetails,
+  mapOtherDetailsFromRequest,
+} from "../../External/CommonServices/npdOtherDetailsService";
 import {
   fetchNpdGeneralInfoById,
   fetchNpdItemDetailsByRequestId,
@@ -11,6 +16,7 @@ import {
   fetchNpdLookupOptions,
   fetchNpdPlantSourceOptions,
   hydrateNpdRequestForm,
+  populateNpdOtherDetails,
   saveNpdDraft,
   submitNpdRequest,
   applyNpdWorkflowAction,
@@ -31,6 +37,9 @@ const initialState: INpdFormState = {
   requestTitle: null,
   workflowSteps: [],
   generalInfo: initialGeneralInfo,
+  otherDetails: createEmptyNpdOtherDetails(),
+  otherDetailsStatus: "idle",
+  profitCenterOptions: [],
   brandOptions: [],
   plantSourceOptions: [],
   lookupOptionsByType: {},
@@ -55,6 +64,9 @@ const npdFormSlice = createSlice({
       state.requestTitle = null;
       state.workflowSteps = [];
       state.generalInfo = { ...initialGeneralInfo };
+      state.otherDetails = createEmptyNpdOtherDetails();
+      state.otherDetailsStatus = "idle";
+      state.profitCenterOptions = [];
       state.plantSourceOptions = [];
       state.plantSourceStatus = "idle";
       state.loadStatus = "idle";
@@ -80,6 +92,15 @@ const npdFormSlice = createSlice({
     },
     setNpdPlantSource(state, action: PayloadAction<string | null>) {
       state.generalInfo.plantSource = action.payload;
+    },
+    setNpdOtherDetailsProfitCenter(state, action: PayloadAction<string>) {
+      state.otherDetails.profitCenter = action.payload;
+    },
+    setNpdOtherDetailsMaterialExtension(state, action: PayloadAction<string>) {
+      state.otherDetails.materialExtension = action.payload;
+    },
+    setNpdOtherDetails(state, action: PayloadAction<INpdOtherDetails>) {
+      state.otherDetails = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -119,6 +140,19 @@ const npdFormSlice = createSlice({
       .addCase(fetchNpdLookupOptions.rejected, (state, action) => {
         state.lookupOptionsStatus = "error";
         state.error = action.payload ?? "Failed to load lookup options.";
+      })
+      .addCase(populateNpdOtherDetails.pending, (state) => {
+        state.otherDetailsStatus = "loading";
+      })
+      .addCase(populateNpdOtherDetails.fulfilled, (state, action) => {
+        state.otherDetailsStatus = "idle";
+        state.otherDetails = action.payload.otherDetails;
+        state.profitCenterOptions = action.payload.profitCenterOptions;
+      })
+      .addCase(populateNpdOtherDetails.rejected, (state, action) => {
+        state.otherDetailsStatus = "error";
+        state.error =
+          action.payload ?? "Failed to load MIS Other Details.";
       })
       .addCase(saveNpdDraft.pending, (state) => {
         state.saveStatus = "saving";
@@ -160,6 +194,7 @@ const npdFormSlice = createSlice({
         state.requestStatus = action.payload.Status;
         state.requestTitle = action.payload.Title;
         state.workflowSteps = action.payload.WorkflowSteps ?? [];
+        state.otherDetails = mapOtherDetailsFromRequest(action.payload);
       })
       .addCase(applyNpdWorkflowAction.rejected, (state, action) => {
         state.saveStatus = "idle";
@@ -170,6 +205,7 @@ const npdFormSlice = createSlice({
         state.error = null;
         if (state.requestId !== action.meta.arg) {
           state.generalInfo = { ...initialGeneralInfo };
+          state.otherDetails = createEmptyNpdOtherDetails();
           state.requestStatus = null;
           state.requestTitle = null;
           state.workflowSteps = [];
@@ -186,6 +222,7 @@ const npdFormSlice = createSlice({
           materialType: action.payload.MaterialType || null,
           plantSource: action.payload.Plant || null,
         };
+        state.otherDetails = mapOtherDetailsFromRequest(action.payload);
       })
       .addCase(fetchNpdGeneralInfoById.rejected, (state, action) => {
         state.loadStatus = "error";
@@ -196,6 +233,7 @@ const npdFormSlice = createSlice({
         state.error = null;
         if (state.requestId !== action.meta.arg) {
           state.generalInfo = { ...initialGeneralInfo };
+          state.otherDetails = createEmptyNpdOtherDetails();
           state.requestStatus = null;
           state.requestTitle = null;
           state.workflowSteps = [];
@@ -215,6 +253,7 @@ const npdFormSlice = createSlice({
           materialType: request.MaterialType || null,
           plantSource: request.Plant || null,
         };
+        state.otherDetails = mapOtherDetailsFromRequest(request);
       })
       .addCase(hydrateNpdRequestForm.rejected, (state, action) => {
         state.loadStatus = "error";
@@ -234,6 +273,9 @@ export const {
   setNpdBrand,
   setNpdMaterialType,
   setNpdPlantSource,
+  setNpdOtherDetailsProfitCenter,
+  setNpdOtherDetailsMaterialExtension,
+  setNpdOtherDetails,
 } = npdFormSlice.actions;
 
 export const selectIsFinishedProductsMaterialType = (

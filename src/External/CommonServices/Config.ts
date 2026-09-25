@@ -8,6 +8,9 @@ export const ListNames = {
   NpdRequest: "NPD_Request",
   NpdItemDetails: "NPD_ItemDetails",
   NpdApproverComments: "NPD_ApproverComments",
+  MaterialGroupConfig: "NPD_MaterialGroupConfig",
+  MaterialGroupRequests: "NPD_MaterialGroupRequests",
+  MaterialGroupAuditLogs: "NPD_MaterialGroupAuditLogs",
 } as const;
 
 export const RocaMasterListNames = {
@@ -51,6 +54,26 @@ export const NpdTradedPlantSources = {
   Domestic: "Domestic",
 } as const;
 
+/** MIS Other Details — Plant Code for all Traded Products. */
+export const NpdMisPlantCodes = {
+  TradedWarehouse: "CCWH",
+} as const;
+
+/** MIS Other Details — Valuation Class display values (saved to NPD_Request). */
+export const NpdValuationClasses = {
+  FinishedProduct: "Finished Product - 6000",
+  TradedDomestic: "Traded Goods & Domestic - 5000",
+  TradedImported: "Traded Goods & Imported - 5100",
+} as const;
+
+/** MIS Other Details — Class Type is always this value. */
+export const NpdMisClassTypeDefault = "001";
+
+/** Lookup Type Title used for Profit Center dropdown options. */
+export const NpdMisLookupTypes = {
+  ProfitCenter: "Profit Center",
+} as const;
+
 /** Brands that require Roca Global Code on Item Details rows. */
 export const NpdRocaGlobalCodeBrands = ["Roca", "Laufen", "Armani"] as const;
 
@@ -84,6 +107,14 @@ export const RequestStatus = {
   Completed: "Completed",
 } as const;
 
+export const MaterialGroupStatus = {
+  Draft: "Draft",
+  Pending: "Pending",
+  Completed: "Completed",
+  Rework: "Rework",
+  Rejected: "Rejected",
+} as const;
+
 export const WorkflowStepStatus = {
   Pending: "Pending",
   Approved: "Approved",
@@ -107,6 +138,11 @@ export const NpdRequestIdFormat = {
   PadLength: 3,
 } as const;
 
+export const MgRequestIdFormat = {
+  Prefix: "MG-",
+  PadLength: 3,
+} as const;
+
 export const NpdItemImport = {
   MaxRows: 200,
   MultiValueSeparator: "; ",
@@ -117,7 +153,7 @@ export const ThemeColors = {
 } as const;
 
 export const NpdEmail = {
-  HeaderBackground: ThemeColors.Primary,
+  HeaderBackground: "#774dec",
   HeaderColor: "#ffffff",
   LogoContentId: "rocaLogo",
   LabelBackground: "#f7f3c8",
@@ -127,6 +163,16 @@ export const NpdEmail = {
   RejectBackground: "#c0392b",
   ButtonColor: "#ffffff",
   QueryAction: "action",
+} as const;
+
+/** Standalone NPDApproverMail page (email Approve / Rework / Reject). */
+export const NpdApproverMail = {
+  /** Page file under the current web's Site Pages library (tenant/site come from SPFx context). */
+  PageFileName: "NPDApproverMail.aspx",
+  /** Relative library folder under the current web. */
+  SitePagesFolder: "SitePages",
+  QueryRequestId: "RequestID",
+  QueryAction: "Action",
 } as const;
 
 export const NpdFormQuery = {
@@ -171,6 +217,14 @@ export const FieldNames = {
     Plant: "Plant",
     Status: "Status",
     WorkFlowJSON: "WorkFlowJSON",
+    PlantCode: "PlantCode",
+    StorageLocation: "StorageLocation",
+    ProfitCenter: "ProfitCenter",
+    MRPGroup: "MRPGroup",
+    MRPController: "MRPController",
+    ValuationClass: "ValuationClass",
+    ClassType: "ClassType",
+    MaterialExtension: "MaterialExtension",
   },
   NpdItemDetails: {
     Title: "Title",
@@ -199,10 +253,39 @@ export const FieldNames = {
   NpdApproverComments: {
     Title: "Title",
     Comments: "Comments",
+    /** Person field display/internal name is `User`; REST write uses `UserId`. */
+    User: "User",
     UserId: "UserId",
     Role: "Role",
     NPDRequest: "NPDRequest",
     NPDRequestId: "NPDRequestId",
+    ActionVia: "ActionVia",
+  },
+  MaterialGroupConfig: {
+    Title: "Title",
+    RelatedFields: "RelatedFields",
+  },
+  MaterialGroupRequests: {
+    Title: "Title",
+    Code: "Code",
+    Description: "Description",
+    MaterialGroupConfig: "MaterialGroupConfig",
+    MaterialGroupConfigId: "MaterialGroupConfigId",
+    RequestsJSON: "RequestsJSON",
+    GUID: "GUID",
+    Status: "Status",
+    Initiator: "Initiator",
+    InitiatorId: "InitiatorId",
+  },
+  MaterialGroupAuditLogs: {
+    Title: "Title",
+    Comments: "Comments",
+    MaterialGroupRequests: "MaterialGroupRequests",
+    MaterialGroupRequestsId: "MaterialGroupRequestsId",
+    Consultant: "Consultant",
+    ConsultantId: "ConsultantId",
+    Role: "Role",
+    ActionVia: "ActionVia",
   },
 } as const;
 
@@ -216,6 +299,14 @@ export const FieldLabels = {
   MaterialType: "Material Type",
   Plant: "Plant",
   PlantSource: "Plant / Source",
+  PlantCode: "Plant Code",
+  StorageLocation: "Storage Location",
+  ProfitCenter: "Profit Center",
+  MRPGroup: "MRP Group",
+  MRPController: "MRP Controller",
+  ValuationClass: "Valuation Class",
+  ClassType: "Class Type",
+  MaterialExtension: "Material Extension",
   RequestType: "Request Type",
   CurrentRole: "Current Role",
   NextRole: "Next Role",
@@ -256,6 +347,9 @@ export const FieldLabels = {
   Export: "Export",
   RocaGlobalCode: "Roca Global Code",
   MaterialCode: "Material Code",
+  ConfiguredMasters: "Configured Masters",
+  EntriesCount: "Entries Count",
+  Initiator: "Initiator",
   LineItemsAdded: "Line Items Added",
   MaterialDescription: "Material Description",
   ProductGroupMg2: "Product Group (MG2)",
@@ -275,6 +369,11 @@ export const FieldLabels = {
   Uom: "UOM",
   MinQtyBoxQty: "Min. Qty/Box Qty",
   Comments: "Comments",
+  CreateNewMaterialGroupRequest: "Create New Material Group Request",
+  SelectMastersToConfigure: "SELECT MASTERS TO CONFIGURE (MULTI-SELECT)",
+  MasterCodeAndDescriptionDetails: "MASTER CODE & DESCRIPTION DETAILS",
+  DraftInitiatorWorkflow: "Draft Initiator Workflow",
+  SubmitToConsultant: "Submit to Consultant",
 } as const;
 
 export const DeleteDependencies = {
@@ -306,9 +405,11 @@ export const Config = {
   LibraryNames,
   TemplateTypes,
   NpdRequestIdFormat,
+  MgRequestIdFormat,
   NpdItemImport,
   ThemeColors,
   NpdEmail,
+  NpdApproverMail,
   NpdFormQuery,
   NpdFormFrom,
   NpdItemDetailsPageSize,
@@ -321,6 +422,7 @@ export const Config = {
   WorkflowDefaults,
   WorkflowNpdExcludedNextRoles,
   RequestStatus,
+  MaterialGroupStatus,
   WorkflowStepStatus,
   ApproverSystems,
   NpdApproverSystems,
@@ -328,6 +430,10 @@ export const Config = {
   NpdMaterialTypes,
   NpdPlantSourceFilters,
   NpdTradedPlantSources,
+  NpdMisPlantCodes,
+  NpdValuationClasses,
+  NpdMisClassTypeDefault,
+  NpdMisLookupTypes,
   NpdRocaGlobalCodeBrands,
 
   Roles: {

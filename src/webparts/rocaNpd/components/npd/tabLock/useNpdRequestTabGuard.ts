@@ -2,13 +2,17 @@ import * as React from "react";
 import type { INpdTabRestriction } from "../../../../../External/CommonServices/npdRequestTabSync";
 import {
   formatNpdTabClock,
-  getForeignNpdTabLock,
+  getForeignEditingLock,
   getNpdTabId,
   NPD_TAB_QUERY_WAIT_MS,
   publishNpdTabSync,
   subscribeNpdTabLocks,
 } from "../../../../../External/CommonServices/npdRequestTabSync";
 
+/**
+ * List-row guard: only blocks View/Edit when another same-user tab holds a live
+ * editing claim. Draft-saved / submitted must not block a later View click.
+ */
 export function useNpdRequestTabGuard(): {
   restriction: INpdTabRestriction | null;
   guardAction: (
@@ -32,7 +36,7 @@ export function useNpdRequestTabGuard(): {
         if (!pendingId) {
           return;
         }
-        const foreign = getForeignNpdTabLock(pendingId);
+        const foreign = getForeignEditingLock(pendingId);
         if (foreign) {
           pendingIdRef.current = 0;
           setRestriction(foreign);
@@ -48,7 +52,7 @@ export function useNpdRequestTabGuard(): {
         return;
       }
 
-      const existing = getForeignNpdTabLock(requestId);
+      const existing = getForeignEditingLock(requestId);
       if (existing) {
         setRestriction(existing);
         return;
@@ -64,7 +68,7 @@ export function useNpdRequestTabGuard(): {
       });
 
       window.setTimeout(() => {
-        const foreign = getForeignNpdTabLock(requestId);
+        const foreign = getForeignEditingLock(requestId);
         if (foreign) {
           pendingIdRef.current = 0;
           setRestriction(foreign);

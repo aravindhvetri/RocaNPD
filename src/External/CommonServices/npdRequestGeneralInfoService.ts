@@ -2,6 +2,7 @@ import { Config, RequestStatus } from "./Config";
 import type {
   INpdDraftSavePayload,
   INpdItemDetailRecord,
+  INpdOtherDetails,
   INpdRequestGeneralInfo,
   IResolvedUserAccess,
   NpdWorkflowAction,
@@ -23,7 +24,6 @@ import {
   buildNpdDraftWorkflowJson,
   getFirstPendingApproverRole,
   getPendingApproverEmails,
-  hasCompletedWorkflowStep,
   parseWorkflowJson,
   resolveActorWorkflowRole,
   resolveRequestStatusAfterAction,
@@ -43,9 +43,34 @@ import SPServices from "./SPServices";
 const LIST_NAME = (): string => Config.ListNames.NpdRequest;
 const FIELDS = Config.FieldNames.NpdRequest;
 
-const SELECT_FIELDS =
-  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail";
+const SELECT_FIELDS = [
+  "Id",
+  "Title",
+  "Brand",
+  "MaterialType",
+  "Plant",
+  "Status",
+  "IsDeleted",
+  "WorkFlowJSON",
+  "PlantCode",
+  "StorageLocation",
+  "ProfitCenter",
+  "MRPGroup",
+  "MRPController",
+  "ValuationClass",
+  "ClassType",
+  "MaterialExtension",
+  "Created",
+  "Modified",
+  "Author/Id",
+  "Author/Title",
+  "Author/EMail",
+].join(",");
 const EXPAND_FIELDS = "Author";
+
+/** Minimal select when Other Details columns are not yet provisioned. */
+const SELECT_FIELDS_CORE =
+  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail";
 
 function getNumericId(value: unknown): number {
   const id = Number(value);
@@ -102,6 +127,29 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     AuthorTitle: getAuthorTitle(item),
     Created: String(item.Created ?? ""),
     Modified: String(item.Modified ?? item.Created ?? ""),
+    PlantCode: String(item[FIELDS.PlantCode] ?? "").trim(),
+    StorageLocation: String(item[FIELDS.StorageLocation] ?? "").trim(),
+    ProfitCenter: String(item[FIELDS.ProfitCenter] ?? "").trim(),
+    MRPGroup: String(item[FIELDS.MRPGroup] ?? "").trim(),
+    MRPController: String(item[FIELDS.MRPController] ?? "").trim(),
+    ValuationClass: String(item[FIELDS.ValuationClass] ?? "").trim(),
+    ClassType: String(item[FIELDS.ClassType] ?? "").trim(),
+    MaterialExtension: String(item[FIELDS.MaterialExtension] ?? "").trim(),
+  };
+}
+
+function buildOtherDetailsUpdatePayload(
+  otherDetails: INpdOtherDetails,
+): Record<string, unknown> {
+  return {
+    [FIELDS.PlantCode]: otherDetails.plantCode.trim(),
+    [FIELDS.StorageLocation]: otherDetails.storageLocation.trim(),
+    [FIELDS.ProfitCenter]: otherDetails.profitCenter.trim(),
+    [FIELDS.MRPGroup]: otherDetails.mrpGroup.trim(),
+    [FIELDS.MRPController]: otherDetails.mrpController.trim(),
+    [FIELDS.ValuationClass]: otherDetails.valuationClass.trim(),
+    [FIELDS.ClassType]: otherDetails.classType.trim() || "001",
+    [FIELDS.MaterialExtension]: otherDetails.materialExtension.trim(),
   };
 }
 
@@ -189,7 +237,7 @@ export async function saveNpdGeneralInfoDraft(
   const title =
     payload.existingTitle && isNpdRequestIdTitle(payload.existingTitle)
       ? payload.existingTitle.trim()
-      : payload.brand.trim();
+      : "";
 
   return persistHeaderAndItems(payload, workflowJson, status, title, items);
 }
@@ -230,6 +278,7 @@ export async function submitNpdRequest(
       action: "Submitted",
       to: pendingEmails,
       includeActionButtons: shouldIncludeNpdEmailActions(pendingRole),
+      siteUrl: contextSiteUrl,
     });
   } catch {
     // Persist succeeded; notification failure must not roll back the request.
@@ -239,15 +288,28 @@ export async function submitNpdRequest(
 }
 
 export async function fetchActiveNpdRequests(): Promise<INpdRequestGeneralInfo[]> {
-  const rows = (await SPServices.SPReadItems({
-    Listname: LIST_NAME(),
-    Select: SELECT_FIELDS,
-    Expand: EXPAND_FIELDS,
-    Filter: getActiveRecordFilters(),
-    Orderby: "Modified",
-    Orderbydecorasc: false,
-    Topcount: 5000,
-  })) as Record<string, unknown>[];
+  let rows: Record<string, unknown>[] = [];
+  try {
+    rows = (await SPServices.SPReadItems({
+      Listname: LIST_NAME(),
+      Select: SELECT_FIELDS,
+      Expand: EXPAND_FIELDS,
+      Filter: getActiveRecordFilters(),
+      Orderby: "Modified",
+      Orderbydecorasc: false,
+      Topcount: 5000,
+    })) as Record<string, unknown>[];
+  } catch {
+    rows = (await SPServices.SPReadItems({
+      Listname: LIST_NAME(),
+      Select: SELECT_FIELDS_CORE,
+      Expand: EXPAND_FIELDS,
+      Filter: getActiveRecordFilters(),
+      Orderby: "Modified",
+      Orderbydecorasc: false,
+      Topcount: 5000,
+    })) as Record<string, unknown>[];
+  }
 
   return rows.map(mapGeneralInfo).filter(isActiveRecord);
 }
@@ -261,6 +323,11 @@ export async function applyNpdWorkflowAction(params: {
   actorUserId: number;
   access: IResolvedUserAccess;
   items?: INpdItemDetailRecord[];
+  /** MIS Coordinator Other Details — persisted on Approve / Rework / Reject. */
+  otherDetails?: INpdOtherDetails;
+  /** Current NPD web absolute URL for ApproverMail email links. */
+  siteUrl?: string;
+  actionVia?: "System" | "Mail" | string;
 }): Promise<INpdRequestGeneralInfo> {
   const request = await fetchNpdGeneralInfoById(params.requestId);
   const actorRole =
@@ -270,8 +337,13 @@ export async function applyNpdWorkflowAction(params: {
       params.access.assignedRoles,
     ) || params.actorRole;
 
-  if (hasCompletedWorkflowStep(request.WorkflowSteps, params.actorEmail)) {
-    return request;
+  const pendingRole = getFirstPendingApproverRole(request.WorkflowSteps);
+  if (!pendingRole) {
+    throw new Error("This request has no pending approval action.");
+  }
+
+  if (pendingRole.trim().toLowerCase() !== actorRole.trim().toLowerCase()) {
+    throw new Error("You do not have a pending approval action on this request.");
   }
 
   const canAct =
@@ -282,10 +354,6 @@ export async function applyNpdWorkflowAction(params: {
     ) && canActOnPendingNpdStep(params.access, request.Brand, actorRole);
 
   if (!canAct) {
-    if (!getFirstPendingApproverRole(request.WorkflowSteps)) {
-      return request;
-    }
-
     throw new Error("You do not have a pending approval action on this request.");
   }
 
@@ -307,17 +375,50 @@ export async function applyNpdWorkflowAction(params: {
     updatedSteps,
   );
 
-  await SPServices.SPUpdateItem({
-    Listname: LIST_NAME(),
-    ID: params.requestId,
-    RequestJSON: {
-      [FIELDS.Status]: headerStatus,
-      [FIELDS.WorkFlowJSON]: stringifyWorkflowJson(updatedSteps),
-    },
-  });
+  const updatePayload: Record<string, unknown> = {
+    [FIELDS.Status]: headerStatus,
+    [FIELDS.WorkFlowJSON]: stringifyWorkflowJson(updatedSteps),
+  };
+
+  if (params.otherDetails) {
+    Object.assign(updatePayload, buildOtherDetailsUpdatePayload(params.otherDetails));
+  }
+
+  try {
+    await SPServices.SPUpdateItem({
+      Listname: LIST_NAME(),
+      ID: params.requestId,
+      RequestJSON: updatePayload,
+    });
+  } catch (updateError) {
+    // Status / workflow must still persist even if Other Details columns fail.
+    if (params.otherDetails) {
+      await SPServices.SPUpdateItem({
+        Listname: LIST_NAME(),
+        ID: params.requestId,
+        RequestJSON: {
+          [FIELDS.Status]: headerStatus,
+          [FIELDS.WorkFlowJSON]: stringifyWorkflowJson(updatedSteps),
+        },
+      });
+      console.warn(
+        "NPD Request updated without Other Details fields:",
+        updateError,
+      );
+    } else {
+      throw updateError;
+    }
+  }
 
   if (params.items) {
-    await saveNpdItemDetailsBatch(params.requestId, params.items);
+    try {
+      await saveNpdItemDetailsBatch(params.requestId, params.items);
+    } catch (itemsError) {
+      console.warn(
+        "NPD Item Details save failed after workflow status update:",
+        itemsError,
+      );
+    }
   }
 
   const userIds = await resolveApproverUserIds(
@@ -325,14 +426,23 @@ export async function applyNpdWorkflowAction(params: {
     params.actorEmail,
   );
 
-  await addNpdApproverComment({
-    requestId: params.requestId,
-    requestTitle: request.Title,
-    comments: params.comments,
-    role: actorRole,
-    userIds,
-    action: params.action,
-  });
+  try {
+    await addNpdApproverComment({
+      requestId: params.requestId,
+      requestTitle: request.Title,
+      comments: params.comments,
+      role: actorRole,
+      userIds,
+      action: params.action,
+      actorEmail: params.actorEmail,
+      actionVia: params.actionVia || "System",
+    });
+  } catch (commentError) {
+    console.error(
+      "NPD Request status updated but Approver Comments write failed:",
+      commentError,
+    );
+  }
 
   const saved = await fetchNpdGeneralInfoById(params.requestId);
   const nextPendingRole = getFirstPendingApproverRole(saved.WorkflowSteps);
@@ -341,16 +451,22 @@ export async function applyNpdWorkflowAction(params: {
       ? getPendingApproverEmails(saved.WorkflowSteps)
       : [saved.AuthorEmail];
 
+  const recipientRole =
+    params.action === "Approve"
+      ? nextPendingRole
+      : Config.Roles.Initiator;
+
   try {
     await sendNpdApprovalNotification({
       request: saved,
       action: params.action,
       comments: params.comments,
-      role: actorRole,
+      role: recipientRole,
       to: recipients,
       includeActionButtons:
         params.action === "Approve" &&
         shouldIncludeNpdEmailActions(nextPendingRole),
+      siteUrl: params.siteUrl,
     });
   } catch {
     // Action already persisted.
@@ -362,12 +478,22 @@ export async function applyNpdWorkflowAction(params: {
 export async function fetchNpdGeneralInfoById(
   id: number,
 ): Promise<INpdRequestGeneralInfo> {
-  const item = (await SPServices.SPReadItemUsingId({
-    Listname: LIST_NAME(),
-    SelectedId: id,
-    Select: SELECT_FIELDS,
-    Expand: EXPAND_FIELDS,
-  })) as unknown;
+  let item: unknown;
+  try {
+    item = await SPServices.SPReadItemUsingId({
+      Listname: LIST_NAME(),
+      SelectedId: id,
+      Select: SELECT_FIELDS,
+      Expand: EXPAND_FIELDS,
+    });
+  } catch {
+    item = await SPServices.SPReadItemUsingId({
+      Listname: LIST_NAME(),
+      SelectedId: id,
+      Select: SELECT_FIELDS_CORE,
+      Expand: EXPAND_FIELDS,
+    });
+  }
 
   const record = Array.isArray(item)
     ? (item[0] as Record<string, unknown> | undefined)

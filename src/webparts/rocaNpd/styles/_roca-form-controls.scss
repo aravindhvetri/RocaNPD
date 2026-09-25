@@ -40,6 +40,13 @@
     font-family: $roca-overlay-font !important;
   }
 
+  .p-toast.p-toast-top-right,
+  .p-toast.p-toast-top-left,
+  .p-toast.p-toast-top-center {
+    top: 68px !important;
+    z-index: 100001 !important;
+  }
+
   // ---- Focus / active: no PrimeReact blue ring --------------------------------
   .p-dropdown,
   .p-multiselect,

@@ -23,6 +23,7 @@ function DataTable<T extends Record<string, unknown>>({
   currentPageReportTemplate = "Showing {first} to {last} of {totalRecords} entries",
   first,
   onPage,
+  rowClassName,
 }: IDataTableProps<T>): React.ReactElement {
   const mergedClassName = [styles.dataTable, className].filter(Boolean).join(" ");
 
@@ -42,6 +43,7 @@ function DataTable<T extends Record<string, unknown>>({
       paginatorPosition={paginatorPosition}
       paginatorTemplate={paginatorTemplate}
       currentPageReportTemplate={currentPageReportTemplate}
+      rowClassName={rowClassName}
       {...(typeof first === "number" ? { first, onPage } : {})}
       stripedRows
       showGridlines={false}

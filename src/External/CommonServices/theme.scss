@@ -133,3 +133,119 @@ $roca-sidebar-width-collapsed: 4.25rem;
 $roca-radius-sm: 6px;
 $roca-radius-md: 8px;
 $roca-radius-pill: 6px;
+
+// =============================================================================
+// Primary Action Animations (New NPD Request & New Material Group)
+// =============================================================================
+
+:global {
+  @keyframes flowGradient {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes pulseGlow {
+    0% {
+      box-shadow:
+        0 0 5px #4ab7c3,
+        0 0 10px rgba(74, 183, 195, 0.5);
+    }
+
+    50% {
+      box-shadow:
+        0 0 12px #4ab7c3,
+        0 0 25px rgba(74, 183, 195, 0.7);
+    }
+
+    100% {
+      box-shadow:
+        0 0 5px #4ab7c3,
+        0 0 10px rgba(74, 183, 195, 0.5);
+    }
+  }
+}
+
+[data-roca-npd-nav] a[href*="/npd/new"],
+[data-roca-npd-nav] a[href*="/mg/new"] {
+  border-radius: 10px !important;
+  background-color: #207383 !important;
+  background-image: linear-gradient(110deg,
+      #207383 0%,
+      #1a8093 18%,
+      #307a8a 34%,
+      #3ec8d8 50%,
+      #1389d2 66%,
+      #1a8093 82%,
+      #207383 100%) !important;
+  background-size: 250% 200% !important;
+  background-repeat: no-repeat !important;
+  color: #ffffff !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  transform: translateY(0);
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+  animation:
+    flowGradient 5s ease infinite,
+    pulseGlow 2.5s ease-in-out infinite !important;
+
+  &:focus,
+  &:focus-visible,
+  &:active,
+  &.active,
+  &[aria-current="page"],
+  &[class*="actionActive"] {
+    background-color: #207383 !important;
+    background: linear-gradient(-45deg, #307a8a, #29889d, #4ab7c3, #2196f3);
+    background-size: 300% 300% !important;
+    background-repeat: no-repeat !important;
+    color: #ffffff !important;
+    outline: none !important;
+    border: none !important;
+    animation:
+      flowGradient 5s ease infinite,
+      pulseGlow 2.5s ease-in-out infinite !important;
+
+    span,
+    i {
+      color: #ffffff !important;
+    }
+
+    [class*="iconWrap"] {
+      background: rgba(255, 255, 255, 0.22) !important;
+    }
+  }
+
+  &:hover {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    transform: translateY(-2px) !important;
+    color: #1d6d7a !important;
+    text-decoration: none !important;
+    box-shadow:
+      0 4px 15px rgba(74, 183, 195, 0.5),
+      0 0 10px #4ab7c3 !important;
+
+    span,
+    i {
+      color: #1d6d7a !important;
+    }
+
+    [class*="iconWrap"] {
+      background: rgba(29, 109, 122, 0.1) !important;
+    }
+  }
+}

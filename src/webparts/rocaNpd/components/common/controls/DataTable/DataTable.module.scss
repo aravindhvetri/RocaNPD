@@ -143,9 +143,13 @@
 }
 
 .workflowAction {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  min-width: 1.75rem !important;
+
   :global(.p-button-icon) {
     color: $roca-color-accent;
-    font-size: 0.875rem;
+    font-size: 1.125rem;
   }
 }
 

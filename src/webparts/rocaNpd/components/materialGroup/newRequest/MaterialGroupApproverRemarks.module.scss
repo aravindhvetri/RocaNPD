@@ -1,0 +1,32 @@
+@import '../../../styles/_theme-import.scss';
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem 0.875rem;
+  background: $roca-color-bg-surface;
+  border: 1px solid $roca-color-border-light;
+  border-radius: $roca-radius-md;
+  flex-shrink: 0;
+}
+
+.textarea {
+  width: 100%;
+
+  :global(textarea) {
+    min-height: 6.5rem;
+    resize: vertical;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.8125rem;
+  }
+
+  :global(label),
+  :global(.p-float-label label) {
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 600;
+    font-size: 0.6875rem;
+    font-family: "Poppins", sans-serif;
+  }
+}

@@ -1,5 +1,39 @@
 @import '../../../../styles/theme-import';
 
+@keyframes flowGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow:
+      0 0 5px #4ab7c3,
+      0 0 10px rgba(74, 183, 195, 0.5);
+  }
+
+  50% {
+    box-shadow:
+      0 0 12px #4ab7c3,
+      0 0 25px rgba(74, 183, 195, 0.7);
+  }
+
+  100% {
+    box-shadow:
+      0 0 5px #4ab7c3,
+      0 0 10px rgba(74, 183, 195, 0.5);
+  }
+}
+
 .link {
   display: flex;
   align-items: center;
@@ -8,32 +42,79 @@
   height: 2.5rem;
   margin: 0.375rem auto 0.5rem;
   border: none;
-  border-radius: 0;
-  background-color: $roca-color-nav-primary-action-bg;
+  border-radius: 10px;
+  background-color: #207383;
+  background: linear-gradient(-45deg, #307a8a, #29889d, #4ab7c3, #2196f3);
+  background-size: 300% 300% !important;
+  background-repeat: no-repeat;
+  color: #ffffff !important;
   text-decoration: none;
-  transition: background-color 0.15s ease;
+  transform: translateY(0);
+  box-shadow:
+    0 0 5px #4ab7c3,
+    0 0 10px rgba(74, 183, 195, 0.5);
+  animation:
+    flowGradient 5s ease infinite,
+    pulseGlow 2.5s ease-in-out infinite;
+  transition: all .3s cubic-bezier(.4, 0, .2, 1);
+
+  &:focus,
+  &:focus-visible,
+  &:active,
+  &.active,
+  &[aria-current="page"] {
+    outline: none !important;
+    border: none !important;
+    color: #ffffff !important;
+
+    .iconWrap {
+      background: rgba(255, 255, 255, 0.22) !important;
+    }
+
+    .icon,
+    i {
+      color: #ffffff !important;
+    }
+  }
 
   &:hover {
-    background-color: $roca-color-nav-primary-action-hover-bg;
-    text-decoration: none;
+    background-image: none !important;
+    background-color: #ffffff !important;
+    transform: translateY(-2px) !important;
+    color: #1d6d7a !important;
+    text-decoration: none !important;
+    box-shadow:
+      0 4px 15px rgba(74, 183, 195, 0.5),
+      0 0 10px #4ab7c3 !important;
+
+    .iconWrap {
+      background: rgba(29, 109, 122, 0.1) !important;
+    }
+
+    .icon,
+    i {
+      color: #1d6d7a !important;
+    }
   }
 }
 
-.linkActive {
-  background-color: $roca-color-nav-item-selected-bg;
-  color: $roca-color-nav-item-selected-text !important;
 
-  .icon {
-    color: $roca-color-nav-item-selected-text !important;
-  }
 
-  &:hover {
-    background-color: $roca-color-nav-item-selected-bg;
-    color: $roca-color-nav-item-selected-text !important;
-  }
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .icon {
-  font-size: 1rem;
-  color: $roca-color-nav-icon-default !important;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff !important;
+  transition: color 0.2s ease;
 }

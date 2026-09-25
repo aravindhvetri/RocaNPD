@@ -145,6 +145,26 @@ export interface INpdGeneralInfo {
   plantSource: string | null;
 }
 
+/** MIS Coordinator Other Details (saved on NPD_Request). */
+export interface INpdOtherDetails {
+  plantCode: string;
+  storageLocation: string;
+  profitCenter: string;
+  mrpGroup: string;
+  mrpController: string;
+  valuationClass: string;
+  classType: string;
+  materialExtension: string;
+}
+
+/** PlantMaster row fields used for MIS Other Details auto-populate. */
+export interface IPlantMasterSapDetails {
+  plantCode: string;
+  storageLocation: string;
+  mrpGroup: string;
+  mrpController: string;
+}
+
 /** One step stored in NPD_Request.WorkFlowJSON. */
 export interface INpdWorkflowStepJson {
   Role: string;
@@ -167,6 +187,14 @@ export interface INpdRequestGeneralInfo {
   AuthorTitle: string;
   Created: string;
   Modified: string;
+  PlantCode?: string;
+  StorageLocation?: string;
+  ProfitCenter?: string;
+  MRPGroup?: string;
+  MRPController?: string;
+  ValuationClass?: string;
+  ClassType?: string;
+  MaterialExtension?: string;
 }
 
 export interface INpdRequestGeneralInfoRow
@@ -213,6 +241,8 @@ export interface INpdItemDetailRecord {
   weightKg: number | null;
   uom: string[];
   minQtyBoxQty: string;
+  /** True when the line item was added by the MIS Coordinator, highlighted in Item Details table. */
+  isMisAdded?: boolean;
 }
 
 export interface INpdItemDetailsImportParseResult {
@@ -228,6 +258,21 @@ export interface INpdApproverCommentPayload {
   role: string;
   userIds: number[];
   action: string;
+  /** Used to ensure the Person field resolves to the logged-in site user. */
+  actorEmail?: string;
+  actionVia?: string;
+}
+
+/** Display row for NPD Approver Comments / Audit Log DataTable. */
+export interface INpdApproverCommentRow extends Record<string, unknown> {
+  id: number;
+  status: string;
+  actionedBy: string;
+  actionedByEmail?: string;
+  role: string;
+  comments: string;
+  created?: string;
+  actionVia?: string;
 }
 
 export type NpdWorkflowAction = "Approve" | "Reject" | "Rework";
@@ -275,3 +320,135 @@ export interface IRequestAccessInput {
   brand?: string;
   module: "npd" | "mg";
 }
+
+/** Dynamic JSON entry stored in NPD_MaterialGroupRequests.RequestsJSON */
+export interface IMaterialGroupRequestJsonEntry {
+  LookupId: string;
+  LookupName: string;
+  Code: string;
+  Description: string;
+}
+
+/** Configuration option loaded from NPD_MaterialGroupConfig. */
+export interface IMaterialGroupConfigOption {
+  id: number;
+  title: string;
+  relatedFieldId?: number;
+  relatedFieldTitle?: string;
+}
+
+/** Form entry row for a specific material group master. */
+export interface IMaterialGroupEntryRow {
+  tempId: string;
+  sharePointId?: number;
+  code: string;
+  description: string;
+  /** True when the row was added by the user after the form loaded (not hydrated from SharePoint). Used for highlighting. */
+  isNew?: boolean;
+}
+
+/** Payload for saving an item into NPD_MaterialGroupRequests. */
+export interface IMaterialGroupRequestPayload {
+  Title?: string;
+  Code?: string;
+  Description?: string;
+  MaterialGroupConfigId?: number | number[];
+  RequestsJSON?: string;
+  Status: string;
+  InitiatorId?: number;
+}
+
+/** SharePoint list item — NPD_MaterialGroupRequests */
+export interface IMaterialGroupItem {
+  Id: number;
+  Title?: string;
+  Code?: string;
+  Description?: string;
+  RequestsJSON?: string;
+  MaterialGroupConfigId?: number | number[];
+  MaterialGroupConfig?:
+    | {
+        Id: number;
+        Title: string;
+      }
+    | Array<{
+        Id: number;
+        Title: string;
+      }>;
+  GUID?: string;
+  Status: string;
+  Initiator?: {
+    Id: number;
+    Title: string;
+    EMail: string;
+  };
+  InitiatorId?: number;
+  Created?: string;
+  Modified?: string;
+  Author?: {
+    Id: number;
+    Title: string;
+    EMail: string;
+  };
+}
+
+/** Request row for Material Group requests table. */
+export interface IMaterialGroupGroupedRequest extends Record<string, unknown> {
+  id: number;
+  guid?: string;
+  requestId: string;
+  configuredMasters: string[];
+  configuredMasterIds: number[];
+  entriesCount: number;
+  initiatorName: string;
+  initiatorEmail: string;
+  createdDate: string;
+  status: string;
+  currentApprover: string;
+  currentApproverEmail?: string;
+  requestsJson?: IMaterialGroupRequestJsonEntry[];
+  items?: IMaterialGroupItem[];
+}
+
+/** Payload for hydrating Material Group Form from SharePoint by ID or GUID */
+export interface IMaterialGroupHydratePayload {
+  id?: number;
+  guid?: string;
+  requestId: string;
+  status: string;
+  selectedConfigIds: number[];
+  entriesByConfigId: Record<number, IMaterialGroupEntryRow[]>;
+  initiatorName?: string;
+  initiatorEmail?: string;
+  /** Audit log rows from NPD_MaterialGroupAuditLogs (newest first). */
+  auditLogs?: IMaterialGroupAuditLogRow[];
+  /** @deprecated Prefer auditLogs DataTable. */
+  latestComments?: string;
+  latestCommentAction?: string;
+}
+
+/** Audit log row written on Consultant Rework / Reject / Complete. */
+export interface IMaterialGroupAuditLogPayload {
+  requestListItemId: number;
+  requestTitle: string;
+  action: "Rework" | "Rejected" | "Completed";
+  comments: string;
+  /** Site user Id for the Consultant Person/Group column. */
+  consultantUserId?: number;
+  consultantEmail?: string;
+  role?: string;
+  actionVia?: string;
+}
+
+/** Display row for Initiator audit-log DataTable. */
+export interface IMaterialGroupAuditLogRow extends Record<string, unknown> {
+  id: number;
+  status: string;
+  actionedBy: string;
+  actionedByEmail?: string;
+  role?: string;
+  comments: string;
+  created?: string;
+  actionVia?: string;
+}
+
