@@ -1,5 +1,4 @@
 import * as React from "react";
-import { RequestStatus } from "../../../../../External/CommonServices/Config";
 import { fetchNpdRequestStatusChoices } from "../../../../../External/CommonServices/npdRequestStatusChoices";
 import type { INpdRequestListItemRow } from "../../../../../External/CommonServices/Interface";
 import {
@@ -28,9 +27,8 @@ export function useNpdRequestListFilters(
 
   React.useEffect(() => {
     setSearchValue("");
-    setStatusFilter(
-      variant === "approved" ? RequestStatus.Approved : ALL_STATUS_VALUE,
-    );
+    // Approved tab hides the status dropdown; keep All so VH Pending-with-MIS rows are not filtered out.
+    setStatusFilter(ALL_STATUS_VALUE);
     setBrandFilter(ALL_BRAND_VALUE);
   }, [variant]);
 
@@ -53,11 +51,9 @@ export function useNpdRequestListFilters(
         String(option.value).toLowerCase() === statusFilter.toLowerCase(),
     );
     if (!stillValid) {
-      setStatusFilter(
-        variant === "approved" ? RequestStatus.Approved : ALL_STATUS_VALUE,
-      );
+      setStatusFilter(ALL_STATUS_VALUE);
     }
-  }, [statusFilter, statusOptions, variant]);
+  }, [statusFilter, statusOptions]);
 
   const filteredRows = items.filter(
     (item) =>
@@ -93,9 +89,7 @@ export function useNpdRequestListFilters(
     ),
     resetFilters: () => {
       setSearchValue("");
-      setStatusFilter(
-        variant === "approved" ? RequestStatus.Approved : ALL_STATUS_VALUE,
-      );
+      setStatusFilter(ALL_STATUS_VALUE);
       setBrandFilter(ALL_BRAND_VALUE);
     },
   };

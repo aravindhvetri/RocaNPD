@@ -80,6 +80,7 @@ const LookupTypeMaster: React.FC = () => {
     React.useState(false);
   const [importPreview, setImportPreview] =
     React.useState<IImportParseResult | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const isLoading = status === "loading";
   const isSaving = status === "saving";
@@ -200,18 +201,21 @@ const LookupTypeMaster: React.FC = () => {
   };
 
   const handleSave = async (title: string): Promise<void> => {
+    const mode = dialogMode;
+    const editingItem = selectedItem;
+    setDialogVisible(false);
+    setSelectedItem(null);
+
     try {
-      if (dialogMode === "create") {
+      if (mode === "create") {
         await dispatch(createLookupType(title)).unwrap();
         showSuccessToast(toastRef, "Lookup type created successfully.");
-      } else if (selectedItem) {
+      } else if (editingItem) {
         await dispatch(
-          updateLookupType({ id: selectedItem.Id, title }),
+          updateLookupType({ id: editingItem.Id, title }),
         ).unwrap();
         showSuccessToast(toastRef, "Lookup type updated successfully.");
       }
-      setDialogVisible(false);
-      setSelectedItem(null);
     } catch {
       // Error toast handled via slice error effect.
     }
@@ -343,16 +347,22 @@ const LookupTypeMaster: React.FC = () => {
       return;
     }
 
-    try {
-      exportLookupTypesToExcel(filteredRows);
-      showSuccessToast(toastRef, "Export completed successfully.");
-    } catch {
-      showErrorToast(toastRef, "Failed to export lookup types.");
-    }
+    setIsExporting(true);
+    window.setTimeout(() => {
+      try {
+        exportLookupTypesToExcel(filteredRows);
+        showSuccessToast(toastRef, "Export completed successfully.");
+      } catch {
+        showErrorToast(toastRef, "Failed to export lookup types.");
+      } finally {
+        setIsExporting(false);
+      }
+    }, 0);
   };
 
-  const showPageLoader = isLoading || isSaving;
-  const pageLoaderLabel = isSaving ? "Saving..." : "Loading...";
+  const showPageLoader = isLoading || isSaving || isExporting;
+  const pageLoaderLabel = "Processing";
+
 
   return (
     <section className={styles.master}>

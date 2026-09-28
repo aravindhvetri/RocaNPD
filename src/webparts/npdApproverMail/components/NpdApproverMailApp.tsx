@@ -3,6 +3,7 @@ import type { WebPartContext } from "@microsoft/sp-webpart-base";
 import type { Toast as PrimeToast } from "primereact/toast";
 import {
   Toast,
+  showSuccessToast,
   showApproveToast,
   showReworkToast,
   showRejectToast,
@@ -29,7 +30,7 @@ const NpdApproverMailApp: React.FC<INpdApproverMailAppProps> = ({
   const controllerOptions = React.useMemo<IUseNpdApproverMailControllerOptions>(
     () => ({
       onSuccess: () => {
-        showApproveToast(
+        showSuccessToast(
           toastRef,
           "Your response for this request has been submitted successfully.",
           "Success",
@@ -85,7 +86,7 @@ const NpdApproverMailApp: React.FC<INpdApproverMailAppProps> = ({
 
       {isBusy ? (
         <NpdApproverMailLoader
-          label="Loading request details..."
+          label="Processing"
           warning="Do not refresh, go back, or close this window."
         />
       ) : showResult ? (

@@ -246,11 +246,32 @@ export function injectRocaPrimeOverrides(): void {
       justify-content: flex-start !important;
       gap: 0.5rem !important;
       padding: 0.4375rem 0.75rem !important;
+      max-width: 100% !important;
+      overflow: hidden !important;
     }
 
     [data-roca-npd-root] .p-multiselect-items .p-multiselect-item .p-checkbox {
       margin: 0 !important;
       flex: 0 0 1rem !important;
+    }
+
+    [data-roca-npd-root] .p-multiselect-items .p-multiselect-item > span {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+    }
+
+    [data-roca-npd-root] .p-multiselect-panel {
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
+    }
+
+    [data-roca-npd-root] .p-multiselect-items-wrapper,
+    [data-roca-npd-root] .p-multiselect-items {
+      overflow-x: hidden !important;
     }
 
     [data-roca-npd-root] .p-multiselect-items .p-multiselect-item.p-highlight,
@@ -356,6 +377,15 @@ export function injectRocaPrimeOverrides(): void {
       background: #f5f7f9 !important;
       color: #2d3748 !important;
       cursor: pointer !important;
+    }
+
+    [data-roca-npd-root] .p-dropdown-items {
+      padding: 4px 0 0 0 !important;
+    }
+
+    [data-roca-npd-root] textarea,
+    [data-roca-npd-root] .p-inputtextarea {
+      resize: none !important;
     }
 
     [data-roca-npd-root] .p-paginator .p-paginator-first .p-paginator-icon,

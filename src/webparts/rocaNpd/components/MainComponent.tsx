@@ -1,5 +1,6 @@
 import * as React from "react";
 import { HashRouter } from "react-router-dom";
+import { Toast as PrimeToast } from "primereact/toast";
 import {
   lockWebPartViewport,
   unlockWebPartViewport,
@@ -7,9 +8,12 @@ import {
 import { injectRocaPrimeOverrides } from "../../../External/CommonServices/injectRocaPrimeOverrides";
 import themeStyles from "../styles/theme.module.scss";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
+import {
+  clearFlashMessage,
+} from "../../../store/slices/uiSlice";
 import { initializeApp } from "../../../store/thunks/appThunks";
 import type { IMainComponentProps } from "./IMainComponentProps";
-import { LoaderOverlay } from "./common/controls";
+import { LoaderOverlay, Toast, showErrorToast, showSuccessToast } from "./common/controls";
 import AppShell from "./layout/AppShell/AppShell";
 import AppRoutes from "./routes/AppRoutes";
 
@@ -33,9 +37,13 @@ import AppRoutes from "./routes/AppRoutes";
 const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
   const dispatch = useAppDispatch();
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const toastRef = React.useRef<PrimeToast>(null);
   const initialized = useAppSelector((state) => state.app.initialized);
   const roleStatus = useAppSelector((state) => state.app.roleStatus);
+  const globalProcessing = useAppSelector((state) => state.ui.globalProcessing);
+  const flashMessage = useAppSelector((state) => state.ui.flashMessage);
   const isResolvingAccess = !initialized || roleStatus === "loading";
+  const showItemProgress = Boolean(globalProcessing?.showItemProgress);
 
   React.useEffect(() => {
     dispatch(initializeApp(spfxContext)).catch(() => undefined);
@@ -58,9 +66,37 @@ const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!flashMessage) {
+      return;
+    }
+    if (flashMessage.severity === "success") {
+      showSuccessToast(toastRef, flashMessage.detail);
+    } else {
+      showErrorToast(toastRef, flashMessage.detail);
+    }
+    dispatch(clearFlashMessage());
+  }, [dispatch, flashMessage]);
+
   return (
     <div ref={rootRef} className={themeStyles.appRoot} data-roca-npd-root>
-      <LoaderOverlay visible={isResolvingAccess} label="Loading..." />
+      <Toast ref={toastRef} />
+      <LoaderOverlay
+        visible={isResolvingAccess || Boolean(globalProcessing)}
+        label="Processing"
+        progressCurrent={
+          showItemProgress ? globalProcessing?.current : undefined
+        }
+        progressTotal={showItemProgress ? globalProcessing?.total : undefined}
+        progressPercent={
+          showItemProgress ? globalProcessing?.percent : undefined
+        }
+        progressCaption={
+          showItemProgress && globalProcessing
+            ? `${globalProcessing.current} / ${globalProcessing.total}`
+            : undefined
+        }
+      />
       <HashRouter>
         <AppShell>
           <AppRoutes />

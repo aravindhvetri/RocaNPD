@@ -7,7 +7,7 @@ import type {
   IMaterialGroupRequestJsonEntry,
 } from "./Interface";
 import { getLookupTitles } from "./lookupFieldUtils";
-import { createLookup } from "./lookupService";
+import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
 import { fetchActiveLookupTypes } from "./lookupTypeService";
 import {
   addMaterialGroupAuditLog,
@@ -18,6 +18,12 @@ import {
   generateNextMgRequestId,
   isMgRequestIdTitle,
 } from "./materialGroupIdService";
+import {
+  getLastApproverRoleFromSequence,
+  getNpdApprovalRoleSequence,
+} from "./npdWorkflowJsonService";
+import { fetchActiveWorkflowSteps } from "./workflowConfigurationService";
+import { isMgRequestType } from "./workflowConfigurationUtils";
 import {
   fetchConsultantApproverInfo,
   sendMaterialGroupInitiatorNotification,
@@ -264,10 +270,16 @@ function buildRequestsJsonAndLookupIds(
       }
     }
 
-    if (hasEntryForConfig) {
-      // Multi-lookup on NPD_MaterialGroupRequests → NPD_MaterialGroupConfig items
-      configIdSet.add(configId);
+    if (!hasEntryForConfig) {
+      rawEntries.push({
+        LookupId: lookupIdStr,
+        LookupName: lookupName,
+        Code: "",
+        Description: "",
+      });
     }
+
+    configIdSet.add(configId);
   }
 
   return {
@@ -368,8 +380,8 @@ export async function saveMaterialGroupDraft(
     configs,
   );
 
-  if (!rawEntries.length) {
-    throw new Error("Please add at least one entry before saving draft.");
+  if (!selectedConfigIds.length) {
+    throw new Error("Please select at least one master category to configure.");
   }
 
   const targetId = id && id > 0 ? id : Number(params.guid) || undefined;
@@ -398,11 +410,14 @@ export interface ISubmitMaterialGroupRequestParams {
   actorName?: string;
   masterTitles?: Record<number, string>;
   existingRequestId?: string;
+  existingStatus?: string;
+  comments?: string;
 }
 
 /**
  * Submits Material Group request for Consultant review.
  * Generates sequential MG-YYYY-### ID, sets Title = requestId, Status = "Pending",
+ * records Initiator audit log ("Initiated" / "Resubmit"),
  * and dispatches Consultant email notification.
  */
 export async function submitMaterialGroupRequest(
@@ -417,6 +432,8 @@ export async function submitMaterialGroupRequest(
     actorName,
     masterTitles,
     existingRequestId,
+    existingStatus,
+    comments,
   } = params;
 
   let initiatorId = actorId;
@@ -460,6 +477,29 @@ export async function submitMaterialGroupRequest(
     configLookupIds,
   );
 
+  const isRework =
+    (existingStatus || "").trim().toLowerCase() === "rework" ||
+    (existingStatus || "").trim().toLowerCase() === "in rework";
+  const action = isRework ? "Resubmit" : "Initiated";
+  const auditComments =
+    (comments || "").trim() ||
+    (isRework ? "Request resubmitted" : "Request initiated");
+
+  try {
+    await addMaterialGroupAuditLog({
+      requestListItemId: savedId,
+      requestTitle: requestId,
+      role: Config.Roles.Initiator,
+      action,
+      comments: auditComments,
+      consultantEmail: actorEmail,
+      consultantUserId: initiatorId,
+      actionVia: "System",
+    });
+  } catch (auditErr) {
+    console.warn("Failed to record Initiator audit log for Material Group:", auditErr);
+  }
+
   // Dispatch email notification to Consultant asynchronously
   void sendMaterialGroupSubmitNotification({
     requestId,
@@ -482,6 +522,8 @@ export interface IFetchGroupedRequestsParams {
   userId?: number;
   userLoginName?: string;
   assignedRoles: string[];
+  /** Active side-nav role context (`?as=`). */
+  viewRole?: string | null;
   variant?: "all" | "draft-rework" | "pending" | "completed";
 }
 
@@ -568,17 +610,30 @@ export async function fetchGroupedMaterialGroupRequests(
     userId,
     userLoginName,
     assignedRoles,
+    viewRole,
     variant = "all",
   } = params;
   const normalizedUserEmail = normalizeEmail(userEmail || "");
+  const normalizedViewRole = (viewRole || "").trim().toLowerCase();
 
-  const isConsultant = assignedRoles.some(
-    (role) =>
-      role.trim().toLowerCase() === Config.Roles.Consultant.toLowerCase(),
-  );
-  const isAdmin = assignedRoles.some(
-    (role) => role.trim().toLowerCase() === Config.Roles.Admin.toLowerCase(),
-  );
+  const isAdminView =
+    normalizedViewRole === Config.Roles.Admin.toLowerCase() ||
+    (!normalizedViewRole &&
+      assignedRoles.some(
+        (role) =>
+          role.trim().toLowerCase() === Config.Roles.Admin.toLowerCase(),
+      ));
+  const isConsultantView =
+    normalizedViewRole === Config.Roles.Consultant.toLowerCase() ||
+    (!normalizedViewRole &&
+      !isAdminView &&
+      assignedRoles.some(
+        (role) =>
+          role.trim().toLowerCase() === Config.Roles.Consultant.toLowerCase(),
+      ));
+  const isInitiatorView =
+    normalizedViewRole === Config.Roles.Initiator.toLowerCase() ||
+    (!normalizedViewRole && !isAdminView && !isConsultantView);
 
   // RequestsJSON + Status only for row content — do not Expand MaterialGroupConfig here
   const selectFields = [
@@ -650,8 +705,9 @@ export async function fetchGroupedMaterialGroupRequests(
       }
     }
 
-    // Role filtering — Initiator sees own; Consultant sees non-draft + own drafts
-    if (!isAdmin) {
+    // Role filtering — scoped by active nav role (`?as=`).
+    // Admin: all requests. Initiator: own only. Consultant: non-draft + own drafts.
+    if (!isAdminView) {
       const isOwner = isOwnedByCurrentUser(
         owner,
         normalizedUserEmail,
@@ -659,11 +715,13 @@ export async function fetchGroupedMaterialGroupRequests(
         userLoginName,
       );
 
-      if (isConsultant) {
+      if (isConsultantView) {
         if (statusEquals(status, Config.MaterialGroupStatus.Draft) && !isOwner) {
           continue;
         }
-      } else if (!isOwner) {
+      } else if (isInitiatorView && !isOwner) {
+        continue;
+      } else if (!isConsultantView && !isOwner) {
         continue;
       }
     }
@@ -684,6 +742,13 @@ export async function fetchGroupedMaterialGroupRequests(
       if (!statusEquals(status, Config.MaterialGroupStatus.Completed)) {
         continue;
       }
+    } else if (
+      variant === "all" &&
+      normalizedViewRole === Config.Roles.Admin.toLowerCase() &&
+      statusEquals(status, Config.MaterialGroupStatus.Draft)
+    ) {
+      // Admin module All Requests only: exclude Draft completely.
+      continue;
     }
 
     let currentApprover = "—";
@@ -999,14 +1064,23 @@ export interface IConsultantActionParams {
 }
 
 /**
- * Creates / updates NPD_Lookup rows from completed RequestsJSON entries.
- * LookupId → LookupTypeId (or resolve by LookupName); Code → LookupCode; Description → Title.
+ * Resolves LookupType + validates uniqueness for Complete entries.
+ * Throws before any SharePoint write when Code is missing or already exists.
  */
-async function syncLookupMasterFromRequestsJson(
+async function prepareLookupMasterEntries(
   entries: IMaterialGroupRequestJsonEntry[],
-): Promise<void> {
+): Promise<
+  Array<{
+    lookupTypeId: number;
+    lookupTypeTitle: string;
+    name: string;
+    code: string;
+  }>
+> {
   if (!entries.length) {
-    return;
+    throw new Error(
+      "At least one master entry with NPD Code is required before completing.",
+    );
   }
 
   const lookupTypes = await fetchActiveLookupTypes().catch(() => []);
@@ -1014,38 +1088,97 @@ async function syncLookupMasterFromRequestsJson(
   const typeByTitle = new Map(
     lookupTypes.map((t) => [t.Title.trim().toLowerCase(), t]),
   );
+  const existing = await fetchActiveLookups().catch(() => []);
+  const existingCodes = new Set(
+    existing.map((item) => item.LookupCode.trim().toLowerCase()),
+  );
+  const batchCodes = new Set<string>();
+  const prepared: Array<{
+    lookupTypeId: number;
+    lookupTypeTitle: string;
+    name: string;
+    code: string;
+  }> = [];
 
   for (const entry of entries) {
     const code = (entry.Code || "").trim();
     const description = (entry.Description || "").trim();
-    if (!code && !description) {
-      continue;
+    const lookupName = (entry.LookupName || "").trim();
+
+    if (!code) {
+      throw new Error(
+        `NPD Code is mandatory for ${lookupName || "each master entry"} before completing.`,
+      );
     }
 
     let lookupTypeId = Number(entry.LookupId);
-    const lookupName = (entry.LookupName || "").trim();
-
-    if (!lookupTypeId || lookupTypeId <= 0 || !typeById.has(lookupTypeId)) {
+    let resolvedType = typeById.get(lookupTypeId);
+    if (!lookupTypeId || lookupTypeId <= 0 || !resolvedType) {
       const byName = lookupName
         ? typeByTitle.get(lookupName.toLowerCase())
         : undefined;
       lookupTypeId = byName?.Id || 0;
+      resolvedType = byName;
     }
 
-    if (!lookupTypeId) {
-      console.warn(
-        `Skipping Lookup sync — could not resolve LookupType for "${lookupName}" / LookupId ${entry.LookupId}.`,
+    if (!lookupTypeId || !resolvedType) {
+      throw new Error(
+        `Could not resolve Lookup Type for "${lookupName || code}".`,
       );
-      continue;
     }
 
-    await createLookup(lookupTypeId, description || code, code);
+    const codeKey = code.toLowerCase();
+    if (existingCodes.has(codeKey) || batchCodes.has(codeKey)) {
+      throw new Error(`"${code}" already exists as a Lookup Code.`);
+    }
+
+    const name = description || code;
+    const nameKey = name.toLowerCase();
+    const duplicateName = existing.some(
+      (item) =>
+        item.LookupTypeId === lookupTypeId &&
+        item.LookupName.trim().toLowerCase() === nameKey,
+    );
+    if (duplicateName) {
+      throw new Error(`"${name}" already exists.`);
+    }
+
+    batchCodes.add(codeKey);
+    prepared.push({
+      lookupTypeId,
+      lookupTypeTitle: resolvedType.Title || lookupName,
+      name,
+      code,
+    });
   }
+
+  return prepared;
+}
+
+/**
+ * Creates NPD_Lookup rows from completed RequestsJSON entries.
+ * Validates all entries first, then batch-inserts — no Status change on failure.
+ */
+async function syncLookupMasterFromRequestsJson(
+  entries: IMaterialGroupRequestJsonEntry[],
+): Promise<void> {
+  const prepared = await prepareLookupMasterEntries(entries);
+  await bulkCreateLookups(
+    prepared.map((item) => ({
+      lookupTypeId: item.lookupTypeId,
+      lookupTypeTitle: item.lookupTypeTitle,
+      lookupName: item.name,
+      lookupCode: item.code,
+    })),
+  );
 }
 
 /**
  * Updates Material Group request with Consultant action (Completed / Rework / Rejected),
  * writes audit comments, notifies Initiator on Rework/Reject, and syncs Lookup Master on Complete.
+ *
+ * Complete order (critical): validate + write Lookups first, then set Status.
+ * If validation/lookup sync fails, Status stays Pending and no workflow side-effects run.
  */
 export async function updateConsultantMaterialGroupAction(
   params: IConsultantActionParams,
@@ -1053,6 +1186,15 @@ export async function updateConsultantMaterialGroupAction(
   const targetId = Number(params.id || params.guid);
   if (!targetId) {
     throw new Error("Invalid request ID for consultant action.");
+  }
+
+  const comments = (params.comments || "").trim();
+
+  if (
+    (params.action === "Rework" || params.action === "Rejected") &&
+    !comments
+  ) {
+    throw new Error("Comments are required for Rework / Reject.");
   }
 
   const configs = await fetchMaterialGroupConfigs().catch(() => []);
@@ -1095,6 +1237,14 @@ export async function updateConsultantMaterialGroupAction(
     }
   }
 
+  // Complete: sync Lookup Master BEFORE status change so duplicates leave request Pending.
+  if (params.action === "Completed") {
+    if (!comments) {
+      throw new Error("Comments are required before completing.");
+    }
+    await syncLookupMasterFromRequestsJson(rawEntries);
+  }
+
   const status =
     params.action === "Completed"
       ? Config.MaterialGroupStatus.Completed
@@ -1102,7 +1252,6 @@ export async function updateConsultantMaterialGroupAction(
         ? Config.MaterialGroupStatus.Rework
         : Config.MaterialGroupStatus.Rejected;
 
-  // Status (+ RequestsJSON) first — never block Rework/Reject on multi-lookup format
   const statusPayload: Record<string, unknown> = {
     Status: status,
   };
@@ -1152,8 +1301,6 @@ export async function updateConsultantMaterialGroupAction(
       .map((e) => e.LookupName)
       .filter((name, index, arr) => name && arr.indexOf(name) === index);
 
-  const comments = (params.comments || "").trim();
-
   // Always resolve Initiator from the list item so Rework/Reject emails are not skipped
   // when hydrate used a minimal select without person Expand.
   let initiatorEmail = (params.initiatorEmail || "").trim();
@@ -1188,10 +1335,6 @@ export async function updateConsultantMaterialGroupAction(
   const auditRole = (params.actorRole || "").trim() || Config.Roles.Consultant;
 
   if (params.action === "Rework" || params.action === "Rejected") {
-    if (!comments) {
-      throw new Error("Comments are required for Rework / Reject.");
-    }
-
     await addMaterialGroupAuditLog({
       requestListItemId: targetId,
       requestTitle,
@@ -1223,38 +1366,65 @@ export async function updateConsultantMaterialGroupAction(
         console.warn(`Failed to send Initiator ${params.action} email:`, err);
       }
     }
-  } else if (params.action === "Completed") {
-    if (comments) {
-      await addMaterialGroupAuditLog({
-        requestListItemId: targetId,
-        requestTitle,
-        action: "Completed",
-        comments,
-        consultantUserId: auditActor.consultantUserId,
-        consultantEmail: auditActor.consultantEmail,
-        role: auditRole,
-        actionVia: "System",
-      }).catch((err) => {
-        console.warn("MG Complete remarks audit log skipped:", err);
-      });
-    } else {
-      // Still record who completed, even without remarks text
-      await addMaterialGroupAuditLog({
-        requestListItemId: targetId,
-        requestTitle,
-        action: "Completed",
-        comments: "Completed",
-        consultantUserId: auditActor.consultantUserId,
-        consultantEmail: auditActor.consultantEmail,
-        role: auditRole,
-        actionVia: "System",
-      }).catch((err) => {
-        console.warn("MG Complete audit log skipped:", err);
-      });
-    }
+    return;
   }
 
-  if (params.action === "Completed" && rawEntries.length > 0) {
-    await syncLookupMasterFromRequestsJson(rawEntries);
+  // Completed — audit + Initiator notification only after status was set successfully
+  await addMaterialGroupAuditLog({
+    requestListItemId: targetId,
+    requestTitle,
+    action: "Completed",
+    comments: comments || "Completed",
+    consultantUserId: auditActor.consultantUserId,
+    consultantEmail: auditActor.consultantEmail,
+    role: auditRole,
+    actionVia: "System",
+  }).catch((err) => {
+    console.warn("MG Complete audit log skipped:", err);
+  });
+
+  let actorIsLastApprover = true;
+  try {
+    const workflowSteps = await fetchActiveWorkflowSteps();
+    const mgSteps = workflowSteps.filter((step) =>
+      isMgRequestType(step.RequestType),
+    );
+    const roleSequence = getNpdApprovalRoleSequence(
+      Config.WorkflowRequestTypes.MgRequest,
+      mgSteps,
+    );
+    const lastRole = getLastApproverRoleFromSequence(roleSequence);
+    if (lastRole) {
+      actorIsLastApprover =
+        lastRole.toLowerCase() === auditRole.toLowerCase();
+    }
+  } catch (err) {
+    console.warn(
+      "MG Complete: could not resolve last approver from WorkflowConfiguration:",
+      err,
+    );
+  }
+
+  if (actorIsLastApprover) {
+    if (!initiatorEmail) {
+      console.warn(
+        `No Initiator email for MG Completed on ${requestTitle} (item ${targetId}).`,
+      );
+    } else {
+      try {
+        await sendMaterialGroupInitiatorNotification({
+          requestId: requestTitle,
+          requestListItemId: targetId,
+          initiatorName: initiatorName || "",
+          initiatorEmail,
+          configuredMasters,
+          entriesCount: rawEntries.length,
+          action: "Completed",
+          comments: comments || "Completed",
+        });
+      } catch (err) {
+        console.warn("Failed to send Initiator Completed email:", err);
+      }
+    }
   }
 }

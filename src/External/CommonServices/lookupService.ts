@@ -173,11 +173,44 @@ export async function fetchActiveLookups(): Promise<ILookup[]> {
   return resolveMissingLookupTypeTitles(mapped);
 }
 
+async function assertLookupNotDuplicate(
+  lookupTypeId: number,
+  lookupName: string,
+  lookupCode: string,
+  editingId?: number,
+): Promise<void> {
+  const existing = await fetchActiveLookups();
+  const nameKey = lookupName.trim().toLowerCase();
+  const codeKey = lookupCode.trim().toLowerCase();
+
+  const duplicateName = existing.some(
+    (item) =>
+      item.Id !== editingId &&
+      item.LookupTypeId === lookupTypeId &&
+      item.LookupName.trim().toLowerCase() === nameKey,
+  );
+  if (duplicateName) {
+    throw new Error(`"${lookupName.trim()}" already exists.`);
+  }
+
+  const duplicateCode = existing.some(
+    (item) =>
+      item.Id !== editingId &&
+      item.LookupCode.trim().toLowerCase() === codeKey,
+  );
+  if (duplicateCode) {
+    throw new Error(
+      `"${lookupCode.trim()}" already exists as a Lookup Code.`,
+    );
+  }
+}
+
 export async function createLookup(
   lookupTypeId: number,
   lookupName: string,
   lookupCode: string,
 ): Promise<void> {
+  await assertLookupNotDuplicate(lookupTypeId, lookupName, lookupCode);
   await SPServices.SPAddItem({
     Listname: LIST_NAME(),
     RequestJSON: {
@@ -195,6 +228,7 @@ export async function updateLookup(
   lookupName: string,
   lookupCode: string,
 ): Promise<void> {
+  await assertLookupNotDuplicate(lookupTypeId, lookupName, lookupCode, id);
   await SPServices.SPUpdateItem({
     Listname: LIST_NAME(),
     ID: id,
@@ -225,6 +259,26 @@ export async function bulkCreateLookups(
 ): Promise<void> {
   if (!records.length) {
     return;
+  }
+
+  // Final server-side guard: Lookup Codes must stay unique across all types.
+  const existing = await fetchActiveLookups();
+  const existingCodes = new Set(
+    existing.map((item) => item.LookupCode.trim().toLowerCase()),
+  );
+  const batchCodes = new Set<string>();
+
+  for (const record of records) {
+    const codeKey = (record.lookupCode ?? "").trim().toLowerCase();
+    if (!codeKey) {
+      throw new Error(`${FieldLabels.LookupCode} is required.`);
+    }
+    if (existingCodes.has(codeKey) || batchCodes.has(codeKey)) {
+      throw new Error(
+        `"${(record.lookupCode ?? "").trim()}" already exists as a Lookup Code.`,
+      );
+    }
+    batchCodes.add(codeKey);
   }
 
   await SPServices.batchInsert({
@@ -291,7 +345,11 @@ export async function parseLookupImportFile(
       buildDuplicateKey(item.LookupTypeId, item.LookupName),
     ),
   );
+  const existingCodes = new Set(
+    existingItems.map((item) => item.LookupCode.trim().toLowerCase()),
+  );
   const seenInFile = new Set<string>();
+  const seenCodesInFile = new Set<string>();
   const toCreate: ILookupImportRecord[] = [];
   const duplicates: string[] = [];
   const errors: string[] = [];
@@ -352,6 +410,14 @@ export async function parseLookupImportFile(
       continue;
     }
 
+    const codeKey = lookupCode.trim().toLowerCase();
+    if (existingCodes.has(codeKey) || seenCodesInFile.has(codeKey)) {
+      errors.push(
+        `Row ${rowIndex + 1}: "${lookupCode}" already exists as a Lookup Code.`,
+      );
+      continue;
+    }
+
     const duplicateKey = buildDuplicateKey(lookupType.Id, lookupName);
 
     if (existingKeys.has(duplicateKey) || seenInFile.has(duplicateKey)) {
@@ -360,6 +426,7 @@ export async function parseLookupImportFile(
     }
 
     seenInFile.add(duplicateKey);
+    seenCodesInFile.add(codeKey);
     toCreate.push({
       lookupTypeId: lookupType.Id,
       lookupTypeTitle: lookupType.Title,

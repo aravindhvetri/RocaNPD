@@ -85,19 +85,17 @@
 }
 
 .addNewButton {
-  background: $roca-color-btn-add-new-bg;
-  border-color: $roca-color-btn-add-new-bg;
+  background: $roca-color-btn-add-new-bg !important;
+  background-color: $roca-color-btn-add-new-bg !important;
+  border-color: $roca-color-btn-add-new-bg !important;
 
-  &:enabled:hover {
-    background: $roca-color-btn-add-new-hover-bg;
-    border-color: $roca-color-btn-add-new-hover-bg;
-  }
-
+  &:enabled:hover,
   &:enabled:focus,
   &:enabled:focus-visible,
   &:enabled:active,
   &:global(.p-focus) {
     background: $roca-color-btn-add-new-bg !important;
+    background-color: $roca-color-btn-add-new-bg !important;
     border-color: $roca-color-btn-add-new-bg !important;
     box-shadow: none !important;
     outline: none !important;

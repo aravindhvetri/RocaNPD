@@ -34,6 +34,7 @@ import {
   uniqueBrandOptions,
 } from "../requestList/npdRequestListUtils";
 import { fetchNpdRequestStatusChoices } from "../../../../../External/CommonServices/npdRequestStatusChoices";
+import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import styles from "./NpdDraftRework.module.scss";
 
 const NpdDraftRework: React.FC = () => {
@@ -49,11 +50,14 @@ const NpdDraftRework: React.FC = () => {
   const { draftItems, pendingItems, status, error } = useAppSelector(
     (state) => state.npdRequest,
   );
+  const globalProcessing = useAppSelector((state) => state.ui.globalProcessing);
   const [searchValue, setSearchValue] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState(ALL_STATUS_VALUE);
   const [brandFilter, setBrandFilter] = React.useState(ALL_BRAND_VALUE);
   const [statusChoices, setStatusChoices] = React.useState<string[]>([]);
   const isPendingList = location.pathname === Config.Routes.NpdPending;
+  const viewAs =
+    parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) || undefined;
   const emailRequestId = parseEditId(searchParams.get("id"));
   const emailAction = parseNpdWorkflowAction(
     searchParams.get(Config.NpdEmail.QueryAction),
@@ -74,20 +78,37 @@ const NpdDraftRework: React.FC = () => {
       query.set(Config.NpdEmail.QueryAction, emailAction);
     }
     query.set(Config.NpdFormQuery.From, Config.NpdFormFrom.Pending);
+    if (viewAs) {
+      query.set(Config.NpdFormQuery.ViewAs, viewAs);
+    }
     navigate(`${Config.Routes.NpdNew}?${query.toString()}`, { replace: true });
-  }, [emailAction, emailRequestId, navigate]);
+  }, [emailAction, emailRequestId, navigate, viewAs]);
 
-  const locationState = (location.state as {
-    draftSaved?: boolean;
-    requestSubmitted?: boolean;
-    actionSaved?: boolean;
-  } | null) ?? {};
+  const locationState =
+    (location.state as {
+      draftSaved?: boolean;
+      requestSubmitted?: boolean;
+      actionSaved?: boolean;
+    } | null) ?? {};
 
   React.useEffect(() => {
-    if (initialized) {
-      void dispatch(isPendingList ? fetchNpdPendingList() : fetchNpdDraftReworkList());
+    // Wait until Save Draft / Submit finishes. Navigating here starts before
+    // the list item exists, so an early fetch would show an empty table.
+    if (!initialized || globalProcessing) {
+      return;
     }
-  }, [dispatch, initialized, isPendingList, userEmail]);
+    void dispatch(
+      isPendingList ? fetchNpdPendingList(viewAs) : fetchNpdDraftReworkList(),
+    );
+  }, [
+    dispatch,
+    globalProcessing,
+    initialized,
+    isPendingList,
+    location.key,
+    userEmail,
+    viewAs,
+  ]);
 
   React.useEffect(() => {
     setSearchValue("");
@@ -106,9 +127,14 @@ const NpdDraftRework: React.FC = () => {
       return;
     }
 
-    navigate(location.pathname, { replace: true, state: {} });
+    // Keep `?as=` so multi-role users stay on the same role section (e.g. VH Pending).
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: {} },
+    );
   }, [
     location.pathname,
+    location.search,
     locationState.actionSaved,
     locationState.draftSaved,
     locationState.requestSubmitted,
@@ -166,20 +192,21 @@ const NpdDraftRework: React.FC = () => {
   return (
     <section className={styles.page}>
       <Toast ref={toastRef} />
-      <LoaderOverlay visible={status === "loading"} label="Loading..." />
+      <LoaderOverlay visible={status === "loading"} label="Processing" />
       <NpdDraftReworkToolbar
-        title={isPendingList ? "Pending Approval" : "Draft / ReWork"}
+        title={isPendingList ? "Pending Approval" : "Draft / Rework"}
         searchId={isPendingList ? "npdPendingSearch" : "npdDraftReworkSearch"}
         searchValue={searchValue}
         searchPlaceholder="Search here"
+        showStatusFilter={!isPendingList}
         statusValue={statusFilter}
         statusOptions={statusOptions}
         brandValue={brandFilter}
         brandOptions={uniqueBrandOptions(sourceRows.map((item) => item.Brand))}
         filtersActive={Boolean(
           searchValue.trim() ||
-            statusFilter !== ALL_STATUS_VALUE ||
-            brandFilter !== ALL_BRAND_VALUE,
+          (!isPendingList && statusFilter !== ALL_STATUS_VALUE) ||
+          brandFilter !== ALL_BRAND_VALUE,
         )}
         onSearchChange={setSearchValue}
         onStatusChange={setStatusFilter}
@@ -197,13 +224,27 @@ const NpdDraftRework: React.FC = () => {
             loading={false}
             globalFilter=""
             canEditRow={(row) =>
-              canEditNpdListRow(row, access, userEmail || userLoginName)
+              canEditNpdListRow(row, access, userEmail || userLoginName, viewAs)
             }
             onView={(row) =>
-              navigate(buildNpdRequestFormPath(row.Id, "view", location.pathname))
+              navigate(
+                buildNpdRequestFormPath(
+                  row.Id,
+                  "view",
+                  location.pathname,
+                  viewAs,
+                ),
+              )
             }
             onEdit={(row) =>
-              navigate(buildNpdRequestFormPath(row.Id, "edit", location.pathname))
+              navigate(
+                buildNpdRequestFormPath(
+                  row.Id,
+                  "edit",
+                  location.pathname,
+                  viewAs,
+                ),
+              )
             }
           />
         </MasterTablePanel>

@@ -75,6 +75,7 @@
     font-size: 0.75rem;
     border: none !important;
     font-family: "Poppins", sans-serif;
+    overflow: hidden;
   }
 
   :global(.p-datatable-tbody > tr) {
@@ -94,18 +95,18 @@
   :global(.p-datatable-tbody > tr[class*="misAddedRow"]) {
     background-color: #fefce8 !important;
 
-    >td {
+    > td {
       background-color: #fefce8 !important;
     }
 
-    >td:first-child {
+    > td:first-child {
       border-left: 3px solid #eab308 !important;
     }
 
     &:hover {
       background-color: #fef9c363 !important;
 
-      >td {
+      > td {
         background-color: #fef9c363 !important;
       }
     }
@@ -154,14 +155,23 @@
 
 .tableCellControl {
   margin-bottom: 0 !important;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
   :global(.field) {
     margin-bottom: 0 !important;
     gap: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   :global(.control) {
     margin-bottom: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   :global(.p-inputtext),
@@ -169,11 +179,24 @@
   :global(.p-inputnumber),
   :global(.p-inputnumber-input) {
     width: 100%;
+    max-width: 100%;
     min-height: 1.75rem;
     height: 1.75rem;
     font-size: 0.75rem;
     line-height: 1.2;
     font-family: "Poppins", sans-serif;
+  }
+
+  :global(.p-multiselect) {
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  :global(.p-multiselect-label-container) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
   }
 
   :global(.p-inputnumber) {
@@ -186,14 +209,65 @@
   }
 
   :global(.p-multiselect-label) {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
     line-height: 1.25rem;
     font-family: "Poppins", sans-serif;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :global(.p-multiselect-trigger) {
     width: 1.75rem;
+    flex-shrink: 0;
+  }
+}
+
+/* Portaled MultiSelect panel — Item Details table only */
+.itemDetailsMultiSelectPanel {
+  :global(.p-multiselect-header) {
+    gap: 0.25rem !important;
+    padding: 0.375rem 0.5rem !important;
+  }
+
+  :global(.p-multiselect-filter-container) {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+
+  :global(.p-multiselect-filter-container .p-inputtext),
+  :global(.p-multiselect-filter) {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0.25rem 1.5rem 0.25rem 0.5rem !important;
+    font-size: 0.6875rem !important;
+  }
+
+  :global(.p-multiselect-filter-icon) {
+    font-size: 0.8rem !important;
+    width: 0.8rem !important;
+    right: 0.375rem !important;
+  }
+
+  :global(.p-multiselect-close) {
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    min-width: 1.125rem !important;
+    padding: 0 !important;
+    flex: 0 0 1.125rem !important;
+  }
+
+  :global(.p-multiselect-close-icon),
+  :global(.p-multiselect-close .p-icon),
+  :global(.p-multiselect-close .pi) {
+    font-size: 0.8rem !important;
+    width: 0.8rem !important;
+    height: 0.8rem !important;
   }
 }
 

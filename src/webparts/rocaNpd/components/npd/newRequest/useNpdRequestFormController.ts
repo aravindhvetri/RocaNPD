@@ -2,7 +2,10 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
-import { ApproverSystems, Config } from "../../../../../External/CommonServices/Config";
+import {
+  ApproverSystems,
+  Config,
+} from "../../../../../External/CommonServices/Config";
 import type {
   INpdApproverCommentRow,
   NpdWorkflowAction,
@@ -11,7 +14,9 @@ import { fetchNpdApproverComments } from "../../../../../External/CommonServices
 import {
   canActOnPendingNpdStep,
   hasSystemRole,
+  parseViewAsRole,
 } from "../../../../../External/CommonServices/permissionService";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import {
   getFirstPendingApproverRole,
   isMisCoordinatorWorkflowRole,
@@ -25,6 +30,7 @@ import {
   resetNpdFormState,
   selectHasPlantSourceMaterialType,
 } from "../../../../../store/slices/npdFormSlice";
+import { setFlashMessage } from "../../../../../store/slices/uiSlice";
 import {
   applyNpdWorkflowAction,
   fetchNpdInitiatorBrandOptions,
@@ -35,6 +41,10 @@ import {
   saveNpdDraft,
   submitNpdRequest,
 } from "../../../../../store/thunks/npdFormThunks";
+import {
+  beginUiProcessing,
+  finishUiProcessing,
+} from "../../../../../store/uiProcessing";
 import {
   showActionValidationToast,
   showErrorToast,
@@ -47,6 +57,7 @@ import {
 } from "./npdItemDetailsConfig";
 import type { INpdItemDetailRow } from "./npdItemDetails.types";
 import {
+  validateNpdDraftGeneralInfo,
   validateNpdGeneralInfo,
   validateNpdRequestForm,
 } from "./npdItemDetailsValidation";
@@ -58,10 +69,10 @@ import {
   parseNpdWorkflowAction,
   resolveNpdFooterMode,
   resolveNpdFormCancelRoute,
+  shouldShowNpdOtherDetails,
   toPersistableItemRecords,
   workflowActionRequiresComments,
 } from "./npdRequestFormHelpers";
-import type { INpdSubmitProgress } from "./npdRequestFormHelpers";
 import { useNpdEmailAction } from "./useNpdEmailAction";
 import { useNpdRequestTabLock } from "../tabLock/useNpdRequestTabLock";
 
@@ -81,6 +92,9 @@ export function useNpdRequestFormController(
     emailAction,
     Boolean(editId),
   );
+  const viewAs =
+    parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) ||
+    undefined;
   const initialized = useAppSelector((state) => state.app.initialized);
   const roleStatus = useAppSelector((state) => state.app.roleStatus);
   const userEmail = useAppSelector((state) => state.app.userEmail);
@@ -97,10 +111,6 @@ export function useNpdRequestFormController(
   const [auditLogs, setAuditLogs] = React.useState<INpdApproverCommentRow[]>(
     [],
   );
-  const [successMessage, setSuccessMessage] = React.useState("");
-  const [submitProgress, setSubmitProgress] =
-    React.useState<INpdSubmitProgress | null>(null);
-  const submitProgressTimerRef = React.useRef<number>(0);
 
   const hasPlantSourceMaterialType = selectHasPlantSourceMaterialType(
     npdForm.generalInfo.materialType,
@@ -153,18 +163,17 @@ export function useNpdRequestFormController(
     ApproverSystems.NewProductDevelopment,
   );
 
-  const pendingApproverRole = getFirstPendingApproverRole(npdForm.workflowSteps);
-  const isPendingWithVh =
-    isVerticalHeadWorkflowRole(pendingApproverRole) ||
-    lockedFooterMode === "vertical-head-pending";
+  const pendingApproverRole = getFirstPendingApproverRole(
+    npdForm.workflowSteps,
+  );
 
   const vhStep = npdForm.workflowSteps.find((s) =>
     isVerticalHeadWorkflowRole(s.Role),
   );
   const isApprovedByVh = Boolean(
     vhStep &&
-      vhStep.Status.trim().toLowerCase() ===
-        Config.WorkflowStepStatus.Approved.toLowerCase(),
+    vhStep.Status.trim().toLowerCase() ===
+      Config.WorkflowStepStatus.Approved.toLowerCase(),
   );
 
   const hasReachedMis =
@@ -184,19 +193,22 @@ export function useNpdRequestFormController(
 
   const isRequestApproved = Boolean(
     npdForm.requestStatus &&
-      (npdForm.requestStatus.trim().toLowerCase() ===
-        Config.RequestStatus.Approved.toLowerCase() ||
-        npdForm.requestStatus.trim().toLowerCase() ===
-          Config.RequestStatus.Completed.toLowerCase()),
+    (npdForm.requestStatus.trim().toLowerCase() ===
+      Config.RequestStatus.Approved.toLowerCase() ||
+      npdForm.requestStatus.trim().toLowerCase() ===
+        Config.RequestStatus.Completed.toLowerCase()),
   );
 
-  // Dynamic Other Details visibility:
-  // Before Approved / Post to SAP: Only MIS Coordinator can see Other Details.
-  // After Approved / Post to SAP: Initiator, Vertical Head, and MIS Coordinator can all see Other Details.
-  const showOtherDetails =
-    Boolean(editId || npdForm.requestId) &&
-    (isRequestApproved ||
-      (isMisCoordinator && !isPendingWithVh && hasReachedMis));
+  // Before Approved: MIS Coordinator module only (`?as=`). After Approved: all modules.
+  const showOtherDetails = shouldShowNpdOtherDetails({
+    hasRequest: Boolean(editId || npdForm.requestId),
+    isRequestApproved,
+    viewAs,
+    isMisCoordinator,
+    isVerticalHead,
+    hasReachedMis,
+    footerMode: lockedFooterMode,
+  });
   const otherDetailsReadOnly = lockedFooterMode !== "mis-pending";
   const showApproverRemarks =
     lockedFooterMode === "vertical-head-pending" ||
@@ -239,7 +251,7 @@ export function useNpdRequestFormController(
   }, [dispatch, initialized, location.key, location.pathname]);
 
   React.useEffect(() => {
-    if (!initialized || roleStatus === "loading" || (!userEmail && !userLoginName)) {
+    if (!initialized || (!userEmail && !userLoginName)) {
       return;
     }
     void dispatch(fetchNpdInitiatorBrandOptions());
@@ -278,11 +290,20 @@ export function useNpdRequestFormController(
   }, [dispatch, editId, initialized]);
 
   React.useEffect(() => {
-    if (!initialized || !npdForm.generalInfo.materialType || !hasPlantSourceMaterialType) {
+    if (
+      !initialized ||
+      !npdForm.generalInfo.materialType ||
+      !hasPlantSourceMaterialType
+    ) {
       return;
     }
     void dispatch(fetchNpdPlantSourceOptions(npdForm.generalInfo.materialType));
-  }, [dispatch, hasPlantSourceMaterialType, initialized, npdForm.generalInfo.materialType]);
+  }, [
+    dispatch,
+    hasPlantSourceMaterialType,
+    initialized,
+    npdForm.generalInfo.materialType,
+  ]);
 
   React.useEffect(() => {
     if (npdForm.error) {
@@ -291,68 +312,36 @@ export function useNpdRequestFormController(
     }
   }, [dispatch, npdForm.error, toastRef]);
 
-  const stopSubmitProgress = React.useCallback((): void => {
-    if (submitProgressTimerRef.current) {
-      window.clearInterval(submitProgressTimerRef.current);
-      submitProgressTimerRef.current = 0;
-    }
-  }, []);
-
-  React.useEffect(() => () => stopSubmitProgress(), [stopSubmitProgress]);
-
-  const startSubmitProgress = React.useCallback(
-    (total: number): void => {
-      stopSubmitProgress();
-      const safeTotal = Math.max(total, 1);
-      setSubmitProgress({ current: 1, total: safeTotal, percent: 3 });
-      const startedAt = Date.now();
-      const durationMs = Math.min(10000, Math.max(4000, 2500 + safeTotal * 25));
-      submitProgressTimerRef.current = window.setInterval(() => {
-        const elapsed = Date.now() - startedAt;
-        const ratio = Math.min(0.9, elapsed / durationMs);
-        const eased = 1 - (1 - ratio) * (1 - ratio);
-        const percent = Math.max(3, Math.round(eased * 90));
-        const rawCurrent = Math.max(1, Math.round(eased * safeTotal));
-        const holdAt = Math.max(1, safeTotal - 5);
-        const current = Math.min(holdAt, rawCurrent);
-        setSubmitProgress({ current, total: safeTotal, percent });
-      }, 80);
-    },
-    [stopSubmitProgress],
-  );
-
-  const finishWithSuccess = React.useCallback(
+  const leaveFormForProcessing = React.useCallback(
     (
       route: string,
-      state?: Record<string, boolean>,
-      options?: { keepSubmitProgress?: boolean; successMessage?: string },
+      totalUnits: number,
+      options?: { showItemProgress?: boolean },
     ): void => {
-      const keepSubmitProgress = Boolean(options?.keepSubmitProgress);
-      stopSubmitProgress();
-      if (keepSubmitProgress) {
-        setSubmitProgress((current) =>
-          current
-            ? { current: current.total, total: current.total, percent: 100 }
-            : current,
-        );
-      } else if (options?.successMessage) {
-        setSuccessMessage(options.successMessage);
-      }
-      window.setTimeout(() => {
-        dispatch(resetNpdFormState());
-        setItemRows([createEmptyNpdItemDetailRow()]);
-        setApproverRemarks("");
-        setAuditLogs([]);
-        setSuccessMessage("");
-        setSubmitProgress(null);
-        navigate(route, { state });
-      }, keepSubmitProgress || options?.successMessage ? 750 : 200);
+      beginUiProcessing(dispatch, totalUnits, {
+        showItemProgress: Boolean(options?.showItemProgress),
+      });
+      // Leave the form immediately; keep Redux form state until the thunk finishes.
+      navigate(buildNavHref(route, viewAs));
     },
-    [dispatch, navigate, stopSubmitProgress],
+    [dispatch, navigate, viewAs],
+  );
+
+  const completeFormNavigation = React.useCallback(
+    (route: string, state: Record<string, boolean>): void => {
+      finishUiProcessing(dispatch, true);
+      dispatch(resetNpdFormState());
+      navigate(buildNavHref(route, viewAs), { replace: true, state });
+    },
+    [dispatch, navigate, viewAs],
   );
 
   const dispatchWorkflowAction = React.useCallback(
-    (action: NpdWorkflowAction, comments: string, persistItems = true): void => {
+    (
+      action: NpdWorkflowAction,
+      comments: string,
+      persistItems = true,
+    ): void => {
       if (!pendingRole) {
         showErrorToast(
           toastRef,
@@ -361,34 +350,50 @@ export function useNpdRequestFormController(
         return;
       }
 
+      const items = persistItems
+        ? toPersistableItemRecords(itemRows)
+        : undefined;
+      const includeOtherDetails = lockedFooterMode === "mis-pending";
+      const actorRole = pendingRole;
+
+      // Approver / MIS actions: Processing only — no item progress bar.
       void dispatch(
         applyNpdWorkflowAction({
           action,
           comments,
-          actorRole: pendingRole,
-          items: persistItems
-            ? toPersistableItemRecords(itemRows)
-            : undefined,
-          includeOtherDetails: lockedFooterMode === "mis-pending",
+          actorRole,
+          items,
+          includeOtherDetails,
           actionVia: "System",
         }),
       )
         .unwrap()
         .then((saved) => {
           tabLock.notifySubmitted(saved.Id, saved.Title);
-          // No "Item added successfully" overlay — that message is Item Details only.
-          finishWithSuccess(Config.Routes.NpdPending, { actionSaved: true });
+          dispatch(resetNpdFormState());
+          navigate(buildNavHref(Config.Routes.NpdPending, viewAs), {
+            replace: true,
+            state: { actionSaved: true },
+          });
         })
-        .catch(() => undefined);
+        .catch(() => {
+          dispatch(
+            setFlashMessage({
+              severity: "error",
+              detail: "Failed to update the request. Please try again.",
+            }),
+          );
+        });
     },
     [
       dispatch,
-      finishWithSuccess,
       itemRows,
       lockedFooterMode,
+      navigate,
       pendingRole,
       tabLock,
       toastRef,
+      viewAs,
     ],
   );
 
@@ -409,7 +414,7 @@ export function useNpdRequestFormController(
       return;
     }
     const firstMessage = firstValidationMessage(
-      validateNpdGeneralInfo(npdForm.generalInfo),
+      validateNpdDraftGeneralInfo(npdForm.generalInfo),
     );
     if (firstMessage) {
       showErrorToast(toastRef, firstMessage, "Validation");
@@ -420,25 +425,33 @@ export function useNpdRequestFormController(
       (count, row) => (isEmptyItemDetailRow(row) ? count : count + 1),
       0,
     );
+    const items = toPersistableItemRecords(itemRows);
+
     flushSync(() => {
-      startSubmitProgress(persistableCount);
+      leaveFormForProcessing(
+        Config.Routes.NpdDraftRework,
+        Math.max(persistableCount, 1),
+        { showItemProgress: true },
+      );
     });
 
-    window.setTimeout(() => {
-      const items = toPersistableItemRecords(itemRows);
-      void dispatch(saveNpdDraft(items))
-        .unwrap()
-        .then((saved) => {
-          tabLock.notifyDraftSaved(saved.Id, saved.Title);
-          finishWithSuccess(Config.Routes.NpdDraftRework, { draftSaved: true }, {
-            keepSubmitProgress: true,
-          });
-        })
-        .catch(() => {
-          stopSubmitProgress();
-          setSubmitProgress(null);
+    void dispatch(saveNpdDraft(items))
+      .unwrap()
+      .then((saved) => {
+        tabLock.notifyDraftSaved(saved.Id, saved.Title);
+        completeFormNavigation(Config.Routes.NpdDraftRework, {
+          draftSaved: true,
         });
-    }, 0);
+      })
+      .catch(() => {
+        finishUiProcessing(dispatch, false);
+        dispatch(
+          setFlashMessage({
+            severity: "error",
+            detail: "Failed to save draft. Please try again.",
+          }),
+        );
+      });
   };
 
   const handleSubmit = (): void => {
@@ -457,25 +470,34 @@ export function useNpdRequestFormController(
       (count, row) => (isEmptyItemDetailRow(row) ? count : count + 1),
       0,
     );
+    const items = toPersistableItemRecords(itemRows);
+    const comments = approverRemarks;
+
     flushSync(() => {
-      startSubmitProgress(persistableCount);
+      leaveFormForProcessing(
+        Config.Routes.NpdPending,
+        Math.max(persistableCount, 1),
+        { showItemProgress: true },
+      );
     });
 
-    window.setTimeout(() => {
-      const items = toPersistableItemRecords(itemRows);
-      void dispatch(submitNpdRequest(items))
-        .unwrap()
-        .then((saved) => {
-          tabLock.notifySubmitted(saved.Id, saved.Title);
-          finishWithSuccess(Config.Routes.NpdPending, { requestSubmitted: true }, {
-            keepSubmitProgress: true,
-          });
-        })
-        .catch(() => {
-          stopSubmitProgress();
-          setSubmitProgress(null);
+    void dispatch(submitNpdRequest({ items, comments }))
+      .unwrap()
+      .then((saved) => {
+        tabLock.notifySubmitted(saved.Id, saved.Title);
+        completeFormNavigation(Config.Routes.NpdPending, {
+          requestSubmitted: true,
         });
-    }, 0);
+      })
+      .catch(() => {
+        finishUiProcessing(dispatch, false);
+        dispatch(
+          setFlashMessage({
+            severity: "error",
+            detail: "Failed to submit request. Please try again.",
+          }),
+        );
+      });
   };
 
   const requestAction = (action: NpdWorkflowAction): void => {
@@ -509,10 +531,7 @@ export function useNpdRequestFormController(
       return;
     }
 
-    dispatchWorkflowAction(
-      action,
-      remarks,
-    );
+    dispatchWorkflowAction(action, remarks);
   };
 
   return {
@@ -527,8 +546,6 @@ export function useNpdRequestFormController(
     auditLogs,
     showApproverRemarks,
     showAuditLog,
-    successMessage,
-    submitProgress,
     isRecordLoading:
       npdForm.loadStatus === "loading" || (Boolean(editId) && !recordReady),
     footerMode: lockedFooterMode,
@@ -539,7 +556,7 @@ export function useNpdRequestFormController(
           (npdForm.requestStatus || "").trim().toLowerCase() === "completed" ||
           (npdForm.requestStatus || "").trim().toLowerCase() === "approved"
         ? "View NPD Request"
-        : "Edit NPD Request",
+        : "View NPD Request",
     generalInfoReadOnly: lockedFooterMode !== "initiator-edit",
     itemDetailsReadOnly: isTabLocked || itemDetailsReadOnly,
     isMisCoordinatorActing: lockedFooterMode === "mis-pending",
@@ -548,9 +565,13 @@ export function useNpdRequestFormController(
     tabRestriction: tabLock.restriction,
     handleCancel: () =>
       navigate(
-        resolveNpdFormCancelRoute(searchParams.get(Config.NpdFormQuery.From)),
+        resolveNpdFormCancelRoute(
+          searchParams.get(Config.NpdFormQuery.From),
+          viewAs,
+        ),
       ),
-    handleTabLockDashboard: () => navigate(Config.Routes.NpdAll),
+    handleTabLockDashboard: () =>
+      navigate(buildNavHref(Config.Routes.NpdAll, viewAs)),
     handleTabLockReload: () => {
       window.location.reload();
     },

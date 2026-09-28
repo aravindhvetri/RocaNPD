@@ -45,6 +45,7 @@
   }
 
   .p-link {
+
     &:focus,
     &:focus-visible,
     &:active {
@@ -55,6 +56,7 @@
 
   .p-button.p-button-icon-only,
   .p-button.p-button-text.p-button-icon-only {
+
     &:enabled:focus,
     &:enabled:active,
     &.p-focus {
@@ -66,6 +68,7 @@
   }
 
   .p-button.p-button-danger {
+
     &:enabled:focus,
     &:enabled:active,
     &.p-focus {
@@ -75,11 +78,7 @@
   }
 
   .p-button.p-button-primary,
-  .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(
-      .p-button-secondary
-    ):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(
-      .p-button-help
-    ):not(.p-button-danger) {
+  .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-help):not(.p-button-danger) {
     background: $roca-color-btn-primary-bg;
     border-color: $roca-color-btn-primary-bg;
     color: $roca-color-btn-primary-text;
@@ -195,13 +194,13 @@
       background: transparent;
     }
 
-    .p-datatable-thead > tr > th {
+    .p-datatable-thead>tr>th {
       background: $roca-color-master-table-header;
       color: $roca-color-text-inverse;
       border: none !important;
       font-weight: 400;
       font-size: 0.8125rem;
-      padding: 0.6rem 0.875rem;
+      padding: 0.4rem 0.875rem;
       vertical-align: middle !important;
       white-space: nowrap;
 
@@ -222,6 +221,7 @@
     }
 
     .p-sortable-column {
+
       &:focus,
       &.p-focus {
         box-shadow: none !important;
@@ -250,7 +250,7 @@
       color: rgba(255, 255, 255, 0.55);
     }
 
-    .p-datatable-tbody > tr > td {
+    .p-datatable-tbody>tr>td {
       border-color: $roca-color-table-border;
       padding: 0.625rem 0.875rem;
       color: $roca-color-text-primary;
@@ -259,7 +259,7 @@
       white-space: nowrap;
     }
 
-    .p-datatable-tbody > tr.p-datatable-emptymessage > td {
+    .p-datatable-tbody>tr.p-datatable-emptymessage>td {
       text-align: center !important;
       vertical-align: top !important;
       white-space: normal !important;
@@ -267,11 +267,11 @@
       padding: 12px !important;
     }
 
-    .p-datatable-tbody > tr.p-row-odd {
+    .p-datatable-tbody>tr.p-row-odd {
       background: $roca-color-bg-subtle;
     }
 
-    .p-datatable-tbody > tr:hover {
+    .p-datatable-tbody>tr:hover {
       background: $roca-color-bg-selected;
     }
   }
@@ -305,9 +305,7 @@
       }
     }
 
-    .p-button:not(.p-button-outlined):not(.p-button-text):not(
-        .p-button-link
-      ):not(.p-button-secondary):not(.p-button-danger) {
+    .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-danger) {
       background: $roca-color-primary;
       border-color: $roca-color-primary;
 

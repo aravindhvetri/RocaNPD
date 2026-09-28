@@ -11,10 +11,12 @@ import type {
   IResolvedUserAccess,
   NpdWorkflowAction,
 } from "../../../../../External/CommonServices/Interface";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import {
   canActOnPendingNpdStep,
   hasPermission,
   hasSystemRole,
+  parseViewAsRole,
 } from "../../../../../External/CommonServices/permissionService";
 import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
 import {
@@ -60,6 +62,7 @@ export function buildNpdRequestFormPath(
   requestId: number,
   mode: "view" | "edit",
   sourcePath?: string,
+  viewAs?: string | null,
 ): string {
   const params = new URLSearchParams();
   params.set("id", String(requestId));
@@ -67,6 +70,10 @@ export function buildNpdRequestFormPath(
   const from = toNpdFormFromKey(sourcePath);
   if (from) {
     params.set(Config.NpdFormQuery.From, from);
+  }
+  const role = (viewAs || "").trim();
+  if (role) {
+    params.set(Config.NpdFormQuery.ViewAs, role);
   }
   return `${Config.Routes.NpdNew}?${params.toString()}`;
 }
@@ -114,11 +121,24 @@ export function toPersistableItemRecords(
 }
 
 export function canEditNpdListRow(
-  row: Pick<INpdRequestListItemRow, "Status" | "Brand" | "AuthorEmail" | "WorkflowSteps">,
+  row: Pick<
+    INpdRequestListItemRow,
+    "Status" | "Brand" | "AuthorEmail" | "WorkflowSteps"
+  >,
   access: IResolvedUserAccess,
   currentUserEmail: string,
+  viewAs?: string | null,
 ): boolean {
+  const viewRole = parseViewAsRole(viewAs);
+
+  if (viewRole === Config.Roles.Admin) {
+    return false;
+  }
+
   if (isDraftOrReworkStatus(row.Status)) {
+    if (viewRole && viewRole !== Config.Roles.Initiator) {
+      return false;
+    }
     return (
       hasSystemRole(
         access,
@@ -134,13 +154,36 @@ export function canEditNpdListRow(
   }
 
   const pendingRole = getFirstPendingApproverRole(row.WorkflowSteps);
-  return (
+  const canAct =
     userCanActOnPendingWorkflow(
       row.WorkflowSteps,
       currentUserEmail,
       access.assignedRoles,
-    ) && canActOnPendingNpdStep(access, row.Brand, pendingRole)
-  );
+    ) && canActOnPendingNpdStep(access, row.Brand, pendingRole);
+
+  if (!canAct) {
+    return false;
+  }
+
+  if (viewRole === Config.Roles.Initiator) {
+    return false;
+  }
+
+  if (viewRole === Config.Roles.VerticalHead) {
+    return (
+      pendingRole.trim().toLowerCase() ===
+      Config.Roles.VerticalHead.toLowerCase()
+    );
+  }
+
+  if (viewRole === Config.Roles.MisCoordinator) {
+    return (
+      pendingRole.trim().toLowerCase() ===
+      Config.Roles.MisCoordinator.toLowerCase()
+    );
+  }
+
+  return true;
 }
 
 export function resolveNpdFooterMode(params: {
@@ -208,8 +251,53 @@ export function canEditNpdItemDetails(params: {
   );
 }
 
-export function resolveNpdFormCancelRoute(fromPath?: string | null): string {
-  return resolveAllowedNpdReturnRoute(fromPath) ?? Config.Routes.NpdAll;
+/**
+ * Other Details visibility:
+ * - After Approved/Completed: all modules (Initiator, VH, MIS).
+ * - Before that: only the MIS Coordinator module (`?as=MIS Coordinator`), never VH/Initiator.
+ * Dual-role users must not see Other Details while browsing as Vertical Head.
+ */
+export function shouldShowNpdOtherDetails(params: {
+  hasRequest: boolean;
+  isRequestApproved: boolean;
+  viewAs?: string | null;
+  isMisCoordinator: boolean;
+  isVerticalHead: boolean;
+  hasReachedMis: boolean;
+  footerMode: NpdRequestFooterMode;
+}): boolean {
+  if (!params.hasRequest) {
+    return false;
+  }
+
+  if (params.isRequestApproved) {
+    return true;
+  }
+
+  if (!params.hasReachedMis && params.footerMode !== "mis-pending") {
+    return false;
+  }
+
+  const moduleRole = parseViewAsRole(params.viewAs);
+  if (moduleRole) {
+    return moduleRole === Config.Roles.MisCoordinator;
+  }
+
+  // No `?as=`: allow MIS-only users, or when the form is actively in MIS action mode.
+  if (params.footerMode === "mis-pending") {
+    return true;
+  }
+
+  return params.isMisCoordinator && !params.isVerticalHead;
+}
+
+export function resolveNpdFormCancelRoute(
+  fromPath?: string | null,
+  viewAs?: string | null,
+): string {
+  const base =
+    resolveAllowedNpdReturnRoute(fromPath) ?? Config.Routes.NpdAll;
+  return buildNavHref(base, viewAs);
 }
 
 export function firstValidationMessage(messages: string[]): string | null {
@@ -218,7 +306,12 @@ export function firstValidationMessage(messages: string[]): string | null {
 }
 
 export function formatNpdLineItemProgress(current: number, total: number): string {
-  return `${current} / ${total} ${Config.FieldLabels.LineItemsAdded}`;
+  const safeTotal = Math.max(total, 1);
+  const percent = Math.max(
+    0,
+    Math.min(100, Math.round((Math.max(current, 0) / safeTotal) * 100)),
+  );
+  return `${percent}%`;
 }
 
 export interface INpdSubmitProgress {

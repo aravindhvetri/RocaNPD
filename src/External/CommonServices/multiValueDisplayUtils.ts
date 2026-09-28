@@ -1,5 +1,5 @@
 /** Max values shown in DataTable cells before appending an ellipsis. */
-export const MULTI_VALUE_CELL_LIMIT = 8;
+export const MULTI_VALUE_CELL_LIMIT = 20;
 
 export interface IMultiValueCellFormatOptions {
   /** Split pattern — default comma-separated lists. */

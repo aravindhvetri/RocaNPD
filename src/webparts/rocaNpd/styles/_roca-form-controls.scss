@@ -47,6 +47,12 @@
     z-index: 100001 !important;
   }
 
+  // ---- Textareas: restrict resize globally across all components ----
+  textarea,
+  .p-inputtextarea {
+    resize: none !important;
+  }
+
   // ---- Focus / active: no PrimeReact blue ring --------------------------------
   .p-dropdown,
   .p-multiselect,
@@ -109,6 +115,13 @@
     border-color: $roca-color-border-light;
     box-shadow: $roca-shadow-md;
     font-size: 0.8125rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .p-multiselect-items-wrapper,
+  .p-multiselect-items {
+    overflow-x: hidden;
   }
 
   .p-multiselect-empty-message {
@@ -178,10 +191,20 @@
     padding: 0.4375rem 0.75rem !important;
     margin: 0 !important;
     font-size: 0.8125rem;
+    max-width: 100% !important;
+    overflow: hidden !important;
 
     .p-checkbox {
       margin: 0 !important;
       flex: 0 0 1rem !important;
+    }
+
+    > span {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     &.p-highlight {

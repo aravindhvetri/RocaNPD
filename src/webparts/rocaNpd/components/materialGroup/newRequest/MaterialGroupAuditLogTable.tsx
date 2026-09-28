@@ -5,9 +5,13 @@ import {
   MaterialGroupStatus,
 } from "../../../../../External/CommonServices/Config";
 import type { IMaterialGroupAuditLogRow } from "../../../../../External/CommonServices/Interface";
+import {
+  fetchConsultantApproverInfo,
+  type IConsultantApproverInfo,
+} from "../../../../../External/CommonServices/materialGroupNotificationService";
 import { renderSharePointUserPersona } from "../../../../../External/CommonServices/personFieldUtils";
 import { formatAuditActionDateTime } from "../../npd/requestList/npdRequestListUtils";
-import { DataTable, Tag } from "../../common/controls";
+import { DataTable } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
 import styles from "./MaterialGroupAuditLogTable.module.scss";
 
@@ -16,46 +20,40 @@ export interface IMaterialGroupAuditLogTableProps {
   requestStatus?: string | null;
 }
 
-function getStatusClass(status: string): string {
-  const s = (status || "").toLowerCase();
-  if (s === "rework") {
-    return styles.statusRework;
+function getRowTime(row: IMaterialGroupAuditLogRow): number {
+  if (!row.created) {
+    return 0;
   }
-  if (s === "rejected") {
-    return styles.statusRejected;
-  }
-  if (s === "completed" || s === "approved") {
-    return styles.statusCompleted;
-  }
-  if (s.startsWith("pending")) {
-    return styles.statusPending;
-  }
-  return styles.statusDefault;
+  const time = new Date(row.created).getTime();
+  return Number.isFinite(time) ? time : 0;
 }
 
-function getAuditActionRank(actionOrStatus?: string): number {
-  const s = (actionOrStatus || "").trim().toLowerCase();
-  if (s === "completed" || s === "approved") {
-    return 1;
-  }
-  if (s === "rejected" || s === "reject") {
-    return 2;
-  }
-  if (s === "rework" || s === "reworked" || s === "in rework") {
-    return 3;
-  }
-  if (s.startsWith("pending")) {
-    return 4;
-  }
-  return 5;
+/** Same as NPD: Action On ascending, then Id as stable tie-break. */
+function sortAuditRowsChronologically(
+  rows: IMaterialGroupAuditLogRow[],
+): IMaterialGroupAuditLogRow[] {
+  return [...rows].sort((a, b) => {
+    const timeA = getRowTime(a);
+    const timeB = getRowTime(b);
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+    return (a.id || 0) - (b.id || 0);
+  });
 }
 
-function buildPendingAuditRow(): IMaterialGroupAuditLogRow {
+function buildPendingAuditRow(
+  consultant?: IConsultantApproverInfo | null,
+): IMaterialGroupAuditLogRow {
+  const name = (consultant?.name || "").trim();
+  const email = (consultant?.email || "").trim();
+
   return {
     id: -1,
     role: Config.Roles.Consultant,
     status: `${FieldLabels.PendingWithPrefix} ${Config.Roles.Consultant}`,
-    actionedBy: "—",
+    actionedBy: name || email || Config.Roles.Consultant,
+    actionedByEmail: email || undefined,
     comments: "—",
   };
 }
@@ -64,27 +62,48 @@ const MaterialGroupAuditLogTable: React.FC<IMaterialGroupAuditLogTableProps> = (
   rows,
   requestStatus,
 }) => {
-  const displayRows = React.useMemo(() => {
-    const merged = [...rows];
-    const isPending =
-      (requestStatus || "").trim().toLowerCase() ===
-      MaterialGroupStatus.Pending.toLowerCase();
+  const isPending =
+    (requestStatus || "").trim().toLowerCase() ===
+    MaterialGroupStatus.Pending.toLowerCase();
 
-    if (isPending) {
-      merged.unshift(buildPendingAuditRow());
+  const [consultant, setConsultant] =
+    React.useState<IConsultantApproverInfo | null>(null);
+
+  React.useEffect(() => {
+    if (!isPending) {
+      setConsultant(null);
+      return;
     }
 
-    return merged.sort((a, b) => {
-      const rankA = getAuditActionRank(a.status);
-      const rankB = getAuditActionRank(b.status);
-      if (rankA !== rankB) {
-        return rankA - rankB;
-      }
-      const timeA = a.created ? new Date(a.created).getTime() : 0;
-      const timeB = b.created ? new Date(b.created).getTime() : 0;
-      return timeB - timeA;
-    });
-  }, [requestStatus, rows]);
+    let cancelled = false;
+    void fetchConsultantApproverInfo()
+      .then((info) => {
+        if (!cancelled) {
+          setConsultant(info);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setConsultant(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPending]);
+
+  const displayRows = React.useMemo(() => {
+    const chronological = sortAuditRowsChronologically(rows);
+
+    // Real actions stay chronological (Initiated → Rework → Resubmit → …).
+    // Pending Consultant placeholder follows at the bottom while still Pending.
+    if (!isPending) {
+      return chronological;
+    }
+
+    return [...chronological, buildPendingAuditRow(consultant)];
+  }, [consultant, isPending, rows]);
 
   const columns = React.useMemo<IDataTableColumn<IMaterialGroupAuditLogRow>[]>(
     () => [
@@ -95,9 +114,17 @@ const MaterialGroupAuditLogTable: React.FC<IMaterialGroupAuditLogTableProps> = (
         body: (row) => (
           <span
             className={styles.role}
-            title={row.role || (row.status?.toLowerCase().includes("pending") ? Config.Roles.Consultant : undefined)}
+            title={
+              row.role ||
+              (row.status?.toLowerCase().includes("pending")
+                ? Config.Roles.Consultant
+                : undefined)
+            }
           >
-            {row.role || (row.status?.toLowerCase().includes("pending") ? Config.Roles.Consultant : "—")}
+            {row.role ||
+              (row.status?.toLowerCase().includes("pending")
+                ? Config.Roles.Consultant
+                : "—")}
           </span>
         ),
       },
@@ -121,7 +148,7 @@ const MaterialGroupAuditLogTable: React.FC<IMaterialGroupAuditLogTableProps> = (
         header: "Action",
         style: { width: "10rem", minWidth: "9rem" },
         body: (row) => (
-          <Tag value={row.status || "—"} className={getStatusClass(row.status)} />
+          <span className={styles.actionText}>{row.status || "—"}</span>
         ),
       },
       {
@@ -129,7 +156,8 @@ const MaterialGroupAuditLogTable: React.FC<IMaterialGroupAuditLogTableProps> = (
         header: "Action Via",
         style: { width: "8rem", minWidth: "7.5rem" },
         body: (row) => {
-          const rawVia = typeof row.actionVia === "string" ? row.actionVia.trim() : "";
+          const rawVia =
+            typeof row.actionVia === "string" ? row.actionVia.trim() : "";
           if (!rawVia || rawVia === "—") {
             return <span>—</span>;
           }
@@ -139,9 +167,7 @@ const MaterialGroupAuditLogTable: React.FC<IMaterialGroupAuditLogTableProps> = (
           return (
             <span
               className={
-                isMail
-                  ? styles.actionViaMail
-                  : styles.actionViaSystem
+                isMail ? styles.actionViaMail : styles.actionViaSystem
               }
             >
               {displayLabel}

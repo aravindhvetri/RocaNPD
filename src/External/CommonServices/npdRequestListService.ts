@@ -19,7 +19,9 @@ import {
   canActOnPendingNpdStep,
   canViewRequest,
   hasSystemRole,
+  parseViewAsRole,
 } from "./permissionService";
+import type { NavViewRole } from "./navigationConfig";
 import SPServices from "./SPServices";
 
 const ITEM_FIELDS = Config.FieldNames.NpdItemDetails;
@@ -99,7 +101,9 @@ function toListItem(
 export async function fetchNpdDashboardItems(
   currentUserEmail: string,
   access: IResolvedUserAccess,
+  viewRole?: string | NavViewRole | null,
 ): Promise<INpdRequestListItem[]> {
+  const scopedRole = parseViewAsRole(viewRole ?? undefined);
   const [requests, summaries] = await Promise.all([
     fetchActiveNpdRequests(),
     fetchItemSummaries(),
@@ -115,6 +119,7 @@ export async function fetchNpdDashboardItems(
           createdByEmail: item.AuthorEmail,
         },
         currentUserEmail,
+        scopedRole,
       ),
     )
     .map((item) => toListItem(item, summaries));
@@ -123,12 +128,14 @@ export async function fetchNpdDashboardItems(
 export async function fetchNpdPendingItems(
   currentUserEmail: string,
   access: IResolvedUserAccess,
+  viewRole?: string | NavViewRole | null,
 ): Promise<INpdRequestListItem[]> {
   const loginEmail = normalizeEmail(currentUserEmail);
   if (!loginEmail) {
     return [];
   }
 
+  const role = parseViewAsRole(viewRole ?? undefined);
   const [requests, summaries] = await Promise.all([
     fetchActiveNpdRequests(),
     fetchItemSummaries(),
@@ -138,6 +145,21 @@ export async function fetchNpdPendingItems(
     .filter((item) => {
       const status = item.Status.trim().toLowerCase();
       if (status !== RequestStatus.Pending.toLowerCase()) {
+        return false;
+      }
+
+      if (
+        !canViewRequest(
+          access,
+          {
+            module: "npd",
+            brand: item.Brand,
+            createdByEmail: item.AuthorEmail,
+          },
+          currentUserEmail,
+          role,
+        )
+      ) {
         return false;
       }
 
@@ -153,6 +175,26 @@ export async function fetchNpdPendingItems(
           loginEmail,
           access.assignedRoles,
         ) && canActOnPendingNpdStep(access, item.Brand, pendingRole);
+
+      if (role === Config.Roles.Initiator) {
+        return normalizeEmail(item.AuthorEmail) === loginEmail;
+      }
+
+      if (role === Config.Roles.VerticalHead) {
+        return (
+          canAct &&
+          pendingRole.trim().toLowerCase() ===
+            Config.Roles.VerticalHead.toLowerCase()
+        );
+      }
+
+      if (role === Config.Roles.MisCoordinator) {
+        return (
+          canAct &&
+          pendingRole.trim().toLowerCase() ===
+            Config.Roles.MisCoordinator.toLowerCase()
+        );
+      }
 
       if (canAct) {
         return true;

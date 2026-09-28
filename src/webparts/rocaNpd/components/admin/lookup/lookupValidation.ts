@@ -1,6 +1,10 @@
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { ILookup } from "../../../../../External/CommonServices/Interface";
 
+function normalizeLookupValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function validateLookupForm(
   lookupTypeId: number | null,
   lookupName: string,
@@ -32,15 +36,29 @@ export function validateLookupForm(
     return `${FieldLabels.LookupName} must be 255 characters or less.`;
   }
 
-  const isDuplicate = existingItems.some(
+  const nameKey = normalizeLookupValue(trimmedName);
+  const codeKey = normalizeLookupValue(trimmedCode);
+
+  const duplicateName = existingItems.some(
     (item) =>
       item.Id !== editingId &&
       item.LookupTypeId === lookupTypeId &&
-      item.LookupName.trim().toLowerCase() === trimmedName.toLowerCase(),
+      normalizeLookupValue(item.LookupName) === nameKey,
   );
 
-  if (isDuplicate) {
+  if (duplicateName) {
     return `"${trimmedName}" already exists.`;
+  }
+
+  // Lookup Code must be unique across all Lookup Types.
+  const duplicateCode = existingItems.some(
+    (item) =>
+      item.Id !== editingId &&
+      normalizeLookupValue(item.LookupCode) === codeKey,
+  );
+
+  if (duplicateCode) {
+    return `"${trimmedCode}" already exists as a Lookup Code.`;
   }
 
   return null;

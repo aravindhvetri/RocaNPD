@@ -4,58 +4,152 @@ import type {
   IMaterialGroupAuditLogRow,
 } from "./Interface";
 import { extractPersonEmails } from "./personFieldUtils";
-import SPServices from "./SPServices";
+import SPServices, { getSP } from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.MaterialGroupAuditLogs;
 const FIELDS = Config.FieldNames.MaterialGroupAuditLogs;
 
-function resolveActionFromTitle(title: string, comments: string = ""): string {
-  const combined = `${title} ${comments}`;
-  if (/rework/i.test(combined)) {
+interface IListFieldInfo {
+  InternalName: string;
+  Title: string;
+  TypeAsString: string;
+  Hidden?: boolean;
+  ReadOnlyField?: boolean;
+}
+
+interface IAuditWriteSchema {
+  actionField?: string;
+  actionViaField?: string;
+  formatConsultantId: (userId: number) => unknown;
+  formatRequestId: (requestId: number) => unknown;
+}
+
+let cachedWriteSchema: IAuditWriteSchema | null = null;
+
+function setCachedWriteSchema(value: IAuditWriteSchema | null): void {
+  cachedWriteSchema = value;
+}
+
+export function formatAuditAction(action: string): string {
+  const a = (action || "").trim().toLowerCase();
+  if (a === "approve" || a === "approved") {
+    return "Approved";
+  }
+  if (a === "reject" || a === "rejected") {
+    return Config.MaterialGroupStatus.Rejected;
+  }
+  if (a === "rework" || a === "in rework") {
     return Config.MaterialGroupStatus.Rework;
   }
+  if (a === "resubmit" || a === "resubmitted") {
+    return "Resubmit";
+  }
+  if (a === "initiated" || a === "initiate" || a === "submit" || a === "submitted") {
+    return "Initiated";
+  }
+  if (a === "complete" || a === "completed") {
+    return Config.MaterialGroupStatus.Completed;
+  }
+  return action || "";
+}
+
+function resolveActionFromTitle(
+  title: string,
+  comments: string = "",
+  role: string = "",
+): string {
+  const combined = `${title} ${comments}`;
   if (/reject/i.test(combined)) {
     return Config.MaterialGroupStatus.Rejected;
   }
-  if (/complete/i.test(combined)) {
+  if (/resubmit/i.test(combined)) {
+    return "Resubmit";
+  }
+  if (/initiat/i.test(combined)) {
+    return "Initiated";
+  }
+  if (/rework/i.test(combined)) {
+    return Config.MaterialGroupStatus.Rework;
+  }
+  if (/complete/i.test(combined) || /approve/i.test(combined)) {
+    return Config.MaterialGroupStatus.Completed;
+  }
+  if (role.toLowerCase() === "initiator") {
+    return /rework/i.test(comments) ? "Resubmit" : "Initiated";
+  }
+  if (role.toLowerCase() === "consultant") {
     return Config.MaterialGroupStatus.Completed;
   }
   return title || "—";
 }
 
 function mapAuditRow(row: Record<string, unknown>): IMaterialGroupAuditLogRow {
-  const consultant = row[FIELDS.Consultant] as
+  const userField =
+    row[FIELDS.Consultant] ??
+    row.Consultant ??
+    row.Initiator ??
+    row.User ??
+    row.Author;
+  const person = userField as
     | { Title?: string; EMail?: string; Email?: string }
     | undefined;
-  const emails = extractPersonEmails(row[FIELDS.Consultant]);
+  const emails = extractPersonEmails(userField);
   const actionedBy =
-    String(consultant?.Title || "").trim() ||
+    String(person?.Title || "").trim() ||
     emails[0] ||
     "—";
   const actionedByEmail =
     emails[0] ||
-    String(consultant?.EMail || consultant?.Email || "").trim();
+    String(person?.EMail || person?.Email || "").trim();
+
+  const rawAction = String(
+    row.Action ??
+    row.ApproverAction ??
+    row.ActionTaken ??
+    row[FIELDS.Title] ??
+    ""
+  ).trim();
+
+  let resolvedStatus = "";
+  if (rawAction) {
+    resolvedStatus = formatAuditAction(rawAction);
+  }
+  if (!resolvedStatus) {
+    resolvedStatus = resolveActionFromTitle(
+      String(row[FIELDS.Title] ?? ""),
+      String(row[FIELDS.Comments] ?? ""),
+      String(row[FIELDS.Role] ?? row.Role ?? "").trim(),
+    );
+  }
 
   return {
     id: Number(row.Id ?? row.ID) || 0,
-    status: resolveActionFromTitle(
-      String(row[FIELDS.Title] ?? ""),
-      String(row[FIELDS.Comments] ?? ""),
-    ),
+    status: resolvedStatus,
     actionedBy,
     actionedByEmail: actionedByEmail || undefined,
     role: String(row[FIELDS.Role] ?? row.Role ?? "").trim(),
     comments: String(row[FIELDS.Comments] ?? "").trim(),
     created: row.Created ? String(row.Created) : undefined,
-    actionVia: String(
-      row[FIELDS.ActionVia] ??
-      row.ActionVia ??
-      row.Action_x0020_Via ??
-      row["Action_x0020_Via"] ??
-      row.Action_x0020_via ??
-      row["Action_x0020_via"] ??
-      ""
-    ).trim(),
+    actionVia:
+      String(
+        row[FIELDS.ActionVia] ??
+        row.ActionVia ??
+        row.Action_x0020_Via ??
+        row["Action_x0020_Via"] ??
+        row.Action_x0020_via ??
+        row["Action_x0020_via"] ??
+        row.actionVia ??
+        row.Actionvia ??
+        row.Action_Via ??
+        row.Via ??
+        row.ActionSource ??
+        ""
+      ).trim() ||
+      (String(row[FIELDS.Role] ?? row.Role ?? "").trim().toLowerCase() === "initiator" ||
+      resolvedStatus.toLowerCase() === "initiated" ||
+      resolvedStatus.toLowerCase() === "resubmit"
+        ? "System"
+        : ""),
   };
 }
 
@@ -80,18 +174,107 @@ async function resolveConsultantSiteUserId(
   }
 }
 
+function matchesFieldName(
+  field: IListFieldInfo,
+  candidates: string[],
+): boolean {
+  const internal = (field.InternalName || "").toLowerCase();
+  const title = (field.Title || "").toLowerCase();
+  return candidates.some((candidate) => {
+    const key = candidate.toLowerCase();
+    return internal === key || title === key;
+  });
+}
+
+function formatIdForFieldType(fieldType: string, id: number): unknown {
+  const type = (fieldType || "").toLowerCase();
+  if (type === "usermulti" || type === "lookupmulti") {
+    return { results: [id] };
+  }
+  return id;
+}
+
+async function resolveAuditWriteSchema(): Promise<IAuditWriteSchema> {
+  const existing = cachedWriteSchema;
+  if (existing) {
+    return existing;
+  }
+
+  const rows = (await getSP()
+    .web.lists.getByTitle(LIST_NAME())
+    .fields.select(
+      "InternalName",
+      "Title",
+      "TypeAsString",
+      "Hidden",
+      "ReadOnlyField",
+    )()) as IListFieldInfo[];
+
+  const fields = (rows || []).filter(
+    (field) => !field.Hidden && !field.ReadOnlyField,
+  );
+
+  const consultantField = fields.find((field) =>
+    matchesFieldName(field, [FIELDS.Consultant, "Consultant", "User"]),
+  );
+  const requestField = fields.find((field) =>
+    matchesFieldName(field, [
+      FIELDS.MaterialGroupRequests,
+      "MaterialGroupRequests",
+      "Material Group Requests",
+    ]),
+  );
+  const actionField = fields.find((field) =>
+    matchesFieldName(field, [
+      FIELDS.Action,
+      "Action",
+      "ApproverAction",
+      "ActionTaken",
+    ]),
+  );
+  const actionViaField = fields.find((field) =>
+    matchesFieldName(field, [
+      FIELDS.ActionVia,
+      "Action Via",
+      "ActionVia",
+      "Action_x0020_Via",
+      "Via",
+    ]),
+  );
+
+  const consultantType = consultantField?.TypeAsString || "User";
+  const requestType = requestField?.TypeAsString || "Lookup";
+
+  const schema: IAuditWriteSchema = {
+    actionField: actionField?.InternalName || FIELDS.Action,
+    actionViaField: actionViaField?.InternalName,
+    formatConsultantId: (userId: number) =>
+      formatIdForFieldType(consultantType, userId),
+    formatRequestId: (requestId: number) =>
+      formatIdForFieldType(requestType, requestId),
+  };
+  setCachedWriteSchema(schema);
+  return schema;
+}
+
 /**
- * Writes Approver Rework / Reject / Complete comments into NPD_MaterialGroupAuditLogs,
- * linked to the NPD_MaterialGroupRequests item via MaterialGroupRequests lookup.
- * Stores the acting Consultant in the Consultant Person/Group column.
+ * Writes Approver Rework / Reject / Complete comments into NPD_MaterialGroupAuditLogs.
+ * Resolves real field internal names once (cached) to avoid 400 probe storms.
  */
 export async function addMaterialGroupAuditLog(
   payload: IMaterialGroupAuditLogPayload,
 ): Promise<void> {
-  const comments = payload.comments.trim();
-  if (!comments) {
-    return;
-  }
+  const isInitiator =
+    (payload.role || "").trim().toLowerCase() === "initiator" ||
+    payload.action === "Initiated" ||
+    payload.action === "Resubmit";
+  const defaultComments =
+    payload.action === "Resubmit"
+      ? "Request resubmitted"
+      : isInitiator
+        ? "Request initiated"
+        : "Completed";
+  const comments = payload.comments ? payload.comments.trim() : defaultComments;
 
   const requestListItemId = Number(payload.requestListItemId);
   if (!requestListItemId || requestListItemId <= 0) {
@@ -103,67 +286,82 @@ export async function addMaterialGroupAuditLog(
     payload.consultantEmail,
   );
 
-  const title = "";
+  const targetAction = formatAuditAction(payload.action);
   const rawVia = String(payload.actionVia || "").trim();
   const targetVia = rawVia.toLowerCase() === "mail" ? "Mail" : "System";
 
-  const viaFieldCandidates = Array.from(
-    new Set([FIELDS.ActionVia, "Action_x0020_Via", "Action_x0020_via", "ActionVia"]),
-  );
+  const buildPayload = (schema: IAuditWriteSchema): Record<string, unknown> => {
+    const requestJson: Record<string, unknown> = {
+      // Title must remain empty (list standard).
+      [FIELDS.Title]: "",
+      [FIELDS.Comments]: comments,
+      [FIELDS.MaterialGroupRequestsId]: schema.formatRequestId(requestListItemId),
+      // Action column stores Approved / Rejected / Completed / etc.
+      [FIELDS.Action]: targetAction,
+    };
+    if (payload.role) {
+      requestJson[FIELDS.Role] = payload.role;
+    }
+    if (consultantUserId > 0) {
+      requestJson[FIELDS.ConsultantId] = schema.formatConsultantId(
+        consultantUserId,
+      );
+    }
+    // Prefer discovered ActionVia field name; fall back to Config internal name.
+    requestJson[schema.actionViaField || FIELDS.ActionVia] = targetVia;
+    return requestJson;
+  };
 
-  const lookupAttempts: unknown[] = [
-    requestListItemId,
-    [requestListItemId],
-    { results: [requestListItemId] },
-  ];
+  try {
+    const schema = await resolveAuditWriteSchema();
+    await SPServices.SPAddItem({
+      Listname: LIST_NAME(),
+      RequestJSON: buildPayload(schema),
+    });
+    return;
+  } catch (primaryError) {
+    setCachedWriteSchema(null);
+    console.warn(
+      "MG audit log schema write failed; trying short probe:",
+      primaryError,
+    );
+  }
 
+  // Short fallback: always include Action; try Action Via variants.
+  const viaKeys = [FIELDS.ActionVia, "Action_x0020_Via", undefined] as const;
   let lastError: unknown;
-  for (const lookupValue of lookupAttempts) {
-    for (const viaField of viaFieldCandidates) {
-      const requestJson: Record<string, unknown> = {
-        [FIELDS.Title]: title,
-        [FIELDS.Comments]: comments,
-        [FIELDS.MaterialGroupRequestsId]: lookupValue,
-        [viaField]: targetVia,
-      };
-      if (payload.role) {
-        requestJson[FIELDS.Role] = payload.role;
-      }
-      if (consultantUserId > 0) {
-        requestJson[FIELDS.ConsultantId] = consultantUserId;
-      }
 
-      try {
-        await SPServices.SPAddItem({
-          Listname: LIST_NAME(),
-          RequestJSON: requestJson,
-        });
-        return;
-      } catch (error) {
-        lastError = error;
-      }
+  for (const viaKey of viaKeys) {
+    const requestJson: Record<string, unknown> = {
+      [FIELDS.Title]: "",
+      [FIELDS.Comments]: comments,
+      [FIELDS.MaterialGroupRequestsId]: requestListItemId,
+      [FIELDS.Action]: targetAction,
+    };
+    if (payload.role) {
+      requestJson[FIELDS.Role] = payload.role;
+    }
+    if (consultantUserId > 0) {
+      requestJson[FIELDS.ConsultantId] = consultantUserId;
+    }
+    if (viaKey) {
+      requestJson[viaKey] = targetVia;
     }
 
-    // Fallback without ActionVia if the column is missing completely on the list
     try {
-      const fallbackJson: Record<string, unknown> = {
-        [FIELDS.Title]: title,
-        [FIELDS.Comments]: comments,
-        [FIELDS.MaterialGroupRequestsId]: lookupValue,
-      };
-      if (payload.role) {
-        fallbackJson[FIELDS.Role] = payload.role;
-      }
-      if (consultantUserId > 0) {
-        fallbackJson[FIELDS.ConsultantId] = consultantUserId;
-      }
       await SPServices.SPAddItem({
         Listname: LIST_NAME(),
-        RequestJSON: fallbackJson,
+        RequestJSON: requestJson,
+      });
+      setCachedWriteSchema({
+        actionField: FIELDS.Action,
+        actionViaField: viaKey,
+        formatConsultantId: (id) => id,
+        formatRequestId: (id) => id,
       });
       return;
-    } catch (fallbackError) {
-      lastError = fallbackError;
+    } catch (error) {
+      lastError = error;
     }
   }
 
@@ -189,6 +387,24 @@ export async function fetchMaterialGroupAuditLogs(
     return [];
   }
 
+  const selectWithPeopleAndAction = [
+    "Id",
+    FIELDS.Title,
+    FIELDS.Comments,
+    FIELDS.Role,
+    FIELDS.ActionVia,
+    "Action",
+    "Created",
+    `${FIELDS.MaterialGroupRequestsId}`,
+    `${FIELDS.MaterialGroupRequests}/Id`,
+    `${FIELDS.Consultant}/Id`,
+    `${FIELDS.Consultant}/Title`,
+    `${FIELDS.Consultant}/EMail`,
+    "Author/Id",
+    "Author/Title",
+    "Author/EMail",
+  ].join(",");
+
   const selectWithPeople = [
     "Id",
     FIELDS.Title,
@@ -201,6 +417,9 @@ export async function fetchMaterialGroupAuditLogs(
     `${FIELDS.Consultant}/Id`,
     `${FIELDS.Consultant}/Title`,
     `${FIELDS.Consultant}/EMail`,
+    "Author/Id",
+    "Author/Title",
+    "Author/EMail",
   ].join(",");
 
   const tryFetch = async (
@@ -210,7 +429,7 @@ export async function fetchMaterialGroupAuditLogs(
   ): Promise<IMaterialGroupAuditLogRow[]> => {
     const rows = (await SPServices.SPReadItems({
       Listname: LIST_NAME(),
-      Select: select || selectWithPeople,
+      Select: select || selectWithPeopleAndAction,
       Expand: expand,
       Filter: [
         {
@@ -232,39 +451,50 @@ export async function fetchMaterialGroupAuditLogs(
   try {
     return await tryFetch(
       `${FIELDS.MaterialGroupRequests}/Id`,
-      `${FIELDS.MaterialGroupRequests},${FIELDS.Consultant}`,
-      selectWithPeople,
+      `${FIELDS.MaterialGroupRequests},${FIELDS.Consultant},Author`,
+      selectWithPeopleAndAction,
     );
   } catch {
     try {
       return await tryFetch(
-        FIELDS.MaterialGroupRequestsId,
-        FIELDS.Consultant,
-        [
-          "Id",
-          FIELDS.Title,
-          FIELDS.Comments,
-          FIELDS.Role,
-          FIELDS.ActionVia,
-          "Created",
-          `${FIELDS.Consultant}/Id`,
-          `${FIELDS.Consultant}/Title`,
-          `${FIELDS.Consultant}/EMail`,
-        ].join(","),
+        `${FIELDS.MaterialGroupRequests}/Id`,
+        `${FIELDS.MaterialGroupRequests},${FIELDS.Consultant},Author`,
+        selectWithPeople,
       );
     } catch {
       try {
-        return await tryFetch(FIELDS.MaterialGroupRequestsId, undefined, [
-          "Id",
-          FIELDS.Title,
-          FIELDS.Comments,
-          FIELDS.Role,
-          FIELDS.ActionVia,
-          "Created",
-        ].join(","));
-      } catch (error) {
-        console.warn("Could not load Material Group audit logs:", error);
-        return [];
+        return await tryFetch(
+          FIELDS.MaterialGroupRequestsId,
+          `${FIELDS.Consultant},Author`,
+          [
+            "Id",
+            FIELDS.Title,
+            FIELDS.Comments,
+            FIELDS.Role,
+            FIELDS.ActionVia,
+            "Created",
+            `${FIELDS.Consultant}/Id`,
+            `${FIELDS.Consultant}/Title`,
+            `${FIELDS.Consultant}/EMail`,
+            "Author/Id",
+            "Author/Title",
+            "Author/EMail",
+          ].join(","),
+        );
+      } catch {
+        try {
+          return await tryFetch(FIELDS.MaterialGroupRequestsId, undefined, [
+            "Id",
+            FIELDS.Title,
+            FIELDS.Comments,
+            FIELDS.Role,
+            FIELDS.ActionVia,
+            "Created",
+          ].join(","));
+        } catch (error) {
+          console.warn("Could not load Material Group audit logs:", error);
+          return [];
+        }
       }
     }
   }

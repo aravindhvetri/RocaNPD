@@ -29,7 +29,6 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  margin-right: 0.25rem;
 }
 
 @mixin master-toolbar-search-wrap {
@@ -192,19 +191,23 @@
 
 @mixin master-toolbar-add-new-button {
   @include master-toolbar-action-button;
-  background: $roca-color-btn-add-new-bg;
-  border-color: $roca-color-btn-add-new-bg;
+  background: $roca-color-btn-add-new-bg !important;
+  background-color: $roca-color-btn-add-new-bg !important;
+  border-color: $roca-color-btn-add-new-bg !important;
 
-  &:enabled:hover {
-    background: $roca-color-btn-add-new-hover-bg;
-    border-color: $roca-color-btn-add-new-hover-bg;
-  }
-
+  &:enabled:hover,
   &:enabled:focus,
   &:enabled:focus-visible,
   &:enabled:active,
-  &:global(.p-focus) {
+  &:global(.p-focus),
+  &:global(.p-button:not(:disabled):hover),
+  &:global(.p-button:not(:disabled):active),
+  &:global(.p-button:not(:disabled):focus) {
     background: $roca-color-btn-add-new-bg !important;
+    background-color: $roca-color-btn-add-new-bg !important;
     border-color: $roca-color-btn-add-new-bg !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: $roca-color-text-inverse !important;
   }
 }

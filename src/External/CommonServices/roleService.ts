@@ -176,44 +176,71 @@ function matchKnownRole(roleTitle: string): UserRole | null {
 }
 
 function isKnownSystem(systemTitle: string): boolean {
-  return KNOWN_SYSTEMS.has(systemTitle.trim().toLowerCase());
+  const s = systemTitle.trim().toLowerCase();
+  // R-SEC03a / Tech Arch §6.4: blank System rows are ignored.
+  if (!s) {
+    return false;
+  }
+  return (
+    KNOWN_SYSTEMS.has(s) ||
+    s === "npd" ||
+    s === "mg" ||
+    s === "new product development" ||
+    s === "new material group" ||
+    s.includes("new product development") ||
+    s.includes("new material group")
+  );
 }
 
 /**
  * Resolves which module System an ApproversMaster row applies to.
  * Returns null when the Role+System combination is invalid.
+ * Only New Product Development / New Material Group count — other systems
+ * (e.g. Transit Breakage) must not grant NPD/MG navigation (R-SEC03a).
  */
 function resolveModuleSystem(
   role: UserRole,
   rawSystemTitle: string,
 ): string | null {
   const raw = rawSystemTitle.trim().toLowerCase();
+  if (!raw) {
+    return null;
+  }
+
   const npd = ApproverSystems.NewProductDevelopment;
   const mg = ApproverSystems.NewMaterialGroup;
   const npdKey = npd.toLowerCase();
   const mgKey = mg.toLowerCase();
 
-  if (role === Config.Roles.Consultant) {
-    // Consultant is Material Group only (Project Master §6.4). Accept either
-    // ApproversMaster System title used on the ROCA site.
-    if (raw === npdKey || raw === mgKey) {
-      return mg;
-    }
+  const isNpd =
+    raw === npdKey ||
+    raw === "npd" ||
+    raw.includes("new product development");
+  const isMg =
+    raw === mgKey ||
+    raw === "mg" ||
+    raw.includes("new material group");
+
+  if (!isNpd && !isMg) {
     return null;
+  }
+
+  if (role === Config.Roles.Consultant) {
+    return mg;
   }
 
   if (
     role === Config.Roles.VerticalHead ||
     role === Config.Roles.MisCoordinator
   ) {
-    return raw === npdKey ? npd : null;
+    return isNpd ? npd : null;
   }
 
   if (role === Config.Roles.Initiator) {
-    if (raw === npdKey) {
+    if (isNpd) {
       return npd;
     }
-    if (raw === mgKey) {
+    if (isMg) {
       return mg;
     }
     return null;

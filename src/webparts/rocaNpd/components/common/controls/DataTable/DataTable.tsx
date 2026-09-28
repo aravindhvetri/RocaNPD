@@ -48,22 +48,45 @@ function DataTable<T extends Record<string, unknown>>({
       stripedRows
       showGridlines={false}
     >
-      {columns.map((col, columnIndex) => (
-        <Column
-          key={`${String(col.field)}-${columnIndex}`}
-          field={col.field}
-          header={col.header}
-          sortable={col.sortable}
-          body={
-            col.body
-              ? (row: T, options: { rowIndex: number }) =>
-                  col.body!(row, options.rowIndex)
-              : undefined
-          }
-          style={col.style}
-          headerStyle={col.headerStyle}
-        />
-      ))}
+      {columns.map((col, columnIndex) => {
+        const isCentered =
+          col.alignHeader === "center" ||
+          col.headerStyle?.textAlign === "center" ||
+          col.style?.textAlign === "center";
+        const headerCls = [
+          col.headerClassName,
+          isCentered ? styles.headerCentered : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const bodyCls = [
+          col.className,
+          isCentered ? styles.cellCentered : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        return (
+          <Column
+            key={`${String(col.field)}-${columnIndex}`}
+            field={col.field}
+            header={col.header}
+            sortable={col.sortable}
+            alignHeader={isCentered ? "center" : col.alignHeader}
+            align={isCentered ? "center" : col.align}
+            headerClassName={headerCls || undefined}
+            className={bodyCls || undefined}
+            body={
+              col.body
+                ? (row: T, options: { rowIndex: number }) =>
+                    col.body!(row, options.rowIndex)
+                : undefined
+            }
+            style={col.style}
+            headerStyle={col.headerStyle}
+          />
+        );
+      })}
     </PrimeDataTable>
   );
 }

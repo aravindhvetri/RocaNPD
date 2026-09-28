@@ -20,7 +20,7 @@ const ProtectedRoute: React.FC<IProtectedRouteProps> = ({ children }) => {
   const access = useAppSelector(selectResolvedAccess);
 
   if (!initialized || roleStatus === "loading") {
-    return <LoaderOverlay visible label="Loading..." />;
+    return <LoaderOverlay visible label="Processing" />;
   }
 
   if (!access.assignedRoles.length) {

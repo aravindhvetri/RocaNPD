@@ -18,6 +18,7 @@ import {
   userCanActOnPendingWorkflow,
 } from "../../../External/CommonServices/npdWorkflowJsonService";
 import { canActOnPendingNpdStep } from "../../../External/CommonServices/permissionService";
+import { normalizeEmail } from "../../../External/CommonServices/personFieldUtils";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { selectResolvedAccess } from "../../../store/slices/appSlice";
 import { initializeApp } from "../../../store/thunks/appThunks";
@@ -30,6 +31,14 @@ export type NpdApproverMailViewState =
   | "alreadyCompleted"
   | "cancelled"
   | "error";
+
+const MSG_SUBMITTED_SUCCESS =
+  "Your response for this request has been submitted successfully.";
+const MSG_ALREADY_SUBMITTED =
+  "Your response for this request has already been submitted.";
+const MSG_NO_ACTION_REQUIRED =
+  "No action is required from you for this request at the moment.";
+const MSG_NOT_IN_WORKFLOW = "You are not part of this request workflow.";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -46,16 +55,6 @@ function defaultComments(action: NpdWorkflowAction): string {
     return "Rejected";
   }
   return "Rework requested";
-}
-
-function actionPastTense(action: NpdWorkflowAction): string {
-  if (action === "Approve") {
-    return "approved";
-  }
-  if (action === "Reject") {
-    return "rejected";
-  }
-  return "sent for rework";
 }
 
 function getVerticalHeadStep(
@@ -86,6 +85,97 @@ function isTerminalWorkflowStatus(status: string): boolean {
     normalized === Config.WorkflowStepStatus.Rejected.toLowerCase() ||
     normalized === Config.WorkflowStepStatus.Rework.toLowerCase()
   );
+}
+
+function resolveWorkflowSteps(
+  loaded: INpdRequestGeneralInfo,
+): INpdWorkflowStepJson[] {
+  if (Array.isArray(loaded.WorkflowSteps) && loaded.WorkflowSteps.length) {
+    return loaded.WorkflowSteps;
+  }
+
+  try {
+    const raw = (loaded.WorkFlowJSON || "").trim();
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .map((entry) => {
+        const record = entry as Record<string, unknown>;
+        return {
+          Role: String(record.Role ?? record.role ?? "").trim(),
+          UserEmail: String(
+            record.UserEmail ?? record.uEmail ?? record.Email ?? "",
+          ).trim(),
+          Status: String(record.Status ?? record.status ?? "").trim(),
+        } as INpdWorkflowStepJson;
+      })
+      .filter((step) => step.Role || step.UserEmail);
+  } catch {
+    return [];
+  }
+}
+
+function isUserInWorkflow(
+  steps: readonly INpdWorkflowStepJson[],
+  userEmail: string,
+): boolean {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    return false;
+  }
+
+  return steps.some(
+    (step) => normalizeEmail(step.UserEmail || "") === email,
+  );
+}
+
+function hasUserCompletedWorkflowStep(
+  steps: readonly INpdWorkflowStepJson[],
+  userEmail: string,
+): boolean {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    return false;
+  }
+
+  return steps.some(
+    (step) =>
+      normalizeEmail(step.UserEmail || "") === email &&
+      isTerminalWorkflowStatus(step.Status || ""),
+  );
+}
+
+/**
+ * Denied / info message when the logged-in user cannot act on the mail link.
+ * Priority (CHK-G35b / CHK-G35e):
+ * 1. Not in WorkFlowJSON → not part of workflow
+ * 2. This user already actioned → already submitted
+ * 3. Otherwise → no action required right now
+ */
+export function resolveNpdApproverMailDeniedMessage(params: {
+  workflowSteps: readonly INpdWorkflowStepJson[];
+  userEmail: string;
+  userCompletedOwnStep: boolean;
+  justSubmitted?: boolean;
+}): string {
+  if (params.justSubmitted) {
+    return MSG_SUBMITTED_SUCCESS;
+  }
+
+  if (!isUserInWorkflow(params.workflowSteps, params.userEmail)) {
+    return MSG_NOT_IN_WORKFLOW;
+  }
+
+  if (params.userCompletedOwnStep) {
+    return MSG_ALREADY_SUBMITTED;
+  }
+
+  return MSG_NO_ACTION_REQUIRED;
 }
 
 /**
@@ -221,9 +311,7 @@ export function useNpdApproverMailController(
           setRequest(saved);
           setViewState("success");
           setResultTitle("");
-          setResultMessage(
-            "Your response for this request has been submitted successfully.",
-          );
+          setResultMessage(MSG_SUBMITTED_SUCCESS);
           options?.onSuccess?.(nextAction);
         })
         .catch((error) => {
@@ -269,51 +357,35 @@ export function useNpdApproverMailController(
     void (async () => {
       try {
         const loaded = await fetchNpdGeneralInfoById(urlParams.requestId);
-        setRequest(loaded);
+        const workflowSteps = resolveWorkflowSteps(loaded);
+        const requestWithSteps: INpdRequestGeneralInfo = {
+          ...loaded,
+          WorkflowSteps: workflowSteps.length
+            ? workflowSteps
+            : loaded.WorkflowSteps || [],
+        };
+        setRequest(requestWithSteps);
 
-        let workflowSteps: any[] = [];
-        try {
-          if (
-            typeof loaded.WorkFlowJSON === "string" &&
-            loaded.WorkFlowJSON.trim()
-          ) {
-            const parsed = JSON.parse(loaded.WorkFlowJSON);
-            if (Array.isArray(parsed)) {
-              workflowSteps = parsed;
-            }
-          }
-        } catch {
-          workflowSteps = [];
-        }
-        if (!workflowSteps.length && Array.isArray(loaded.WorkflowSteps)) {
-          workflowSteps = loaded.WorkflowSteps;
-        }
-
-        const currentUserEmail = (
+        const currentUserEmail = normalizeEmail(
           actorEmail ||
-          context.pageContext.user?.email ||
-          context.pageContext.user?.loginName ||
-          ""
-        )
-          .toLowerCase()
-          .trim();
-
-        const getStepEmail = (w: any): string =>
-          String(w?.uEmail || w?.UserEmail || "").toLowerCase().trim();
-        const getStepStatus = (w: any): string =>
-          String(w?.status || w?.Status || "").trim();
-
-        const alreadyCompleted = isNpdEmailActionAlreadyCompleted(loaded);
-        const userCompleted = workflowSteps.some(
-          (w: any) =>
-            getStepEmail(w) === currentUserEmail &&
-            isTerminalWorkflowStatus(getStepStatus(w)),
+            context.pageContext.user?.email ||
+            context.pageContext.user?.loginName ||
+            "",
         );
 
-        const pendingRole = getFirstPendingApproverRole(loaded.WorkflowSteps);
+        const alreadyCompleted =
+          isNpdEmailActionAlreadyCompleted(requestWithSteps);
+        const userCompleted = hasUserCompletedWorkflowStep(
+          requestWithSteps.WorkflowSteps,
+          currentUserEmail,
+        );
+
+        const pendingRole = getFirstPendingApproverRole(
+          requestWithSteps.WorkflowSteps,
+        );
         const actorRole =
           resolveActorWorkflowRole(
-            loaded.WorkflowSteps,
+            requestWithSteps.WorkflowSteps,
             currentUserEmail,
             assignedRoles,
           ) || pendingRole;
@@ -323,47 +395,23 @@ export function useNpdApproverMailController(
           !userCompleted &&
           Boolean(pendingRole) &&
           userCanActOnPendingWorkflow(
-            loaded.WorkflowSteps,
+            requestWithSteps.WorkflowSteps,
             currentUserEmail,
             assignedRoles,
           ) &&
-          canActOnPendingNpdStep(access, loaded.Brand, actorRole);
+          canActOnPendingNpdStep(access, requestWithSteps.Brand, actorRole);
 
         if (!canAct) {
           setViewState("alreadyCompleted");
           setResultTitle("");
-
-          if (
-            isSubmittedRef.current ||
-            userCompleted ||
-            alreadyCompleted
-          ) {
-            setResultMessage(
-              isSubmittedRef.current
-                ? "Your response for this request has been submitted successfully."
-                : "Your response for this request has already been submitted.",
-            );
-          } else if (
-            workflowSteps.some(
-              (_w: any) =>
-                getStepEmail(_w) === currentUserEmail &&
-                getStepStatus(_w).toLowerCase() === "pending",
-            )
-          ) {
-            setResultMessage(
-              "No action is required from you for this request at the moment.",
-            );
-          } else if (
-            !workflowSteps.some(
-              (_w: any) => getStepEmail(_w) === currentUserEmail,
-            )
-          ) {
-            setResultMessage("You are not part of this request workflow.");
-          } else {
-            setResultMessage(
-              "No action is required from you for this request at the moment.",
-            );
-          }
+          setResultMessage(
+            resolveNpdApproverMailDeniedMessage({
+              workflowSteps: requestWithSteps.WorkflowSteps,
+              userEmail: currentUserEmail,
+              userCompletedOwnStep: userCompleted,
+              justSubmitted: isSubmittedRef.current,
+            }),
+          );
           return;
         }
 
@@ -372,7 +420,7 @@ export function useNpdApproverMailController(
             return;
           }
           approveStartedRef.current = true;
-          submitAction(loaded, "Approve", defaultComments("Approve"));
+          submitAction(requestWithSteps, "Approve", defaultComments("Approve"));
           return;
         }
 

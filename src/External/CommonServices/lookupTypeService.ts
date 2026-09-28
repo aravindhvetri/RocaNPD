@@ -46,7 +46,24 @@ export async function fetchActiveLookupTypes(): Promise<ILookupType[]> {
   return rows.map(mapLookupType).filter(isActiveRecord);
 }
 
+async function assertLookupTypeNotDuplicate(
+  title: string,
+  editingId?: number,
+): Promise<void> {
+  const existing = await fetchActiveLookupTypes();
+  const titleKey = title.trim().toLowerCase();
+  const isDuplicate = existing.some(
+    (item) =>
+      item.Id !== editingId &&
+      item.Title.trim().toLowerCase() === titleKey,
+  );
+  if (isDuplicate) {
+    throw new Error(`Lookup Type Name already exists.`);
+  }
+}
+
 export async function createLookupType(title: string): Promise<void> {
+  await assertLookupTypeNotDuplicate(title);
   await SPServices.SPAddItem({
     Listname: LIST_NAME(),
     RequestJSON: {
@@ -57,6 +74,7 @@ export async function createLookupType(title: string): Promise<void> {
 }
 
 export async function updateLookupType(id: number, title: string): Promise<void> {
+  await assertLookupTypeNotDuplicate(title, id);
   await SPServices.SPUpdateItem({
     Listname: LIST_NAME(),
     ID: id,

@@ -13,19 +13,20 @@
   line-height: 1.35;
   border: none;
   border-radius: $roca-radius-sm;
-  transition: background-color 0.15s ease, color 0.15s ease;
 
   &:hover {
     background-color: $roca-color-nav-item-hover-bg;
     color: $roca-color-nav-text !important;
     text-decoration: none;
+    transition: background-color 0.15s ease;
   }
 }
 
 .itemActive {
-  background-color: $roca-color-nav-item-selected-bg;
+  background-color: $roca-color-nav-item-selected-bg !important;
   color: $roca-color-nav-item-selected-text !important;
   font-weight: 700;
+  transition: none !important;
 
   &::before {
     content: '';
@@ -36,16 +37,19 @@
     width: 0.25rem;
     border-radius: 0 2px 2px 0;
     background-color: var(--nav-selected-bar-color, $roca-color-nav-item-selected-bar);
+    transition: none !important;
   }
 
   .iconDefault,
   .label {
     color: $roca-color-nav-item-selected-text !important;
+    transition: none !important;
   }
 
   &:hover {
-    background-color: $roca-color-nav-item-selected-bg;
+    background-color: $roca-color-nav-item-selected-bg !important;
     color: $roca-color-nav-item-selected-text !important;
+    transition: none !important;
   }
 }
 

@@ -11,6 +11,8 @@ export type NpdRequestFooterMode =
 export interface INpdRequestFormFooterProps {
   saving?: boolean;
   mode: NpdRequestFooterMode;
+  /** When true (Rework status), primary submit shows Resubmit instead of Submit Request. */
+  isResubmit?: boolean;
   onCancel: () => void;
   onSaveDraft: () => void;
   onSubmit: () => void;
@@ -22,6 +24,7 @@ export interface INpdRequestFormFooterProps {
 const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
   saving = false,
   mode,
+  isResubmit = false,
   onCancel,
   onSaveDraft,
   onSubmit,
@@ -52,7 +55,7 @@ const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
           onClick={onSaveDraft}
         />
         <Button
-          label="SUBMIT REQUEST"
+          label={isResubmit ? "RESUBMIT" : "SUBMIT REQUEST"}
           icon="pi pi-send"
           size="sm"
           className={styles.submitButton}

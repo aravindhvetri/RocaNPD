@@ -1,7 +1,14 @@
 import * as React from "react";
-import { NavLink } from "react-router-dom";
-import type { INavItemConfig, NavIconTone } from "../../../../../../External/CommonServices/navigationConfig";
+import { NavLink, useLocation } from "react-router-dom";
+import type {
+  INavItemConfig,
+  NavIconTone,
+} from "../../../../../../External/CommonServices/navigationConfig";
+import { buildNavHref } from "../../../../../../External/CommonServices/navigationConfig";
+import { useAppSelector } from "../../../../../../store/hooks";
+import { findActiveNavItemId } from "../navActiveHelper";
 import { getSelectedBarToneClass } from "../navSelectedBarTone";
+import { useFilteredNavigation } from "../useFilteredNavigation";
 import styles from "./NavCompactItem.module.scss";
 
 export interface INavCompactItemProps {
@@ -17,17 +24,35 @@ const iconToneClass: Record<NavIconTone, string> = {
 };
 
 const NavCompactItem: React.FC<INavCompactItemProps> = ({ item, onNavigate }) => {
+  const location = useLocation();
+  const activeNavItemId = useAppSelector((state) => state.ui.activeNavItemId);
+  const navigation = useFilteredNavigation();
+  const accessibleItems = React.useMemo(
+    () => navigation.flatMap((section) => section.items),
+    [navigation],
+  );
   const tone = item.iconTone ?? "default";
+  const href = buildNavHref(item.route, item.viewRole);
+
+  const resolvedActiveId =
+    findActiveNavItemId(
+      location.pathname,
+      location.search,
+      accessibleItems,
+    ) || activeNavItemId;
+  const isSelected = resolvedActiveId
+    ? resolvedActiveId === item.id
+    : location.pathname === item.route;
 
   return (
     <NavLink
-      to={item.route}
+      to={href}
       end
       title={item.label}
       aria-label={item.label}
-      className={({ isActive }) =>
-        `${styles.link} ${isActive ? styles.linkActive : ""} ${
-          isActive ? getSelectedBarToneClass(item) : ""
+      className={() =>
+        `${styles.link} ${isSelected ? styles.linkActive : ""} ${
+          isSelected ? getSelectedBarToneClass(item) : ""
         }`
       }
       onClick={() => onNavigate(item.id)}

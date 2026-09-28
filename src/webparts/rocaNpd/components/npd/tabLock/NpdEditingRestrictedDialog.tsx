@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import type { INpdTabRestriction } from "../../../../../External/CommonServices/npdRequestTabSync";
 import {
   formatNpdTabLockMessage,
@@ -101,8 +102,11 @@ function messageSuffix(restriction: INpdTabRestriction): string {
   return full.startsWith(label) ? full.slice(label.length) : ` ${full}`;
 }
 
-export function goToNpdDashboard(navigate: (path: string) => void): void {
-  navigate(Config.Routes.NpdAll);
+export function goToNpdDashboard(
+  navigate: (path: string) => void,
+  viewAs?: string | null,
+): void {
+  navigate(buildNavHref(Config.Routes.NpdAll, viewAs));
 }
 
 export default NpdEditingRestrictedDialog;

@@ -1,7 +1,9 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type { NpdWorkflowAction } from "../../../../../External/CommonServices/Interface";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
+import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import type { NpdRequestFooterMode } from "./NpdRequestFormFooter";
 import { defaultEmailActionComments } from "./npdRequestFormHelpers";
 
@@ -16,6 +18,7 @@ export function useNpdEmailAction(params: {
   onApply: (action: NpdWorkflowAction, comments: string) => void;
 }): void {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const handledRef = React.useRef(false);
   const {
     editId,
@@ -45,7 +48,12 @@ export function useNpdEmailAction(params: {
 
     if (loadStatus === "idle") {
       handledRef.current = true;
-      navigate(Config.Routes.NpdPending, { replace: true });
+      const viewAs = parseViewAsRole(
+        searchParams.get(Config.NpdFormQuery.ViewAs),
+      );
+      navigate(buildNavHref(Config.Routes.NpdPending, viewAs), {
+        replace: true,
+      });
     }
   }, [
     editId,
@@ -57,5 +65,6 @@ export function useNpdEmailAction(params: {
     recordReady,
     requestId,
     saveStatus,
+    searchParams,
   ]);
 }

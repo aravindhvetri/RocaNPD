@@ -22,19 +22,25 @@ function getErrorMessage(error: unknown): string {
   return "An unexpected error occurred.";
 }
 
-function getHeaderPayload(state: RootState) {
+function getHeaderPayload(state: RootState, isDraft = false) {
   const { npdForm } = state;
   const { brand, materialType, plantSource } = npdForm.generalInfo;
 
-  if (!brand || !materialType || !plantSource) {
-    return null;
+  if (isDraft) {
+    if (!brand || !materialType) {
+      return null;
+    }
+  } else {
+    if (!brand || !materialType || !plantSource) {
+      return null;
+    }
   }
 
   return {
     id: npdForm.requestId,
     brand,
     materialType,
-    plantSource,
+    plantSource: plantSource || "",
     existingStatus: npdForm.requestStatus,
     existingTitle: npdForm.requestTitle,
   };
@@ -49,23 +55,47 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
   async (_, { getState, rejectWithValue }) => {
     try {
       const app = getState().app;
-      if (app.roleStatus === "succeeded") {
+      const { siteUrl, userEmail, userLoginName } = app;
+
+      // 1. Direct query from ApproversMaster matching current user
+      if (userEmail || userLoginName) {
+        try {
+          const directOptions =
+            await npdFormDataService.fetchInitiatorBrandOptions(
+              userEmail,
+              siteUrl || undefined,
+              userLoginName || undefined,
+            );
+          if (directOptions && directOptions.length > 0) {
+            return directOptions;
+          }
+        } catch (fetchErr) {
+          console.warn("Direct fetchInitiatorBrandOptions failed:", fetchErr);
+        }
+      }
+
+      // 2. Fall back to resolved app.npdInitiatorBrands
+      if (app.npdInitiatorBrands && app.npdInitiatorBrands.length > 0) {
         return app.npdInitiatorBrands.map((title) => ({
           label: title,
           value: title,
         }));
       }
 
-      const { siteUrl, userEmail, userLoginName } = app;
-      if (!userEmail && !userLoginName) {
-        return [];
+      // 3. Fall back to BrandMaster if available
+      try {
+        const fallbackBrands =
+          await npdFormDataService.fetchActiveBrandMasterOptions(
+            siteUrl || undefined,
+          );
+        if (fallbackBrands && fallbackBrands.length > 0) {
+          return fallbackBrands;
+        }
+      } catch {
+        // Ignore fallback error
       }
 
-      return await npdFormDataService.fetchInitiatorBrandOptions(
-        userEmail,
-        siteUrl || undefined,
-        userLoginName || undefined,
-      );
+      return [];
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
@@ -186,10 +216,10 @@ export const saveNpdDraft = createAsyncThunk<
 >("npdForm/saveDraft", async (items, { getState, rejectWithValue }) => {
   try {
     const state = getState();
-    const payload = getHeaderPayload(state);
+    const payload = getHeaderPayload(state, true);
     if (!payload) {
       return rejectWithValue(
-        "Brand (MG1), Material Type, and Plant / Source are required.",
+        "Brand (MG1) and Material Type are required.",
       );
     }
 
@@ -206,9 +236,9 @@ export const saveNpdDraft = createAsyncThunk<
 
 export const submitNpdRequest = createAsyncThunk<
   INpdRequestGeneralInfo,
-  INpdItemDetailRecord[],
+  INpdItemDetailRecord[] | { items: INpdItemDetailRecord[]; comments?: string },
   { rejectValue: string; state: RootState }
->("npdForm/submitRequest", async (items, { getState, rejectWithValue }) => {
+>("npdForm/submitRequest", async (arg, { getState, rejectWithValue }) => {
   try {
     const state = getState();
     const payload = getHeaderPayload(state);
@@ -218,11 +248,15 @@ export const submitNpdRequest = createAsyncThunk<
       );
     }
 
+    const items = Array.isArray(arg) ? arg : arg.items;
+    const comments = Array.isArray(arg) ? undefined : arg.comments;
+
     return await npdRequestGeneralInfoService.submitNpdRequest(
       payload,
       items,
       state.app.userEmail || state.app.userLoginName,
       state.app.siteUrl || undefined,
+      comments,
     );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));

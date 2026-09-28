@@ -194,7 +194,7 @@ function buildMaterialGroupEmailHtml(params: {
   return `
 <table width="100%" cellpadding="0" cellspacing="0" style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#222;border-collapse:collapse;">
   <tr>
-    <td style="background:${theme.HeaderBackground};padding:12px 20px;">
+    <td style="background:${theme.HeaderBackground};padding:12px 20px;border-radius:6px">
       <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
         <tr>
           <td style="color:${theme.HeaderColor};font-weight:600;font-size:16px;vertical-align:middle;">Material Group Request</td>
@@ -234,7 +234,7 @@ function buildMaterialGroupEmailHtml(params: {
         ${commentsRow}
       </table>
       <p style="margin:0 0 16px;">Please <a href="${escapeHtml(params.loginUrl)}">${escapeHtml(params.loginLabel || "log in")}</a> to the NPD system to continue.</p>
-      <p style="margin:24px 0 4px;">Regards,<br/>NPD System</p>
+      <p style="margin:24px 0 4px;">Thanks & Regards,<br/>NPD System</p>
       <p style="margin:12px 0 0;"><strong>Note:</strong> This is an auto-generated email from the NPD System. Please do not reply directly to this message</p>
     </td>
   </tr>
@@ -294,7 +294,7 @@ export async function sendMaterialGroupSubmitNotification(
   const body = buildMaterialGroupEmailHtml({
     greetingName,
     introText:
-      "A new Material Group request has been submitted and requires your review and SAP codification.",
+      "A new Material Group request has been submitted and requires your review.",
     requestId: params.requestId,
     status: Config.MaterialGroupStatus.Pending,
     initiatorName: params.initiatorName || params.initiatorEmail || "Initiator",
@@ -315,13 +315,13 @@ export interface IMaterialGroupInitiatorNotificationParams {
   initiatorEmail: string;
   configuredMasters: string[];
   entriesCount: number;
-  action: "Rework" | "Rejected";
+  action: "Rework" | "Rejected" | "Completed";
   comments: string;
   submittedDate?: string;
 }
 
 /**
- * Notifies the Initiator when Consultant sends Rework or Rejects the request.
+ * Notifies the Initiator when the last approver Completes, Reworks, or Rejects.
  */
 export async function sendMaterialGroupInitiatorNotification(
   params: IMaterialGroupInitiatorNotificationParams,
@@ -335,19 +335,28 @@ export async function sendMaterialGroupInitiatorNotification(
   }
 
   const isRework = params.action === "Rework";
+  const isCompleted = params.action === "Completed";
   const greetingName =
     params.initiatorName?.trim() || greetingNameFromEmail(to[0]);
   const loginUrl = isRework
     ? buildMgReworkEditUrl(params.requestListItemId)
-    : buildMgRejectedViewUrl(params.requestListItemId);
+    : isCompleted
+      ? buildMgHashUrl(Config.Routes.MgCompleted)
+      : buildMgRejectedViewUrl(params.requestListItemId);
   const fallbackListUrl = isRework
     ? buildMgDraftReworkUrl()
-    : buildMgHashUrl(Config.Routes.MgAll);
+    : isCompleted
+      ? buildMgHashUrl(Config.Routes.MgCompleted)
+      : buildMgHashUrl(Config.Routes.MgAll);
 
-  const subject = `${params.requestId} — ${params.action}`;
+  const subject = `${params.requestId} — ${
+    isCompleted ? "Completed" : params.action
+  }`;
   const introText = isRework
     ? "A Material Group request has been sent back for rework."
-    : "A Material Group request has been rejected.";
+    : isCompleted
+      ? "A Material Group request has been completed."
+      : "A Material Group request has been rejected.";
 
   const body = buildMaterialGroupEmailHtml({
     greetingName,
@@ -355,14 +364,20 @@ export async function sendMaterialGroupInitiatorNotification(
     requestId: params.requestId,
     status: isRework
       ? Config.MaterialGroupStatus.Rework
-      : Config.MaterialGroupStatus.Rejected,
+      : isCompleted
+        ? Config.MaterialGroupStatus.Completed
+        : Config.MaterialGroupStatus.Rejected,
     initiatorName: params.initiatorName || params.initiatorEmail || "Initiator",
     submittedDate: params.submittedDate,
     configuredMasters: params.configuredMasters,
     entriesCount: params.entriesCount,
     comments: params.comments,
     loginUrl: loginUrl || fallbackListUrl,
-    loginLabel: isRework ? "open this request for rework" : "view this request",
+    loginLabel: isRework
+      ? "open this request for rework"
+      : isCompleted
+        ? "view completed requests"
+        : "view this request",
   });
 
   await sendMgMail({ to, subject, body });

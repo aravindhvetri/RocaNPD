@@ -151,8 +151,12 @@ function resolveWorkflowStatusLabel(
     return WorkflowStepStatus.Rejected;
   }
 
-  if (status.toLowerCase() === WorkflowStepStatus.Rework.toLowerCase()) {
-    return RequestStatus.Rework;
+  if (
+    status.toLowerCase() === WorkflowStepStatus.Rework.toLowerCase() ||
+    status.toLowerCase() === "rework" ||
+    status.toLowerCase() === "in rework"
+  ) {
+    return WorkflowStepStatus.Pending;
   }
 
   return status;

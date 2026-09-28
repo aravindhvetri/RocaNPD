@@ -41,6 +41,7 @@ const InputTextarea: React.FC<IInputTextareaProps> = ({
       autoComplete="off"
       autoCorrect="off"
       spellCheck={false}
+      style={{ resize: "none" }}
       className={`w-full ${error ? "p-invalid" : ""}`}
       data-testid={testId}
       onChange={(e) => onChange(e.target.value)}

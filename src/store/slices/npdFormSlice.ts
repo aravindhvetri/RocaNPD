@@ -217,11 +217,25 @@ const npdFormSlice = createSlice({
         state.requestStatus = action.payload.Status;
         state.requestTitle = action.payload.Title;
         state.workflowSteps = action.payload.WorkflowSteps ?? [];
+        const fetchedBrand = action.payload.Brand || null;
         state.generalInfo = {
-          brand: action.payload.Brand || null,
+          brand: fetchedBrand,
           materialType: action.payload.MaterialType || null,
           plantSource: action.payload.Plant || null,
         };
+        if (
+          fetchedBrand &&
+          !state.brandOptions.some(
+            (opt) =>
+              String(opt.value ?? "").toLowerCase() ===
+              fetchedBrand.toLowerCase(),
+          )
+        ) {
+          state.brandOptions = [
+            ...state.brandOptions,
+            { label: fetchedBrand, value: fetchedBrand },
+          ];
+        }
         state.otherDetails = mapOtherDetailsFromRequest(action.payload);
       })
       .addCase(fetchNpdGeneralInfoById.rejected, (state, action) => {
@@ -248,11 +262,25 @@ const npdFormSlice = createSlice({
         state.requestStatus = request.Status;
         state.requestTitle = request.Title;
         state.workflowSteps = request.WorkflowSteps ?? [];
+        const hydratedBrand = request.Brand || null;
         state.generalInfo = {
-          brand: request.Brand || null,
+          brand: hydratedBrand,
           materialType: request.MaterialType || null,
           plantSource: request.Plant || null,
         };
+        if (
+          hydratedBrand &&
+          !state.brandOptions.some(
+            (opt) =>
+              String(opt.value ?? "").toLowerCase() ===
+              hydratedBrand.toLowerCase(),
+          )
+        ) {
+          state.brandOptions = [
+            ...state.brandOptions,
+            { label: hydratedBrand, value: hydratedBrand },
+          ];
+        }
         state.otherDetails = mapOtherDetailsFromRequest(request);
       })
       .addCase(hydrateNpdRequestForm.rejected, (state, action) => {

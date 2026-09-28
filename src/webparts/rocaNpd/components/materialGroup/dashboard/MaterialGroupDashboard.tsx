@@ -1,8 +1,10 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type { IMaterialGroupGroupedRequest } from "../../../../../External/CommonServices/Interface";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
+import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import { fetchGroupedMaterialGroupRequestsThunk } from "../../../../../store/thunks/materialGroupThunks";
 import {
@@ -25,29 +27,47 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toastRef = React.useRef<PrimeToast>(null);
 
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const appState = useAppSelector((state) => state.app);
   const mgState = useAppSelector((state) => state.materialGroup);
+  const viewAs =
+    parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) ||
+    undefined;
 
-  const isConsultant = appState.assignedRoles.some(
-    (r) => r.trim().toLowerCase() === Config.Roles.Consultant.toLowerCase(),
-  );
-  const isAdmin = appState.assignedRoles.some(
-    (r) => r.trim().toLowerCase() === Config.Roles.Admin.toLowerCase(),
-  );
-  const isInitiator = appState.assignedRoles.some(
-    (r) => r.trim().toLowerCase() === Config.Roles.Initiator.toLowerCase(),
-  );
-  const showNewRequestButton = isInitiator && !isConsultant;
+  const isConsultantView =
+    (viewAs || "").toLowerCase() === Config.Roles.Consultant.toLowerCase() ||
+    (!viewAs &&
+      appState.assignedRoles.some(
+        (r) => r.trim().toLowerCase() === Config.Roles.Consultant.toLowerCase(),
+      ));
+  const isAdminView =
+    (viewAs || "").toLowerCase() === Config.Roles.Admin.toLowerCase() ||
+    (!viewAs &&
+      appState.assignedRoles.some(
+        (r) => r.trim().toLowerCase() === Config.Roles.Admin.toLowerCase(),
+      ) &&
+      !isConsultantView);
+  const isInitiatorView =
+    (viewAs || "").toLowerCase() === Config.Roles.Initiator.toLowerCase() ||
+    (!viewAs &&
+      !isConsultantView &&
+      !isAdminView &&
+      appState.assignedRoles.some(
+        (r) => r.trim().toLowerCase() === Config.Roles.Initiator.toLowerCase(),
+      ));
+  const showNewRequestButton = isInitiatorView && !isConsultantView && !isAdminView;
 
   React.useEffect(() => {
     if (appState.initialized) {
-      void dispatch(fetchGroupedMaterialGroupRequestsThunk({ variant }));
+      void dispatch(
+        fetchGroupedMaterialGroupRequestsThunk({ variant, viewRole: viewAs }),
+      );
     }
-  }, [appState.initialized, dispatch, variant]);
+  }, [appState.initialized, dispatch, variant, viewAs]);
 
   const title = React.useMemo(() => {
     switch (variant) {
@@ -79,36 +99,62 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
     });
   }, [mgState.groupedRequests, searchQuery]);
 
+  const appendViewAs = React.useCallback(
+    (path: string): string => {
+      if (!viewAs) {
+        return path;
+      }
+      const [base, query = ""] = path.split("?");
+      const params = new URLSearchParams(query);
+      params.set(Config.NpdFormQuery.ViewAs, viewAs);
+      return `${base}?${params.toString()}`;
+    },
+    [viewAs],
+  );
+
   const handleView = React.useCallback(
     (request: IMaterialGroupGroupedRequest) => {
-      navigate(`${Config.Routes.MgNew}?id=${request.id}&mode=view`);
+      navigate(
+        appendViewAs(
+          `${Config.Routes.MgNew}?id=${request.id}&mode=view&from=${variant}`,
+        ),
+      );
     },
-    [navigate],
+    [appendViewAs, navigate, variant],
   );
 
   const handleEdit = React.useCallback(
     (request: IMaterialGroupGroupedRequest) => {
-      if (isConsultant && request.status === Config.MaterialGroupStatus.Pending) {
+      if (
+        isConsultantView &&
+        request.status === Config.MaterialGroupStatus.Pending
+      ) {
         navigate(
-          `${Config.Routes.MgNew}?id=${request.id}&mode=consultant-edit`,
+          appendViewAs(
+            `${Config.Routes.MgNew}?id=${request.id}&mode=consultant-edit&from=${variant}`,
+          ),
         );
       } else {
-        navigate(`${Config.Routes.MgNew}?id=${request.id}&mode=edit`);
+        navigate(
+          appendViewAs(
+            `${Config.Routes.MgNew}?id=${request.id}&mode=edit&from=${variant}`,
+          ),
+        );
       }
     },
-    [isConsultant, navigate],
+    [appendViewAs, isConsultantView, navigate, variant],
   );
 
   const handleNewRequest = React.useCallback(() => {
-    navigate(Config.Routes.MgNew);
-  }, [navigate]);
+    navigate(buildNavHref(Config.Routes.MgNew, viewAs));
+  }, [navigate, viewAs]);
 
   return (
     <div className={styles.page}>
       <Toast ref={toastRef} />
       <LoaderOverlay
         visible={mgState.groupedRequestsStatus === "loading"}
-        label="Loading requests..."
+        label="Processing"
       />
 
       <div className={styles.toolbar}>
@@ -143,8 +189,8 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
             loading={false}
             currentUserEmail={appState.userEmail || appState.userLoginName}
             assignedRoles={appState.assignedRoles}
-            isConsultant={isConsultant}
-            isAdmin={isAdmin}
+            isConsultant={isConsultantView}
+            isAdmin={isAdminView}
             onView={handleView}
             onEdit={handleEdit}
           />

@@ -1,34 +1,25 @@
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Config } from "../../../../../External/CommonServices/Config";
-import { NAV_SECTIONS } from "../../../../../External/CommonServices/navigationConfig";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import {
+  getDefaultNavTarget,
   getDefaultRoute,
+  parseViewAsRole,
 } from "../../../../../External/CommonServices/permissionService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import { selectResolvedAccess } from "../../../../../store/slices/appSlice";
 import { setActiveNavItem } from "../../../../../store/slices/uiSlice";
-
-const findNavItemIdByPath = (pathname: string): string | undefined => {
-  for (const section of NAV_SECTIONS) {
-    const match = section.items.find((item) => item.route === pathname);
-    if (match) {
-      return match.id;
-    }
-  }
-  return undefined;
-};
+import {
+  findAccessibleNavItem,
+  findActiveNavItemId,
+} from "../SideNavigation/navActiveHelper";
+import { useFilteredNavigation } from "../SideNavigation/useFilteredNavigation";
 
 /**
- * Keeps Redux active nav item in sync with the current route.
- *
- * On every location change, it maps the pathname to a nav item ID and
- * dispatches setActiveNavItem so the sidebar highlights the correct item.
- *
- * On initial load (once roles are resolved), if the user is sitting on "/" or
- * "/unauthorized" (e.g. because no previous route was loaded yet), it
- * navigates them to the correct default route based on their access — ensuring
- * they never see "Access denied" simply because of the initial page load.
+ * Keeps Redux active nav item in sync with the current route and query parameters.
+ * Also corrects stale `?as=` values that don't match the user's visible role sections,
+ * and lands on the first All Requests tab with that item selected.
  */
 const NavRouteSync: React.FC = () => {
   const location = useLocation();
@@ -37,19 +28,32 @@ const NavRouteSync: React.FC = () => {
   const activeNavItemId = useAppSelector((state) => state.ui.activeNavItemId);
   const initialized = useAppSelector((state) => state.app.initialized);
   const access = useAppSelector(selectResolvedAccess);
+  const navigation = useFilteredNavigation();
+  const accessibleItems = React.useMemo(
+    () => navigation.flatMap((section) => section.items),
+    [navigation],
+  );
 
-  // Sync active nav item with the current route on every path change.
+  // Sync active nav item with the current route and query on every path change.
   React.useEffect(() => {
-    const matchedId = findNavItemIdByPath(location.pathname);
+    const matchedId = findActiveNavItemId(
+      location.pathname,
+      location.search,
+      accessibleItems,
+    );
     if (matchedId && matchedId !== activeNavItemId) {
       dispatch(setActiveNavItem(matchedId));
     }
-  }, [location.pathname, activeNavItemId, dispatch]);
+  }, [
+    accessibleItems,
+    activeNavItemId,
+    dispatch,
+    location.pathname,
+    location.search,
+  ]);
 
-  // Once roles are fully resolved, if the user is on the home or unauthorized
-  // page without a valid nav-item match, redirect to their correct default route.
-  // This covers the case where the user opens the app fresh (no hash/path) or
-  // was redirected to /unauthorized before roles finished loading.
+  // Once roles are resolved: default landing + fix invalid/stale `?as=` so the
+  // visible All Requests (or matching) nav item is selected.
   React.useEffect(() => {
     if (!initialized) {
       return;
@@ -60,20 +64,72 @@ const NavRouteSync: React.FC = () => {
       location.pathname === Config.Routes.Unauthorized ||
       location.pathname === "/";
 
-    const hasNoNavMatch = !findNavItemIdByPath(location.pathname);
+    const accessibleItem = findAccessibleNavItem(
+      location.pathname,
+      location.search,
+      accessibleItems,
+    );
+    const hasNoNavMatch = !accessibleItem;
+
+    const viewAs = parseViewAsRole(
+      new URLSearchParams(location.search).get(Config.NpdFormQuery.ViewAs),
+    );
+    const needsViewAs =
+      (location.pathname.startsWith("/npd/") ||
+        location.pathname.startsWith("/mg/")) &&
+      location.pathname !== Config.Routes.Reports;
+    // Only rewrite when `?as=` is present but wrong for the visible section.
+    // Missing `?as=` must not invent the first section (Initiator) after toast clear.
+    const staleViewAs =
+      needsViewAs &&
+      Boolean(viewAs) &&
+      Boolean(accessibleItem) &&
+      accessibleItem?.viewRole !== viewAs;
 
     if (isHomeOrUnauthorized || hasNoNavMatch) {
-      const defaultRoute = getDefaultRoute(access);
+      const defaultTarget = getDefaultNavTarget(access);
+      const defaultRoute = defaultTarget?.href ?? getDefaultRoute(access);
       if (defaultRoute && defaultRoute !== Config.Routes.Unauthorized) {
-        const navItemId = findNavItemIdByPath(defaultRoute);
         navigate(defaultRoute, { replace: true });
-        if (navItemId) {
-          dispatch(setActiveNavItem(navItemId));
+        if (defaultTarget?.itemId) {
+          dispatch(setActiveNavItem(defaultTarget.itemId));
+        } else {
+          const navItemId = findActiveNavItemId(
+            defaultRoute,
+            undefined,
+            accessibleItems,
+          );
+          if (navItemId) {
+            dispatch(setActiveNavItem(navItemId));
+          }
         }
       }
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, access]);
+
+    if (staleViewAs && accessibleItem) {
+      const corrected = buildNavHref(
+        accessibleItem.route,
+        accessibleItem.viewRole,
+      );
+      const currentHref = `${location.pathname}${location.search || ""}`;
+      if (corrected !== currentHref) {
+        navigate(corrected, { replace: true });
+      }
+      if (accessibleItem.id !== activeNavItemId) {
+        dispatch(setActiveNavItem(accessibleItem.id));
+      }
+    }
+  }, [
+    access,
+    accessibleItems,
+    activeNavItemId,
+    dispatch,
+    initialized,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
 
   return null;
 };

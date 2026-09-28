@@ -61,28 +61,6 @@ export const saveMaterialGroupDraftThunk = createAsyncThunk<
       );
     }
 
-    // Validate that Description is filled for every entry row
-    for (const configId of selectedConfigIds) {
-      const configItem = configs.find((c) => c.id === configId);
-      const masterName = configItem ? configItem.title : `Master (${configId})`;
-      const rows = entriesByConfigId[configId] || [];
-
-      if (rows.length === 0) {
-        return rejectWithValue(
-          `Please add at least one entry for ${masterName}.`,
-        );
-      }
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row.description.trim()) {
-          return rejectWithValue(
-            `Description is required for ${masterName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
-          );
-        }
-      }
-    }
-
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);
 
     return await materialGroupService.saveMaterialGroupDraft({
@@ -101,9 +79,9 @@ export const saveMaterialGroupDraftThunk = createAsyncThunk<
 
 export const submitMaterialGroupRequestThunk = createAsyncThunk<
   { id: number; guid: string; requestId: string },
-  void,
+  string | { comments?: string } | void,
   { rejectValue: string; state: RootState }
->("materialGroup/submitRequest", async (_, { getState, rejectWithValue }) => {
+>("materialGroup/submitRequest", async (arg, { getState, rejectWithValue }) => {
   try {
     const {
       selectedConfigIds,
@@ -112,6 +90,7 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
       currentId,
       currentGuid,
       currentRequestId,
+      currentStatus,
     } = getState().materialGroup;
     const appState = getState().app;
 
@@ -145,6 +124,12 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
     }
 
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);
+    const comments =
+      typeof arg === "string"
+        ? arg
+        : arg && typeof arg === "object"
+          ? arg.comments
+          : undefined;
 
     return await materialGroupService.submitMaterialGroupRequest({
       id: targetId && targetId > 0 ? targetId : undefined,
@@ -156,6 +141,8 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
       actorId: appState.userId,
       masterTitles,
       existingRequestId: currentRequestId || undefined,
+      existingStatus: currentStatus || undefined,
+      comments,
     });
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
@@ -180,7 +167,11 @@ export const fetchMaterialGroupRequestByGuidThunk =
 
 export const fetchGroupedMaterialGroupRequestsThunk = createAsyncThunk<
   IMaterialGroupGroupedRequest[],
-  { variant?: "all" | "draft-rework" | "pending" | "completed" } | undefined,
+  | {
+      variant?: "all" | "draft-rework" | "pending" | "completed";
+      viewRole?: string | null;
+    }
+  | undefined,
   { rejectValue: string; state: RootState }
 >("materialGroup/fetchGrouped", async (params, { getState, rejectWithValue }) => {
   try {
@@ -190,6 +181,7 @@ export const fetchGroupedMaterialGroupRequestsThunk = createAsyncThunk<
       userId: appState.userId,
       userLoginName: appState.userLoginName,
       assignedRoles: appState.assignedRoles,
+      viewRole: params?.viewRole,
       variant: params?.variant ?? "all",
     });
   } catch (error) {

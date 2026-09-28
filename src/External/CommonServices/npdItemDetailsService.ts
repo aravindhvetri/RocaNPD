@@ -135,11 +135,15 @@ export async function fetchNpdItemDetailsByRequestId(
       },
     ],
     Orderby: "Id",
+    // SPServices.formatInputs currently inverts true→false (desc). Sort client-side
+    // so NPD Item Details always keep original add order (oldest Id first).
     Orderbydecorasc: true,
     Topcount: 5000,
   })) as Record<string, unknown>[];
 
-  return rows.map(mapItem);
+  return rows
+    .map(mapItem)
+    .sort((left, right) => left.sharePointId - right.sharePointId);
 }
 
 function isPersistableItem(record: INpdItemDetailRecord): boolean {

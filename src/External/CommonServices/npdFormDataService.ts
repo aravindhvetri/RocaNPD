@@ -1,6 +1,5 @@
 import {
   Config,
-  NpdApproverSystems,
   NpdPlantSourceFilters,
   NpdTradedPlantSources,
 } from "./Config";
@@ -8,10 +7,9 @@ import type { ISelectOption } from "./Interface";
 import {
   getLookupTitles,
   isDeletedApproverRow,
-  lookupTitlesInclude,
 } from "./lookupFieldUtils";
 import {
-  personFieldMatchesEmail,
+  approversRowMatchesEmail,
   resolveLoginEmail,
 } from "./personFieldUtils";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
@@ -20,10 +18,6 @@ import SPServices from "./SPServices";
 const APPROVERS_SELECT =
   "Id,IsDelete,System/Title,Role/Title,Brand/Title,Users/Id,Users/Title,Users/EMail";
 const APPROVERS_EXPAND = "System,Role,Brand,Users";
-
-function getRowUsers(row: Record<string, unknown>): unknown {
-  return row.Users ?? row.User;
-}
 
 function isActivePlantValue(value: unknown): boolean {
   if (value === true || value === 1) {
@@ -37,16 +31,30 @@ function isActivePlantValue(value: unknown): boolean {
   return normalized === "yes" || normalized === "true" || normalized === "1";
 }
 
+function isSystemMatchingNpd(systemValue: unknown): boolean {
+  const titles = getLookupTitles(systemValue);
+  // R-SEC03a: blank System does not count as NPD.
+  if (!titles.length) {
+    return false;
+  }
+  return titles.some((t) => {
+    const s = t.trim().toLowerCase();
+    return (
+      s === "npd" ||
+      s === "npd request" ||
+      s === "new product development" ||
+      s.includes("new product development")
+    );
+  });
+}
+
 /**
- * Brand options from ApproversMaster, in documented order:
- * 1. System Title = New Product Development
- * 2. Role Title = Initiator
- * 3. Users EMail = logged-in user email
- * 4. Brand Title values
+ * Brand options from ApproversMaster, matching the logged-in Initiator.
  */
 function mapDistinctBrandOptions(
   rows: Record<string, unknown>[],
   loginEmail: string,
+  userEmailById?: ReadonlyMap<number, string>,
 ): ISelectOption[] {
   const brandTitles = new Set<string>();
 
@@ -55,19 +63,28 @@ function mapDistinctBrandOptions(
       return;
     }
 
-    if (!lookupTitlesInclude(row.System, NpdApproverSystems.NewProductDevelopment)) {
+    if (!isSystemMatchingNpd(row.System)) {
       return;
     }
 
-    if (!lookupTitlesInclude(row.Role, Config.Roles.Initiator)) {
+    const roleTitles = getLookupTitles(row.Role);
+    const isInitiator = roleTitles.some((t) =>
+      t.trim().toLowerCase().includes("initiator"),
+    );
+    if (!isInitiator) {
       return;
     }
 
-    if (!personFieldMatchesEmail(getRowUsers(row), loginEmail)) {
+    if (!approversRowMatchesEmail(row, loginEmail, userEmailById)) {
       return;
     }
 
-    getLookupTitles(row.Brand).forEach((title) => brandTitles.add(title));
+    getLookupTitles(row.Brand).forEach((title) => {
+      const trimmed = title.trim();
+      if (trimmed) {
+        brandTitles.add(trimmed);
+      }
+    });
   });
 
   return Array.from(brandTitles)
@@ -87,15 +104,49 @@ export async function fetchInitiatorBrandOptions(
     return [];
   }
 
-  const rows = (await SPServices.getAnotherSPReadItems({
-    SiteUrl: rocaSiteUrl,
-    Listname: Config.RocaMasterListNames.ApproversMaster,
-    Select: APPROVERS_SELECT,
-    Expand: APPROVERS_EXPAND,
-    Topcount: 5000,
-  })) as Record<string, unknown>[];
+  const [rows, userEmailById] = await Promise.all([
+    SPServices.getAnotherSPReadItems({
+      SiteUrl: rocaSiteUrl,
+      Listname: Config.RocaMasterListNames.ApproversMaster,
+      Select: APPROVERS_SELECT,
+      Expand: APPROVERS_EXPAND,
+      Topcount: 5000,
+    }) as Promise<Record<string, unknown>[]>,
+    SPServices.getAnotherSPSiteUserEmailMap(rocaSiteUrl).catch(
+      () => new Map<number, string>(),
+    ),
+  ]);
 
-  return mapDistinctBrandOptions(rows, resolvedEmail);
+  return mapDistinctBrandOptions(rows, resolvedEmail, userEmailById);
+}
+
+export async function fetchActiveBrandMasterOptions(
+  contextSiteUrl?: string,
+): Promise<ISelectOption[]> {
+  try {
+    const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
+    const rows = (await SPServices.getAnotherSPReadItems({
+      SiteUrl: rocaSiteUrl,
+      Listname: Config.RocaMasterListNames.BrandMaster,
+      Select: "Id,Title,IsActive",
+      Orderby: "Title",
+      Orderbydecorasc: true,
+      Topcount: 5000,
+    })) as Record<string, unknown>[];
+
+    const brands = new Set<string>();
+    rows.forEach((r) => {
+      const title = String(r.Title ?? "").trim();
+      if (title && isActivePlantValue(r.IsActive)) {
+        brands.add(title);
+      }
+    });
+    return Array.from(brands)
+      .sort((a, b) => a.localeCompare(b))
+      .map((b) => ({ label: b, value: b }));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchFinishedProductPlantSourceOptions(

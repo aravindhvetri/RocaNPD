@@ -1,6 +1,10 @@
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { ILookupType } from "../../../../../External/CommonServices/Interface";
 
+function normalizeLookupTypeTitle(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function validateLookupTypeTitle(
   title: string,
   existingItems: ILookupType[],
@@ -16,10 +20,11 @@ export function validateLookupTypeTitle(
     return `${FieldLabels.LookupTypeName} must be 255 characters or less.`;
   }
 
+  const titleKey = normalizeLookupTypeTitle(trimmed);
   const isDuplicate = existingItems.some(
     (item) =>
       item.Id !== editingId &&
-      item.Title.trim().toLowerCase() === trimmed.toLowerCase(),
+      normalizeLookupTypeTitle(item.Title) === titleKey,
   );
 
   if (isDuplicate) {

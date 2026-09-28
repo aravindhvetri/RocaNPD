@@ -2,6 +2,7 @@ import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
+import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
   addRow,
@@ -86,10 +87,9 @@ export function useMaterialGroupFormController(
     );
   });
 
-  const approverRemarksLabel = React.useMemo(
-    () => getApproverRemarksLabel(appState.assignedRoles),
-    [appState.assignedRoles],
-  );
+  const isRework =
+    (mgState.currentStatus || "").trim().toLowerCase() === "rework" ||
+    (mgState.currentStatus || "").trim().toLowerCase() === "in rework";
 
   // Compute active mode
   const mode: MaterialGroupFormMode = React.useMemo(() => {
@@ -113,7 +113,13 @@ export function useMaterialGroupFormController(
     return "create";
   }, [urlMode, urlId, isConsultant, mgState.currentStatus]);
 
-  const showApproverRemarks = mode === "consultant-edit" && isApprover;
+  const approverRemarksLabel = React.useMemo(
+    () => getApproverRemarksLabel(appState.assignedRoles),
+    [appState.assignedRoles],
+  );
+
+  const showApproverRemarks =
+    mode === "consultant-edit" && isApprover;
 
   const [approverRemarks, setApproverRemarks] = React.useState("");
 
@@ -203,8 +209,18 @@ export function useMaterialGroupFormController(
 
   const handleCancel = React.useCallback(() => {
     dispatch(resetMaterialGroupForm());
-    navigate(Config.Routes.MgAll);
-  }, [dispatch, navigate]);
+    const from = (searchParams.get("from") ?? "").trim().toLowerCase();
+    const viewAs = searchParams.get(Config.NpdFormQuery.ViewAs);
+    let route = Config.Routes.MgAll;
+    if (from === "draft-rework" || from === "draft") {
+      route = Config.Routes.MgDraftRework;
+    } else if (from === "pending") {
+      route = Config.Routes.MgPending;
+    } else if (from === "completed") {
+      route = Config.Routes.MgCompleted;
+    }
+    navigate(buildNavHref(route, viewAs));
+  }, [dispatch, navigate, searchParams]);
 
   const validateEntries = React.useCallback(
     (isSubmitting: boolean = false): boolean => {
@@ -215,6 +231,11 @@ export function useMaterialGroupFormController(
           "Validation",
         );
         return false;
+      }
+
+      // For Save Draft, selecting at least one option in Select Masters to Configure is sufficient
+      if (!isSubmitting) {
+        return true;
       }
 
       for (const configId of mgState.selectedConfigIds) {
@@ -276,19 +297,23 @@ export function useMaterialGroupFormController(
       .then(() => {
         showSuccessToast(toastRef, "Draft saved successfully.");
         dispatch(resetMaterialGroupForm());
-        navigate(Config.Routes.MgDraftRework, { state: { draftSaved: true } });
+        navigate(buildNavHref(Config.Routes.MgDraftRework, searchParams.get(Config.NpdFormQuery.ViewAs)), {
+          state: { draftSaved: true },
+        });
       })
-      .catch((err) => {
-        showErrorToast(toastRef, err || "Failed to save draft.");
+      .catch(() => {
+        // Error toast is shown once via the mgState.error effect.
       });
-  }, [dispatch, navigate, toastRef, validateEntries]);
+  }, [dispatch, navigate, searchParams, toastRef, validateEntries]);
 
   const handleSubmit = React.useCallback(() => {
     if (!validateEntries(true)) {
       return;
     }
 
-    void dispatch(submitMaterialGroupRequestThunk())
+    void dispatch(
+      submitMaterialGroupRequestThunk({ comments: approverRemarks }),
+    )
       .unwrap()
       .then((result) => {
         showSuccessToast(
@@ -296,18 +321,24 @@ export function useMaterialGroupFormController(
           `Request ${result.requestId} submitted to Consultant successfully.`,
         );
         dispatch(resetMaterialGroupForm());
-        navigate(Config.Routes.MgAll, { state: { submitted: true } });
+        navigate(buildNavHref(Config.Routes.MgAll, searchParams.get(Config.NpdFormQuery.ViewAs)), {
+          state: { submitted: true },
+        });
       })
-      .catch((err) => {
-        showErrorToast(toastRef, err || "Failed to submit request.");
+      .catch(() => {
+        // Error toast is shown once via the mgState.error effect.
       });
-  }, [dispatch, navigate, toastRef, validateEntries]);
+  }, [approverRemarks, dispatch, navigate, searchParams, toastRef, validateEntries]);
 
   const handleConsultantAction = React.useCallback(
     (action: MaterialGroupConsultantActionType) => {
       const remarks = approverRemarks.trim();
 
       if (action === "Completed") {
+        if (!validateEntries(true)) {
+          return;
+        }
+
         for (const configId of mgState.selectedConfigIds) {
           const configItem = mgState.configs.find((c) => c.id === configId);
           const masterTitle = configItem
@@ -379,15 +410,16 @@ export function useMaterialGroupFormController(
           );
           dispatch(resetMaterialGroupForm());
           // Navigate immediately once loading finishes (no artificial delay)
+          const viewAs = searchParams.get(Config.NpdFormQuery.ViewAs);
           if (action === "Completed") {
-            navigate(Config.Routes.MgCompleted);
+            navigate(buildNavHref(Config.Routes.MgCompleted, viewAs));
           } else {
             // Rework / Reject → All Requests (Consultant cannot open Initiator Draft/Rework)
-            navigate(Config.Routes.MgAll);
+            navigate(buildNavHref(Config.Routes.MgAll, viewAs));
           }
         })
-        .catch((err) => {
-          showErrorToast(toastRef, err || "Failed to update request.");
+        .catch(() => {
+          // Error toast is shown once via the mgState.error effect.
         });
     },
     [
@@ -401,7 +433,9 @@ export function useMaterialGroupFormController(
       mgState.entriesByConfigId,
       mgState.selectedConfigIds,
       navigate,
+      searchParams,
       toastRef,
+      validateEntries,
     ],
   );
 

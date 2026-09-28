@@ -199,7 +199,8 @@ const WorkflowConfigurationMaster: React.FC = () => {
   };
 
   const showPageLoader = isLoading || isSaving;
-  const pageLoaderLabel = isSaving ? "Saving..." : "Loading...";
+  const pageLoaderLabel = "Processing";
+
 
   return (
     <section className={styles.master}>

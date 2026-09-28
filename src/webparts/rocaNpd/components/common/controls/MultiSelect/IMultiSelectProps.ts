@@ -12,4 +12,6 @@ export interface IMultiSelectProps extends IBaseControlProps {
   /** When set, limits how many options can be selected (e.g. 1 = single select). */
   selectionLimit?: number;
   emptyMessage?: string;
+  /** Extra class on the portaled overlay panel (e.g. Item Details-only filter chrome). */
+  panelClassName?: string;
 }

@@ -1,7 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type {
-  INpdRequestGeneralInfo,
-  INpdRequestGeneralInfoRow,
   INpdRequestListItem,
   INpdRequestListItemRow,
 } from "../../External/CommonServices/Interface";
@@ -15,10 +13,6 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
   return "An unexpected error occurred.";
-}
-
-function toRequestRow(item: INpdRequestGeneralInfo): INpdRequestGeneralInfoRow {
-  return { ...item } as INpdRequestGeneralInfoRow;
 }
 
 function toDashboardRow(item: INpdRequestListItem): INpdRequestListItemRow {
@@ -54,9 +48,9 @@ export const fetchNpdDraftReworkList = createAsyncThunk<
 
 export const fetchNpdPendingList = createAsyncThunk<
   INpdRequestListItemRow[],
-  void,
+  string | void,
   { rejectValue: string; state: RootState }
->("npdRequest/fetchPending", async (_, { getState, rejectWithValue }) => {
+>("npdRequest/fetchPending", async (viewRole, { getState, rejectWithValue }) => {
   try {
     const state = getState();
     const email = state.app.userEmail || state.app.userLoginName;
@@ -65,6 +59,7 @@ export const fetchNpdPendingList = createAsyncThunk<
         await npdRequestListService.fetchNpdPendingItems(
           email,
           selectResolvedAccess(state),
+          viewRole || undefined,
         )
       ).map(toDashboardRow),
     );
@@ -75,24 +70,28 @@ export const fetchNpdPendingList = createAsyncThunk<
 
 export const fetchNpdDashboardList = createAsyncThunk<
   INpdRequestListItemRow[],
-  void,
+  string | void,
   { rejectValue: string; state: RootState }
->("npdRequest/fetchDashboard", async (_, { getState, rejectWithValue }) => {
-  try {
-    const state = getState();
-    const email = state.app.userEmail || state.app.userLoginName;
-    return sortByModified(
-      (
-        await npdRequestListService.fetchNpdDashboardItems(
-          email,
-          selectResolvedAccess(state),
-        )
-      ).map(toDashboardRow),
-    );
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error));
-  }
-});
+>(
+  "npdRequest/fetchDashboard",
+  async (viewRole, { getState, rejectWithValue }) => {
+    try {
+      const state = getState();
+      const email = state.app.userEmail || state.app.userLoginName;
+      return sortByModified(
+        (
+          await npdRequestListService.fetchNpdDashboardItems(
+            email,
+            selectResolvedAccess(state),
+            viewRole || undefined,
+          )
+        ).map(toDashboardRow),
+      );
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 export const softDeleteNpdRequestItem = createAsyncThunk<
   number,
