@@ -138,8 +138,7 @@ function mapCommentRow(row: Record<string, unknown>): INpdApproverCommentRow {
     | { Title?: string; EMail?: string; Email?: string }
     | undefined;
   const emails = extractPersonEmails(userField);
-  const email =
-    emails[0] || String(user?.EMail || user?.Email || "").trim();
+  const email = emails[0] || String(user?.EMail || user?.Email || "").trim();
   const title = String(user?.Title || "").trim();
 
   // Prefer Action column when present; Title is the fallback label.
@@ -175,7 +174,9 @@ function mapCommentRow(row: Record<string, unknown>): INpdApproverCommentRow {
           row["Action_x0020_Via"] ??
           "",
       ).trim() ||
-      (String(row[FIELDS.Role] ?? "").trim().toLowerCase() === "initiator" ||
+      (String(row[FIELDS.Role] ?? "")
+        .trim()
+        .toLowerCase() === "initiator" ||
       resolvedStatus.toLowerCase() === "initiated" ||
       resolvedStatus.toLowerCase() === "resubmit"
         ? "System"
@@ -208,7 +209,8 @@ function buildPayload(
   shape: ICachedWriteShape,
 ): Record<string, unknown> {
   const comments = resolveCommentText(payload.action, payload.comments);
-  const targetAction = formatAuditAction(payload.action) || payload.action || "";
+  const targetAction =
+    formatAuditAction(payload.action) || payload.action || "";
   const rawVia = String(payload.actionVia || "").trim();
   const targetVia = rawVia.toLowerCase() === "mail" ? "Mail" : "System";
 
@@ -297,8 +299,7 @@ export async function addNpdApproverComment(
     throw new Error("NPD request ID is required for approver comments.");
   }
 
-  let userId =
-    payload.userIds.find((id) => Number.isFinite(id) && id > 0) || 0;
+  let userId = payload.userIds.find((id) => Number.isFinite(id) && id > 0) || 0;
 
   if (payload.actorEmail) {
     try {
