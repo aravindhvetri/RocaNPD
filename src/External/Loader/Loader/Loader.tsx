@@ -2,7 +2,7 @@ import * as React from "react";
 import styles from "./Loader.module.scss";
 
 export interface ILoaderProps {
-  /** Text to display below the spinner. */
+  /** Text to display below the spinner. Defaults to "Processing". */
   label?: string;
   /** Whether to show the loader as a full-screen overlay. Defaults to true. */
   fullScreen?: boolean;
@@ -10,9 +10,9 @@ export interface ILoaderProps {
   progressCurrent?: number;
   /** Total units for the optional progress bar. */
   progressTotal?: number;
-  /** Optional 0-100 fill that is independent of the item caption. */
+  /** Optional 0-100 fill. */
   progressPercent?: number;
-  /** Caption shown above the progress bar (for example `5 / 10 Line Items Added`). */
+  /** Caption above the progress bar (e.g. `3 / 10`). */
   progressCaption?: string;
 }
 
@@ -21,7 +21,7 @@ export interface ILoaderProps {
  * Use via common `LoaderOverlay` for portal-based full-page loading in feature screens.
  */
 const Loader: React.FC<ILoaderProps> = ({
-  label = "Loading...",
+  label = "Processing",
   fullScreen = true,
   progressCurrent,
   progressTotal,
@@ -46,6 +46,14 @@ const Loader: React.FC<ILoaderProps> = ({
       )
     : 0;
 
+  const caption =
+    progressCaption ||
+    (hasProgress &&
+    typeof progressCurrent === "number" &&
+    typeof progressTotal === "number"
+      ? `${progressCurrent} / ${progressTotal}`
+      : undefined);
+
   return (
     <div
       className={`${styles.loaderContainer} ${fullScreen ? styles.fullScreen : ""}`}
@@ -60,10 +68,11 @@ const Loader: React.FC<ILoaderProps> = ({
           <div className={styles.circle} />
           <div className={styles.circle} />
         </div>
+        {label ? <p className={styles.loaderLabel}>{label}</p> : null}
         {hasProgress ? (
           <div className={styles.progressBlock}>
-            {progressCaption ? (
-              <p className={styles.progressCaption}>{progressCaption}</p>
+            {caption ? (
+              <p className={styles.progressCaption}>{caption}</p>
             ) : null}
             <div
               className={styles.progressTrack}
@@ -71,13 +80,11 @@ const Loader: React.FC<ILoaderProps> = ({
               aria-valuemin={0}
               aria-valuemax={progressTotal}
               aria-valuenow={progressCurrent}
-              aria-label={progressCaption}
+              aria-label={caption || "Processing progress"}
             >
               <div className={styles.progressFill} style={{ width: `${percent}%` }} />
             </div>
           </div>
-        ) : label ? (
-          <p className={styles.loaderLabel}>{label}</p>
         ) : null}
       </div>
     </div>

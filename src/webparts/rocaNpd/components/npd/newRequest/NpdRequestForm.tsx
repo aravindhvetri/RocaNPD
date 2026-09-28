@@ -18,7 +18,6 @@ import NpdOtherDetailsSection from "./NpdOtherDetailsSection";
 import NpdRequestFormFooter from "./NpdRequestFormFooter";
 import NpdEditingRestrictedDialog from "../tabLock/NpdEditingRestrictedDialog";
 import { useNpdRequestFormController } from "./useNpdRequestFormController";
-import { formatNpdLineItemProgress } from "./npdRequestFormHelpers";
 import styles from "./NpdRequestForm.module.scss";
 
 const NpdRequestForm: React.FC = () => {
@@ -35,8 +34,6 @@ const NpdRequestForm: React.FC = () => {
     auditLogs,
     showApproverRemarks,
     showAuditLog,
-    successMessage,
-    submitProgress,
     formTitle,
     isRecordLoading,
     footerMode,
@@ -56,19 +53,10 @@ const NpdRequestForm: React.FC = () => {
 
   const isBrandLoading = npdForm.brandOptionsStatus === "loading";
   const isPlantLoading = npdForm.plantSourceStatus === "loading";
-  const isSaving = npdForm.saveStatus === "saving" || npdForm.saveStatus === "submitting";
+  const isSaving =
+    npdForm.saveStatus === "saving" || npdForm.saveStatus === "submitting";
   const isLoadingRecord = isRecordLoading;
   const { generalInfo } = npdForm;
-  const loaderLabel = successMessage
-    ? successMessage
-    : isSaving
-      ? npdForm.saveStatus === "submitting"
-        ? "Submitting..."
-        : "Saving..."
-      : "Loading...";
-  const progressCaption = submitProgress
-    ? formatNpdLineItemProgress(submitProgress.current, submitProgress.total)
-    : undefined;
 
   return (
     <form
@@ -79,23 +67,15 @@ const NpdRequestForm: React.FC = () => {
       <Toast ref={toastRef} />
       <LoaderOverlay
         visible={
-          Boolean(successMessage) ||
-          Boolean(submitProgress) ||
           isSaving ||
           isLoadingRecord ||
           (isBrandLoading && !npdForm.brandOptions.length) ||
           (npdForm.lookupOptionsStatus === "loading" &&
             !Object.keys(npdForm.lookupOptionsByType).length)
         }
-        label={progressCaption ? undefined : loaderLabel}
-        progressCurrent={submitProgress?.current}
-        progressTotal={submitProgress?.total}
-        progressPercent={submitProgress?.percent}
-        progressCaption={progressCaption}
+        label="Processing"
       />
-      <h1 className={styles.title}>
-        {formTitle}
-      </h1>
+      <h1 className={styles.title}>{formTitle}</h1>
       <div className={styles.sections}>
         <NpdGeneralInfoSection
           brand={generalInfo.brand}
@@ -103,9 +83,9 @@ const NpdRequestForm: React.FC = () => {
           plantSource={generalInfo.plantSource}
           brandOptions={npdForm.brandOptions}
           plantSourceOptions={npdForm.plantSourceOptions}
-          brandLoading={isBrandLoading || isLoadingRecord}
-          plantSourceLoading={isPlantLoading || isLoadingRecord}
           readOnly={generalInfoReadOnly}
+          brandLoading={isBrandLoading}
+          plantSourceLoading={isPlantLoading}
           onBrandChange={(value) => dispatch(setNpdBrand(value))}
           onMaterialTypeChange={(value) => dispatch(setNpdMaterialType(value))}
           onPlantSourceChange={(value) => dispatch(setNpdPlantSource(value))}
@@ -123,7 +103,6 @@ const NpdRequestForm: React.FC = () => {
           <NpdOtherDetailsSection
             details={npdForm.otherDetails}
             profitCenterOptions={npdForm.profitCenterOptions}
-            loading={npdForm.otherDetailsStatus === "loading"}
             readOnly={otherDetailsReadOnly}
             onProfitCenterChange={(value) =>
               dispatch(setNpdOtherDetailsProfitCenter(value))
@@ -136,7 +115,6 @@ const NpdRequestForm: React.FC = () => {
         {showApproverRemarks ? (
           <NpdApproverRemarks
             value={approverRemarks}
-            disabled={isSaving}
             onChange={setApproverRemarks}
           />
         ) : null}
@@ -149,14 +127,17 @@ const NpdRequestForm: React.FC = () => {
         ) : null}
       </div>
       <NpdRequestFormFooter
-        saving={isSaving}
         mode={footerMode}
+        isResubmit={
+          (npdForm.requestStatus || "").trim().toLowerCase() === "rework" ||
+          (npdForm.requestStatus || "").trim().toLowerCase() === "in rework"
+        }
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}
         onApprove={() => requestAction("Approve")}
-        onReject={() => requestAction("Reject")}
         onRework={() => requestAction("Rework")}
+        onReject={() => requestAction("Reject")}
       />
       <NpdItemDetailsImport
         visible={importVisible}

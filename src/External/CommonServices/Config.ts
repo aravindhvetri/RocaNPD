@@ -180,6 +180,8 @@ export const NpdFormQuery = {
   View: "view",
   Edit: "edit",
   From: "from",
+  /** Active side-nav role context (`?as=Initiator`). */
+  ViewAs: "as",
 } as const;
 
 export const NpdFormFrom = {
@@ -260,6 +262,7 @@ export const FieldNames = {
     NPDRequest: "NPDRequest",
     NPDRequestId: "NPDRequestId",
     ActionVia: "ActionVia",
+    Action: "Action",
   },
   MaterialGroupConfig: {
     Title: "Title",
@@ -286,6 +289,7 @@ export const FieldNames = {
     ConsultantId: "ConsultantId",
     Role: "Role",
     ActionVia: "ActionVia",
+    Action: "Action",
   },
 } as const;
 
@@ -343,7 +347,7 @@ export const FieldLabels = {
   Actions: "Actions",
   AllStatuses: "All Statuses",
   AllBrands: "All Brands",
-  InRework: "In ReWork",
+  InRework: "Rework",
   Export: "Export",
   RocaGlobalCode: "Roca Global Code",
   MaterialCode: "Material Code",
@@ -468,7 +472,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.0",
+  AppVersion: "V1.2",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

@@ -8,8 +8,15 @@ export interface INpdRequestSummaryCounts {
   approved: number;
 }
 
-const NpdRequestSummaryCards: React.FC<{ counts: INpdRequestSummaryCounts }> = ({
+export interface INpdRequestSummaryCardsProps {
+  counts: INpdRequestSummaryCounts;
+  /** Admin All Requests uses "In Rework"; Initiator keeps "In Rework / Drafts". */
+  reworkCardLabel?: string;
+}
+
+const NpdRequestSummaryCards: React.FC<INpdRequestSummaryCardsProps> = ({
   counts,
+  reworkCardLabel = "In Rework / Drafts",
 }) => (
   <div className={styles.cards}>
     <article className={`${styles.card} ${styles.cardTotal}`}>
@@ -32,7 +39,7 @@ const NpdRequestSummaryCards: React.FC<{ counts: INpdRequestSummaryCounts }> = (
     </article>
     <article className={`${styles.card} ${styles.cardRework}`}>
       <div className={styles.cardCopy}>
-        <p className={styles.cardLabel}>In Rework / Drafts</p>
+        <p className={styles.cardLabel}>{reworkCardLabel}</p>
         <p className={styles.cardValue}>{counts.reworkDraft}</p>
       </div>
       <span className={styles.cardIcon} aria-hidden="true">

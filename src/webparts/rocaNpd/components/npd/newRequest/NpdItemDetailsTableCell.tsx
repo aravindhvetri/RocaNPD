@@ -91,6 +91,7 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
       readOnly={readOnly}
       disabled={readOnly}
       className={controlClassName}
+      panelClassName={styles.itemDetailsMultiSelectPanel}
       onChange={(value) =>
         handleChange(value.map((entry) => String(entry)).slice(0, 1))
       }

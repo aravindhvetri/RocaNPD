@@ -22,6 +22,10 @@ const SideNavigationCompact: React.FC<ISideNavigationCompactProps> = ({
     <nav className={styles.compactNav} aria-label="Compact application navigation">
       <div className={styles.topDivider} role="separator" />
       {navigation.map((section: INavSectionConfig, sectionIndex: number) => {
+        const previous = navigation[sectionIndex - 1];
+        const roleGroupChanged =
+          section.roleGroup !== "Analytics" &&
+          (!previous || previous.roleGroup !== section.roleGroup);
         const primaryItems = section.items.filter(
           (item: INavItemConfig) => item.isPrimaryAction,
         );
@@ -31,14 +35,22 @@ const SideNavigationCompact: React.FC<ISideNavigationCompactProps> = ({
 
         return (
           <div key={section.id} className={styles.sectionGroup}>
-            {sectionIndex > 0 && (
+            {roleGroupChanged && sectionIndex > 0 ? (
+              <div
+                className={styles.roleGroupDivider}
+                title={section.roleGroup}
+                role="separator"
+                aria-label={section.roleGroup}
+              />
+            ) : null}
+            {sectionIndex > 0 ? (
               <NavCompactSectionIcon
                 icon={section.icon}
-                label={section.label}
+                label={`${section.roleGroup}: ${section.label}`}
                 tone={section.sectionIconTone}
-                showDividerBefore
+                showDividerBefore={!roleGroupChanged}
               />
-            )}
+            ) : null}
             {primaryItems.map((item: INavItemConfig) => (
               <NavCompactPrimary key={item.id} item={item} onNavigate={onNavigate} />
             ))}

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
 import type { INavItemConfig } from "../../../../../../External/CommonServices/navigationConfig";
+import { buildNavHref } from "../../../../../../External/CommonServices/navigationConfig";
 import styles from "./NavPrimaryAction.module.scss";
 
 export interface INavPrimaryActionProps {
@@ -10,7 +11,7 @@ export interface INavPrimaryActionProps {
 
 const NavPrimaryAction: React.FC<INavPrimaryActionProps> = ({ item, onNavigate }) => (
   <NavLink
-    to={item.route}
+    to={buildNavHref(item.route, item.viewRole)}
     end
     className={() => styles.action}
     onClick={(e) => {

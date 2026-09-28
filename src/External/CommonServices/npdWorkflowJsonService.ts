@@ -21,6 +21,10 @@ export function getNpdApprovalRoleSequence(
   const ordered = orderWorkflowSteps(steps, requestType);
   const roles: string[] = [Config.WorkflowDefaults.NpdStartRole];
 
+  if (requestType === Config.WorkflowRequestTypes.MgRequest) {
+    roles[0] = Config.WorkflowDefaults.MgStartRole;
+  }
+
   ordered.forEach((step) => {
     const nextRole = step.NextRole.trim();
     if (
@@ -34,16 +38,32 @@ export function getNpdApprovalRoleSequence(
   return roles;
 }
 
+/** Last non-Initiator role in a WorkflowConfiguration role sequence. */
+export function getLastApproverRoleFromSequence(roleSequence: string[]): string {
+  for (let index = roleSequence.length - 1; index >= 0; index -= 1) {
+    const role = (roleSequence[index] || "").trim();
+    if (role && !isInitiatorWorkflowRole(role)) {
+      return role;
+    }
+  }
+  return "";
+}
+
 export async function buildNpdDraftWorkflowJson(
   brand: string,
   initiatorEmail: string,
   contextSiteUrl?: string,
+  options?: { enforceApprovers?: boolean },
 ): Promise<INpdWorkflowStepJson[]> {
+  const enforceApprovers = options?.enforceApprovers !== false;
   const requestType = Config.WorkflowRequestTypes.NpdRequest;
   const allSteps = await fetchActiveWorkflowSteps();
   const npdSteps = allSteps.filter((step) => isNpdRequestType(step.RequestType));
 
   if (!npdSteps.length) {
+    if (!enforceApprovers) {
+      return initiatorOnlyWorkflowSteps(initiatorEmail);
+    }
     throw new Error(
       "NPD workflow is not configured. Configure the NPD Request approval chain before saving.",
     );
@@ -58,6 +78,9 @@ export async function buildNpdDraftWorkflowJson(
   for (const role of roleSequence) {
     if (role.toLowerCase() === Config.Roles.Initiator.toLowerCase()) {
       if (!initiator.includes("@")) {
+        if (!enforceApprovers) {
+          continue;
+        }
         throw new Error("The logged-in user email is required to save a draft.");
       }
 
@@ -76,6 +99,11 @@ export async function buildNpdDraftWorkflowJson(
       brand,
     );
     if (!emails.length) {
+      // Save Draft only requires Brand and Material Type.
+      // Approver assignment is validated on Submit Request.
+      if (!enforceApprovers) {
+        continue;
+      }
       if (role.toLowerCase() === Config.Roles.VerticalHead.toLowerCase()) {
         throw new Error(
           `No Vertical Head is assigned to brand "${brand}" in ApproversMaster.`,
@@ -97,6 +125,20 @@ export async function buildNpdDraftWorkflowJson(
   }
 
   return steps;
+}
+
+function initiatorOnlyWorkflowSteps(initiatorEmail: string): INpdWorkflowStepJson[] {
+  const initiator = initiatorEmail.trim();
+  if (!initiator.includes("@")) {
+    return [];
+  }
+  return [
+    {
+      Role: Config.Roles.Initiator,
+      UserEmail: initiator,
+      Status: "",
+    },
+  ];
 }
 
 export function stringifyWorkflowJson(steps: INpdWorkflowStepJson[]): string {
@@ -314,6 +356,26 @@ export function getFirstPendingApproverStep(
       step.Status.trim().toLowerCase() ===
         Config.WorkflowStepStatus.Pending.toLowerCase(),
   );
+}
+
+/**
+ * Approver steps still waiting in the current Pending cycle (UI / Audit Log only).
+ * Includes Status=Pending and blank Status (e.g. MIS not yet actioned while VH is Pending).
+ * Excludes steps that already have an action Status (Approved / Rework / Rejected).
+ */
+export function getAuditLogPendingWorkflowSteps(
+  steps: readonly INpdWorkflowStepJson[],
+): INpdWorkflowStepJson[] {
+  const pendingStatus = Config.WorkflowStepStatus.Pending.toLowerCase();
+
+  return steps.filter((step) => {
+    if (isInitiatorWorkflowRole(step.Role)) {
+      return false;
+    }
+
+    const status = (step.Status || "").trim().toLowerCase();
+    return !status || status === pendingStatus;
+  });
 }
 
 export function getFirstPendingApproverRole(

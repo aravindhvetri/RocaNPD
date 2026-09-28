@@ -11,6 +11,8 @@ export interface INpdRequestListToolbarProps {
   searchValue: string;
   searchPlaceholder?: string;
   wideSearch?: boolean;
+  /** Hide status dropdown on single-status tabs (Pending / Approved). Default true. */
+  showStatusFilter?: boolean;
   statusValue: string;
   statusOptions: IDropdownOption[];
   brandValue: string;
@@ -32,6 +34,7 @@ const NpdRequestListToolbar: React.FC<INpdRequestListToolbarProps> = ({
   searchValue,
   searchPlaceholder,
   wideSearch = false,
+  showStatusFilter = true,
   statusValue,
   statusOptions,
   brandValue,
@@ -58,14 +61,16 @@ const NpdRequestListToolbar: React.FC<INpdRequestListToolbarProps> = ({
         onSearchChange={onSearchChange}
         onResetFilters={onResetFilters}
       />
-      <Dropdown
-        id={`${searchId}Status`}
-        value={statusValue}
-        options={statusOptions}
-        placeholder={FieldLabels.AllStatuses}
-        className={styles.filterDropdown}
-        onChange={(value) => onStatusChange(String(value ?? "all"))}
-      />
+      {showStatusFilter ? (
+        <Dropdown
+          id={`${searchId}Status`}
+          value={statusValue}
+          options={statusOptions}
+          placeholder={FieldLabels.AllStatuses}
+          className={styles.filterDropdown}
+          onChange={(value) => onStatusChange(String(value ?? "all"))}
+        />
+      ) : null}
       <Dropdown
         id={`${searchId}Brand`}
         value={brandValue}

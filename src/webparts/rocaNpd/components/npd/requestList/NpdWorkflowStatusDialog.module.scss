@@ -47,28 +47,48 @@
   background: $roca-color-workflow-self-bg;
 }
 
-.statusPending {
-  color: $roca-color-warning;
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
   font-weight: 600;
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  border-width: 1px;
+  border-style: solid;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.statusPending {
+  background: $roca-color-status-pending-bg;
+  color: $roca-color-warning;
+  border-color: #f59e0b;
 }
 
 .statusApproved {
+  background: $roca-color-status-approved-bg;
   color: $roca-color-success;
-  font-weight: 600;
+  border-color: #10b981;
 }
 
 .statusRejected {
+  background: $roca-color-status-rejected-bg;
   color: $roca-color-error;
-  font-weight: 600;
+  border-color: #ef4444;
 }
 
 .statusRework {
-  color: $roca-color-status-rework;
-  font-weight: 600;
+  background: #fff4e5;
+  color: #d97706;
+  border-color: #f97316;
 }
 
 .statusMuted {
+  background: $roca-color-status-draft-bg;
   color: $roca-color-text-secondary;
+  border-color: #cbd5e1;
 }
 
 .empty {

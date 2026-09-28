@@ -7,6 +7,7 @@ export interface INpdDraftReworkToolbarProps {
   searchId: string;
   searchValue: string;
   searchPlaceholder?: string;
+  showStatusFilter?: boolean;
   statusValue: string;
   statusOptions: IDropdownOption[];
   brandValue: string;
@@ -24,6 +25,7 @@ const NpdDraftReworkToolbar: React.FC<INpdDraftReworkToolbarProps> = (props) => 
     searchId={props.searchId}
     searchValue={props.searchValue}
     searchPlaceholder={props.searchPlaceholder ?? "Search here"}
+    showStatusFilter={props.showStatusFilter}
     statusValue={props.statusValue}
     statusOptions={props.statusOptions}
     brandValue={props.brandValue}

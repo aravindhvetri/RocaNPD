@@ -83,7 +83,7 @@ const MaterialGroupRequestForm: React.FC = () => {
     if (isReadOnly) {
       return "View configured material group categories, descriptions, and codified values.";
     }
-    return "Select master categories, configure descriptions and submit for Consultant verification and SAP codification.";
+    return "Select master categories, configure descriptions and submit for Consultant verification.";
   }, [isConsultantMode, isReadOnly, initiatorName]);
 
   const badgeText = React.useMemo(() => {
@@ -94,11 +94,7 @@ const MaterialGroupRequestForm: React.FC = () => {
     return `${idPrefix}Draft Initiator Workflow`;
   }, [currentRequestId, currentStatus]);
 
-  const loaderLabel = isSaving
-    ? isSubmitting
-      ? "Submitting..."
-      : "Saving..."
-    : "Loading...";
+  const loaderLabel = "Processing";
 
   return (
     <div className={styles.page}>
@@ -154,13 +150,13 @@ const MaterialGroupRequestForm: React.FC = () => {
           <MaterialGroupApproverRemarks
             label={approverRemarksLabel}
             value={approverRemarks}
-            required
+            required={mode === "consultant-edit"}
             disabled={isSaving}
             onChange={setApproverRemarks}
           />
         ) : null}
 
-        {isInitiatorScreen && !isConsultantMode ? (
+        {Boolean(currentRequestId || auditLogs.length > 0) && mode !== "create" ? (
           <MaterialGroupAuditLogTable
             rows={auditLogs}
             requestStatus={currentStatus}

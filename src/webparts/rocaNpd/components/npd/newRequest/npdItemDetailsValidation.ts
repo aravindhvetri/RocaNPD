@@ -17,6 +17,22 @@ function isEmptyNumber(value: unknown): boolean {
   return typeof value !== "number" || !Number.isFinite(value);
 }
 
+export function validateNpdDraftGeneralInfo(
+  generalInfo: INpdGeneralInfo,
+): string[] {
+  const messages: string[] = [];
+
+  if (!generalInfo.brand) {
+    messages.push("Brand (MG1) is required.");
+  }
+
+  if (!generalInfo.materialType) {
+    messages.push("Material Type is required.");
+  }
+
+  return messages;
+}
+
 export function validateNpdGeneralInfo(
   generalInfo: INpdGeneralInfo,
 ): string[] {

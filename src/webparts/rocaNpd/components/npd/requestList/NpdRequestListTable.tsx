@@ -1,9 +1,10 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Config, FieldLabels, RequestStatus } from "../../../../../External/CommonServices/Config";
 import type { INpdRequestListItemRow } from "../../../../../External/CommonServices/Interface";
 import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
 import { npdTabDashboardRoute } from "../../../../../External/CommonServices/npdRequestTabSync";
+import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import { renderSharePointUserPersona } from "../../../../../External/CommonServices/personFieldUtils";
 import { Button, DataTable, MultiValueCell, Tag } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
@@ -78,6 +79,8 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
   onEdit,
 }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const viewAs = parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs));
   const workflow = useNpdWorkflowStatusDialog();
   const {
     restriction,
@@ -109,7 +112,7 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
             <button
               type="button"
               className={styles.requestId}
-              onClick={() => handleView(row)}
+              onClick={() => (canEditRow(row) ? handleEdit(row) : handleView(row))}
             >
               {row.Title.trim()}
             </button>
@@ -156,7 +159,6 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
           <Tag
             value={formatNpdRequestListStatus(row.Status, row.WorkflowSteps)}
             icon={getStatusIcon(row.Status)}
-            rounded
             className={getStatusClass(row.Status)}
           />
         ),
@@ -189,6 +191,8 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
       {
         field: "Id",
         header: FieldLabels.Workflow,
+        alignHeader: "center",
+        align: "center",
         ...columnSize("6.75rem", { textAlign: "center", maxWidth: "7rem" }),
         body: (row) =>
           isDraftNpdStatus(row.Status) ? null : (
@@ -210,7 +214,9 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
       {
         field: "Id",
         header: FieldLabels.Actions,
-        ...columnSize("6rem", { textAlign: "left", maxWidth: "6.5rem" }),
+        alignHeader: "center",
+        align: "center",
+        ...columnSize("6rem", { textAlign: "center", maxWidth: "6.5rem" }),
         body: (row) => (
           <div className={tableStyles.actionCell}>
             {canEditRow(row) ? (
@@ -261,7 +267,7 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
         restriction={restriction}
         onGoToDashboard={() => {
           goToDashboard();
-          navigate(npdTabDashboardRoute());
+          navigate(npdTabDashboardRoute(viewAs));
         }}
         onReload={reload}
       />

@@ -11,15 +11,15 @@
 | Phase | Total Tasks | Completed | Status |
 |---|---:|---:|---|
 | Phase 0 — Project Preparation | 13 | 1 | In Progress |
-| Phase 1 — Application Foundation | 71 | 47 | In Progress |
+| Phase 1 — Application Foundation | 71 | 48 | In Progress |
 | Phase 2 — SharePoint Data Structure | 22 | 4 | In Progress |
-| Phase 3 — Security & Role Management | 14 | 13 | In Progress |
+| Phase 3 — Security & Role Management | 15 | 14 | In Progress |
 | Phase 4 — Admin Module | 54 | 24 | In Progress |
 | Phase 5 — NPD Initiator Module | 34 | 28 | In Progress |
 | Phase 6 — NPD Vertical Head Module | 17 | 13 | In Progress |
 | Phase 7 — NPD MIS Coordinator Module | 24 | 16 | In Progress |
 | Phase 8 — Material Group Initiator Module | 20 | 16 | In Progress |
-| Phase 9 — Material Group Consultant Module | 14 | 13 | In Progress |
+| Phase 9 — Material Group Consultant Module | 15 | 14 | In Progress |
 | Phase 10 — Workflow Automation | 18 | 7 | In Progress |
 | Phase 11 — SAP Integration | 12 | 0 | Not Started |
 | Phase 12 — Material Master Integration | 8 | 0 | Not Started |
@@ -28,9 +28,9 @@
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **379** | **148** | **In Progress** |
+| **TOTAL** | **381** | **151** | **In Progress** |
 
-**Last Updated:** 23 September 2026
+**Last Updated:** 26 September 2026
 
 ---
 
@@ -92,6 +92,8 @@
 - [x] **T-0132** Implement `AppShell.tsx` layout wrapper
 - [x] **T-0133** Implement `Header.tsx` (static `headerSample` wireframe + ROCA logo)
 - [x] **T-0134** Implement `SideNavigation.tsx` — Plant Master, Role, and Approver Configuration removed (ROCA-sourced; no local modules)
+- [x] **T-0134a** Role-grouped side navigation — separate NPD / MG / Admin sections per assigned role with `?as=` view context; brand-scoped Initiator data vs unscoped Admin All Requests
+- [x] **T-0134b** Preserve `?as=` on Pending toast-state clear and related navigations so multi-role VH/Initiator keep the correct nav section
 - [ ] **T-0135** Implement `PageHeader.tsx` (screen title, breadcrumbs, actions)
 - [x] **T-0136** `RoleIndicator.tsx` implemented (removed from side navigation / AppShell per design requirement)
 - [x] **T-0137** Wire navigation to react-router-dom routes (HashRouter)
@@ -181,6 +183,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0305** Implement brand mapping for Initiator and Vertical Head (and other mapped roles)
 - [x] **T-0306** Store assigned roles + brands in Redux `appSlice` (multi-role union, no override)
 - [x] **T-0307** Implement role-based navigation filtering (`filterNavigationByRoles`)
+- [x] **T-0307a** Multi-role nav sections + list scoping via `?as=` (`getNpdViewScope` / `getMgViewScope` / `canViewRequest`)
 - [x] **T-0308** Implement role-based route guards (`ProtectedRoute`)
 - [x] **T-0309** Implement role-based action helpers (`hasPermission`, `canActOnNpdBrand`)
 - [x] **T-0310** Block unauthorized URL / page access (`/unauthorized`)
@@ -283,8 +286,9 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 
 ### 4.9 Admin — Request Visibility
 
-- [ ] **T-0480** Implement Admin NPD All Requests view (all requests, search, filter, export)
-- [ ] **T-0481** Implement Admin Material Group All Requests view
+- [x] **T-0480** Implement Admin NPD All Requests view (all requests, search, filter, export)
+- [x] **T-0480a** Admin All Requests excludes Draft; summary card shows "In Rework" (Initiator All unchanged)
+- [x] **T-0481** Implement Admin Material Group All Requests view (excludes Draft when `?as=Admin`)
 
 ### 4.10 Admin Redux & Services
 
@@ -317,6 +321,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
 - [x] **T-0514** Implement Item Details grid (all BRD columns; MultiSelect options from `NPD_Lookup` by Lookup Type matching field name); paginate at 7 rows when there are more than 7 items
 - [x] **T-0514a** Prefetch Item Details lookup options on app init; selection fields single-select only (`selectionLimit={1}`)
+- [x] **T-0514b** MultiSelect overlay panel matches each Item Details input width/position; long option labels ellipsize with full-text tooltip
 - [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
 - [x] **T-0516** Implement + Add Another Item Line with small inline plus icon next to label
 - [x] **T-0517** Implement Import items (Excel) — header mapping is trim + lowercase + whitespace-insensitive so template columns match Item Details fields; up to 200 rows
@@ -347,6 +352,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0601** Implement VH All Requests table (brand-scoped)
 - [x] **T-0602** Implement VH Pending Approval table (counter + search)
 - [x] **T-0603** Implement VH Approved Requests table (search, brand filter, Export CSV)
+- [x] **T-0603a** VH Approved Requests includes VH-approved Pending (Pending with MIS); fully Approved after Post to SAP
 - [x] **T-0604** Implement VH Request Detail screen (read-only header + items)
 - [x] **T-0605** Implement Approve action with confirmation dialog
 - [x] **T-0606** Implement Rework action with comments and confirmation
@@ -360,6 +366,12 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0614** Verify brand-scoped data filtering
 - [x] **T-0615** NPDApproverMail web part: VH email Approve/Reject/Rework via `RequestID` + `Action` URL; updates `NPD_Request` + `NPD_ApproverComments`
 - [x] **T-0616** NPDApproverMail condition-based single-line messages with no icon/title: exact messages from WorkFlowJSON and isSubmittedRef
+- [x] **T-0616a** NPDApproverMail: not-in-WorkFlowJSON checked first → "You are not part of this request workflow." (before already-submitted)
+- [x] **T-0619** Export shows page loader while download runs (Lookup, Lookup Type, Brand Material Extension, NPD All Requests)
+- [x] **T-0620** Lookup / Lookup Type / BME: close form dialog immediately on Add/Update; show page loader until save completes
+- [x] **T-0621** Case-insensitive duplicate validation for Lookup Name/Code and Lookup Type Title (UI + service)
+- [x] **T-0622** Remove Initiator Remarks box on NPD and Material Group (approver remarks only)
+- [x] **T-0623** Last-approver completion email to Initiator (NPD Post to SAP / Approve with no next pending; MG Complete via WorkflowConfiguration last role)
 
 ---
 
@@ -382,8 +394,11 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0715** Implement `misCoordinatorAction` thunk (via `applyNpdWorkflowAction` + Other Details payload)
 - [ ] **T-0716** Verify MIS cannot access Material Group module
 - [x] **T-0717** Inline Approver Remarks (no popup) + Audit Log from `NPD_ApproverComments` (MG pattern)
+- [x] **T-0717a** NPD Audit Log chronological order + UI-only Pending approvers from WorkflowJSON (replaced by ApproverComments when actioned)
 - [x] **T-0718** Fix MIS Rework/Reject: update `NPD_Request` Status/WorkFlowJSON + write Approver Comments; no Item-added overlay
 - [x] **T-0719** Highlight only MIS Coordinator-added rows in NPD Item Details (yellow background `#fefce8` + amber accent `#eab308`); persist across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
+- [x] **T-0720** Other Details: show only in MIS Coordinator module (`?as=`) until Approved; after Post to SAP / Approved show in all modules; dual-role VH+MIS must not see Other Details in VH module
+- [x] **T-0721** NPD Item Details: preserve original add order (Id ascending); MIS-added rows must not jump to top (MG keeps latest-first)
 
 ---
 
@@ -426,6 +441,10 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0918** Role-based DataTable column: Initiator sees Current Approver; Consultant sees Initiator column
 - [x] **T-0919** Fix default navigation / initial landing page — `NavRouteSync` redirects to correct default route after roles resolve; remove hardcoded `activeNavItemId` from `uiSlice`
 - [x] **T-0913** On Complete — update Lookup Master with new codes
+- [x] **T-0915** Last MG approver Complete sends completion email to Initiator (role from WorkflowConfiguration)
+- [x] **T-0920** Fix duplicate MG error toasts — show once via `mgState.error` effect (Consultant Complete / Save Draft / Submit)
+- [x] **T-0921** Consultant Complete: validate + batch-sync Lookup Master before Status; failed validation keeps Pending (Cancel does not complete)
+- [x] **T-0922** Material Group Audit Log: chronological Action On / Id order (Initiated → Rework → Resubmit), matching NPD; Pending Consultant row at bottom
 - [ ] **T-0914** Verify Consultant cannot access NPD module
 
 ---
@@ -607,6 +626,14 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 24 Sep 2026 | NPDApproverMail: condition-based single-line messages with no icon/title; exact success, already submitted, not required, and not part of workflow messages | T-0616 |
 | 24 Sep 2026 | Empty Title on spAddItem for NPD_Request (Drafts), NPD_ApproverComments, NPD_MaterialGroupAuditLogs; existing Request ID generation logic preserved on submit | T-1003a |
 | 24 Sep 2026 | Keep SharePoint default suite bar visible; add Action Via column to audit log tables (System/Mail); format Action On as DD/MM/YYYY hh:mm A; remove CC on emails (To only); email header background #774dec | T-0617 |
+| 25 Sep 2026 | Auto-refresh lookup options on component navigation; Sprint 2 unit test cases (.txt + .xls) covering VH, MIS, NPDApproverMail, MG Consultant flow, and navigation refresh; End-to-End Code Review document updated | T-0618, T-0915, T-1004 |
+| 25 Sep 2026 | Export loader; Lookup/Lookup Type/BME dialog closes before save; case-insensitive duplicates; remove Initiator Remarks; last-approver completion email to Initiator (NPD + MG) | T-0619–T-0623 |
+| 25 Sep 2026 | Role-grouped side navigation: separate Initiator / VH / MIS / Consultant / Admin sections with `?as=` scoped list data (brand-filtered Initiator vs unscoped Admin) | T-0134a, T-0307a |
+| 26 Sep 2026 | ApproversMaster System scoping — only NPD/MG systems grant app roles; ignore blank and unrelated systems (e.g. Transit Breakage Initiator) | T-0304, T-0307, R-SEC03a |
+| 26 Sep 2026 | Fix duplicate MG error toasts on Consultant Complete / Save Draft / Submit | T-0920 |
+| 27 Sep 2026 | Other Details MIS-module-only until Approved; NPD Item Details chronological order | T-0720, T-0721 |
+| 27 Sep 2026 | Item Details MultiSelect overlay aligned to trigger; option labels ellipsize | T-0514b |
+| 28 Sep 2026 | Material Group Audit Log chronological order matching NPD | T-0922 |
 
 ---
 

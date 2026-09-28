@@ -20,8 +20,9 @@
 }
 
 .linkActive {
-  background-color: $roca-color-nav-item-selected-bg;
-  border-color: var(--nav-selected-bar-color, $roca-color-nav-active-border);
+  background-color: $roca-color-nav-item-selected-bg !important;
+  border-color: var(--nav-selected-bar-color, $roca-color-nav-active-border) !important;
+  transition: none !important;
 
   &::before {
     content: '';
@@ -32,10 +33,12 @@
     width: 0.2rem;
     border-radius: 0 2px 2px 0;
     background-color: var(--nav-selected-bar-color, $roca-color-nav-item-selected-bar);
+    transition: none !important;
   }
 
   .iconDefault {
     color: $roca-color-nav-item-selected-text !important;
+    transition: none !important;
   }
 }
 

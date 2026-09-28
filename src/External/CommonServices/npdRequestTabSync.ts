@@ -1,4 +1,5 @@
 import { Config, FieldLabels } from "./Config";
+import { buildNavHref } from "./navigationConfig";
 import { isNpdRequestIdTitle } from "./npdRequestIdService";
 import { normalizeEmail } from "./personFieldUtils";
 
@@ -386,6 +387,6 @@ function toRestriction(
   };
 }
 
-export function npdTabDashboardRoute(): string {
-  return Config.Routes.NpdAll;
+export function npdTabDashboardRoute(viewAs?: string | null): string {
+  return buildNavHref(Config.Routes.NpdAll, viewAs);
 }

@@ -180,7 +180,7 @@ function buildItemPayload(
     [FIELDS.Title]: title,
     [FIELDS.Brand]: payload.brand.trim(),
     [FIELDS.MaterialType]: payload.materialType.trim(),
-    [FIELDS.Plant]: payload.plantSource.trim(),
+    [FIELDS.Plant]: (payload.plantSource || "").trim(),
     [FIELDS.Status]: status,
     [FIELDS.WorkFlowJSON]: workflowJson,
   };
@@ -231,6 +231,7 @@ export async function saveNpdGeneralInfoDraft(
     payload.brand.trim(),
     initiatorEmail,
     contextSiteUrl,
+    { enforceApprovers: false },
   );
   const workflowJson = stringifyWorkflowJson(workflowSteps);
   const status = resolveSavedStatus(payload.existingStatus);
@@ -247,12 +248,14 @@ export async function submitNpdRequest(
   items: INpdItemDetailRecord[],
   initiatorEmail: string,
   contextSiteUrl?: string,
+  initiatorComments?: string,
 ): Promise<INpdRequestGeneralInfo> {
   const workflowSteps = applySubmitWorkflowStatuses(
     await buildNpdDraftWorkflowJson(
       payload.brand.trim(),
       initiatorEmail,
       contextSiteUrl,
+      { enforceApprovers: true },
     ),
   );
   const workflowJson = stringifyWorkflowJson(workflowSteps);
@@ -269,13 +272,40 @@ export async function submitNpdRequest(
     items,
   );
 
+  const isRework =
+    (payload.existingStatus || "").trim().toLowerCase() === "rework" ||
+    (payload.existingStatus || "").trim().toLowerCase() === "in rework";
+  const auditAction = isRework ? "Resubmit" : "Initiated";
+  const auditComments =
+    (initiatorComments || "").trim() ||
+    (isRework ? "Request resubmitted" : "Request initiated");
+
+  try {
+    const userIds = await resolveApproverUserIds(
+      0,
+      initiatorEmail,
+    );
+    await addNpdApproverComment({
+      requestId: saved.Id,
+      requestTitle: saved.Title,
+      comments: auditComments,
+      role: Config.Roles.Initiator,
+      userIds,
+      action: auditAction,
+      actorEmail: initiatorEmail,
+      actionVia: "System",
+    });
+  } catch (auditError) {
+    console.warn("Initiator audit log write failed on submit:", auditError);
+  }
+
   const pendingEmails = getPendingApproverEmails(saved.WorkflowSteps);
   const pendingRole = getFirstPendingApproverRole(saved.WorkflowSteps);
 
   try {
     await sendNpdApprovalNotification({
       request: saved,
-      action: "Submitted",
+      action: isRework ? "Resubmitted" : "Submitted",
       to: pendingEmails,
       includeActionButtons: shouldIncludeNpdEmailActions(pendingRole),
       siteUrl: contextSiteUrl,
@@ -446,26 +476,39 @@ export async function applyNpdWorkflowAction(params: {
 
   const saved = await fetchNpdGeneralInfoById(params.requestId);
   const nextPendingRole = getFirstPendingApproverRole(saved.WorkflowSteps);
-  const recipients =
-    params.action === "Approve"
-      ? getPendingApproverEmails(saved.WorkflowSteps)
-      : [saved.AuthorEmail];
+  const isFinalApproval =
+    params.action === "Approve" && !nextPendingRole;
 
-  const recipientRole =
-    params.action === "Approve"
-      ? nextPendingRole
-      : Config.Roles.Initiator;
+  let recipients: string[];
+  let recipientRole: string;
+  let notificationAction: string = params.action;
+  let includeActionButtons = false;
+
+  if (params.action === "Approve") {
+    if (isFinalApproval) {
+      // Last approver in WorkflowConfiguration chain completed the request.
+      recipients = [saved.AuthorEmail];
+      recipientRole = Config.Roles.Initiator;
+      notificationAction = "Approved";
+      includeActionButtons = false;
+    } else {
+      recipients = getPendingApproverEmails(saved.WorkflowSteps);
+      recipientRole = nextPendingRole;
+      includeActionButtons = shouldIncludeNpdEmailActions(nextPendingRole);
+    }
+  } else {
+    recipients = [saved.AuthorEmail];
+    recipientRole = Config.Roles.Initiator;
+  }
 
   try {
     await sendNpdApprovalNotification({
       request: saved,
-      action: params.action,
+      action: notificationAction,
       comments: params.comments,
       role: recipientRole,
       to: recipients,
-      includeActionButtons:
-        params.action === "Approve" &&
-        shouldIncludeNpdEmailActions(nextPendingRole),
+      includeActionButtons,
       siteUrl: params.siteUrl,
     });
   } catch {

@@ -2,26 +2,78 @@
 
 .multiSelect {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.host {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
   :global(.p-multiselect) {
     width: 100%;
+    max-width: 100%;
     font-size: 0.8125rem;
     border-radius: $roca-radius-sm;
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  :global(.p-multiselect-label-container) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
   }
 
   :global(.p-multiselect-label) {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     font-size: 0.8125rem;
     color: $roca-color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.p-multiselect-trigger) {
+    flex-shrink: 0;
   }
 }
 
 .panel {
   font-family: 'Poppins', sans-serif !important;
   font-size: 0.8125rem;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+
+  :global(.p-multiselect-items-wrapper) {
+    overflow-x: hidden !important;
+  }
+
+  :global(.p-multiselect-items) {
+    overflow-x: hidden !important;
+  }
 
   :global(.p-multiselect-empty-message) {
     font-size: 12px !important;
     line-height: 1.4;
     padding: 0.75rem 0.875rem;
   }
+
+  :global(.p-multiselect-item) {
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+}
+
+.optionLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }

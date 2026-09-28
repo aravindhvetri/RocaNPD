@@ -1,6 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
 import type { INavItemConfig } from "../../../../../../External/CommonServices/navigationConfig";
+import { buildNavHref } from "../../../../../../External/CommonServices/navigationConfig";
 import styles from "./NavCompactPrimary.module.scss";
 
 export interface INavCompactPrimaryProps {
@@ -10,7 +11,7 @@ export interface INavCompactPrimaryProps {
 
 const NavCompactPrimary: React.FC<INavCompactPrimaryProps> = ({ item, onNavigate }) => (
   <NavLink
-    to={item.route}
+    to={buildNavHref(item.route, item.viewRole)}
     end
     title={item.label}
     aria-label={item.label}

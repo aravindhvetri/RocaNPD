@@ -95,7 +95,7 @@ $roca-color-header-text: #2d3748;
 // Master list screens (LookupType Master v2)
 $roca-color-master-table-header: #5793a0;
 $roca-color-master-page-title: #1d4e56;
-$roca-color-btn-add-new-bg: #2d7089;
+$roca-color-btn-add-new-bg: #40919d;
 $roca-color-btn-add-new-hover-bg: #255f75;
 $roca-color-edit-icon: #5a929e;
 $roca-color-toast-warning-accent: #f5a623;
@@ -178,14 +178,16 @@ $roca-radius-pill: 6px;
 [data-roca-npd-nav] a[href*="/mg/new"] {
   border-radius: 10px !important;
   background-color: #207383 !important;
-  background-image: linear-gradient(110deg,
-      #207383 0%,
-      #1a8093 18%,
-      #307a8a 34%,
-      #3ec8d8 50%,
-      #1389d2 66%,
-      #1a8093 82%,
-      #207383 100%) !important;
+  background-image: linear-gradient(
+    110deg,
+    #207383 0%,
+    #1a8093 18%,
+    #307a8a 34%,
+    #3ec8d8 50%,
+    #1389d2 66%,
+    #1a8093 82%,
+    #207383 100%
+  ) !important;
   background-size: 250% 200% !important;
   background-repeat: no-repeat !important;
   color: #ffffff !important;

@@ -276,6 +276,11 @@
 .statusRejected {
   max-width: 100%;
   font-size: 0.75rem !important;
+  font-weight: 600;
+  border-radius: 4px !important;
+  padding: 0.2rem 0.55rem !important;
+  border-width: 1px !important;
+  border-style: solid !important;
 
   :global(.p-tag-value) {
     overflow: hidden;
@@ -287,26 +292,31 @@
 .statusPending {
   background: $roca-color-status-pending-bg !important;
   color: $roca-color-warning !important;
+  border-color: #f59e0b !important;
 }
 
 .statusApproved {
   background: $roca-color-status-approved-bg !important;
   color: $roca-color-success !important;
+  border-color: #10b981 !important;
 }
 
 .statusRework {
   background: #fff4e5 !important;
-  color: $roca-color-warning !important;
+  color: #d97706 !important;
+  border-color: #f97316 !important;
 }
 
 .statusDraft {
   background: $roca-color-status-draft-bg !important;
   color: $roca-color-text-secondary !important;
+  border-color: #cbd5e1 !important;
 }
 
 .statusRejected {
   background: $roca-color-status-rejected-bg !important;
   color: $roca-color-error !important;
+  border-color: #ef4444 !important;
 }
 
 @media (max-width: 1100px) {

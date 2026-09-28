@@ -1,6 +1,6 @@
 @import '../../../External/CommonServices/theme.scss';
 
-$roca-dialog-title-size: 1.125rem;
+$roca-dialog-title-size: 1rem;
 $roca-dialog-label-size: 0.75rem;
 $roca-dialog-control-size: 0.8125rem;
 
@@ -129,11 +129,13 @@ $roca-dialog-control-size: 0.8125rem;
   :global(.p-inputtext),
   :global(.p-dropdown),
   :global(.p-multiselect),
-  :global(.p-inputtextarea) {
+  :global(.p-inputtextarea),
+  :global(textarea) {
     width: 100%;
     font-size: $roca-dialog-control-size;
     font-family: 'Poppins', sans-serif;
     border-radius: $roca-radius-sm;
+    resize: none !important;
 
     &:enabled:focus,
     &:enabled:active {

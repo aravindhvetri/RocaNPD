@@ -11,13 +11,13 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 49 | 38 | 11 |
+| B — Technical Foundation | 50 | 39 | 11 |
 | C — SharePoint Data | 24 | 5 | 19 |
-| D — Security & Roles | 22 | 12 | 10 |
-| E — UI / UX / Theme | 28 | 9 | 19 |
+| D — Security & Roles | 24 | 15 | 9 |
+| E — UI / UX / Theme | 29 | 10 | 19 |
 | F — Admin Module | 39 | 24 | 15 |
 | G — NPD Module | 48 | 43 | 5 |
-| H — Material Group Module | 26 | 14 | 12 |
+| H — Material Group Module | 27 | 15 | 12 |
 | I — Workflow & Automation | 20 | 0 | 20 |
 | J — SAP Integration | 16 | 0 | 16 |
 | K — Material Master | 10 | 0 | 10 |
@@ -26,9 +26,9 @@
 | N — Testing | 24 | 0 | 24 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **353** | **136** | **217** |
+| **TOTAL** | **357** | **143** | **214** |
 
-**Last Updated:** 22 September 2026
+**Last Updated:** 26 September 2026
 
 ---
 
@@ -89,6 +89,8 @@
 - [x] **CHK-B21** Route guards block unauthorized role access (`ProtectedRoute` + `permissionService`)
 - [x] **CHK-B22** App shell matches wireframe layout (header, left nav, content)
 - [x] **CHK-B23** Navigation items show/hide correctly per role (`filterNavigationByRoles`, union of assigned roles)
+- [x] **CHK-B23a** Multi-role users see separate role-grouped nav sections (Initiator / VH / MIS / Consultant / Admin) with `?as=` context
+- [x] **CHK-B23b** After Approve/Submit/Save Draft success toast clear, `?as=` is preserved so the same role section stays selected (e.g. VH Pending, not Initiator Pending)
 - [x] **CHK-B24** Active Login Role indicator removed from side navigation per design requirement
 - [x] **CHK-B25** Unauthorized URL redirects to access-denied page (`/unauthorized`)
 
@@ -193,8 +195,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### D.2 Access Control — Initiator
 
-- [ ] **CHK-D07** Initiator sees only own NPD requests
-- [ ] **CHK-D08** Initiator sees only own Material Group requests
+- [x] **CHK-D07** Initiator sees only own / brand-scoped NPD requests (Initiator nav section + `getNpdViewScope`)
+- [x] **CHK-D08** Initiator sees only own Material Group requests (Initiator MG section)
 - [x] **CHK-D09** Initiator cannot Approve, Rework, or Reject (`hasPermission` / action matrix)
 - [x] **CHK-D10** Initiator cannot edit Pending or Approved requests (View is read-only; Edit only for own Draft/Rework)
 - [x] **CHK-D11** Initiator can edit and resubmit Draft / Rework requests
@@ -221,7 +223,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### D.5 Access Control — Admin
 
-- [ ] **CHK-D23** Admin sees all NPD and Material Group requests
+- [x] **CHK-D23** Admin sees all NPD and Material Group requests (Admin nav sections, no brand restriction)
+- [x] **CHK-D23a** Multi-role Admin+Initiator keeps separate Initiator (brand-scoped) and Admin (unscoped) NPD / MG sections
+- [x] **CHK-D23b** Admin All Requests (NPD + MG) excludes Draft records; summary card label is "In Rework" (not "In Rework / Drafts")
 - [x] **CHK-D24** Admin has full Administration module access
 - [x] **CHK-D25** Admin cannot perform workflow actions (approve/post) unless by design
 
@@ -244,6 +248,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 - [x] **CHK-E09** Left navigation matches NavSelectDesign.png (icon tones, hover, selected bar, pill actions)
 - [x] **CHK-E09a** Administration nav excludes Plant Master, Role, and Approver Configuration (ROCA-sourced; no local modules)
+- [x] **CHK-E09b** Role group banners separate Initiator / VH / MIS / Consultant / Admin blocks in expanded side nav
 - [x] **CHK-E06** Primary/accent colors match wireframe (#40919D accent, #162C34 sidebar, semantic nav icons)
 - [x] **CHK-E17b** Nav hover = subtle translucent bg; selected = **white** bg + dark teal text + colored left bar; icons keep semantic colors
 - [x] **CHK-E17c** Sidebar shrink/expand toggle matches shrink.png; content area adjusts; primary actions hover + selected only on click
@@ -296,6 +301,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F04d** Bottom pagination with entry count matches new design
 - [x] **CHK-F04e** Delete confirmation uses common `DeleteConfirmDialog` design
 - [x] **CHK-F04j** Lookup Type delete blocked when used by Lookup records (`DeleteBlockedDialog`, not delete confirm + Toast)
+- [x] **CHK-F04k** Case-insensitive duplicate Lookup Type Title (UI + service; e.g. Resin / RESIN)
+- [x] **CHK-F04l** Add/Edit Lookup Type dialog closes immediately on save; page loader until complete
+- [x] **CHK-F04m** Export shows page loader while Excel download runs
 
 ### F.2 Lookup Master
 
@@ -310,6 +318,10 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F09c** Export downloads Excel for filtered grid data including Lookup Code
 - [x] **CHK-F09d** Lookup Type delete dependency check runs before delete confirm dialog
 - [x] **CHK-F09e** Lookup delete blocked when referenced in Brand Material Extension (Toast)
+- [x] **CHK-F09f** Case-insensitive duplicate Lookup Name and Lookup Code under the same Lookup Type (UI + service)
+- [x] **CHK-F09g** Add/Edit Lookup dialog closes immediately on save; page loader until complete
+- [x] **CHK-F09h** Lookup Export shows page loader while Excel download runs
+- [x] **CHK-F09i** Add New button keeps the same background on click/focus (no color flash)
 
 ### F.3 Plant / Role / Approver — ROCA site (no local admin screens)
 
@@ -360,6 +372,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G02** Summary cards show correct counts (Total, Pending, Rework, Approved)
 - [x] **CHK-G03** Pending Approval shows own requests in pipeline (view-only for Initiator; Edit only if the user can act as the pending VH/MIS role)
 - [x] **CHK-G04** Approved Requests shows fully approved requests in the user's scope (view-only)
+- [x] **CHK-G04a** Vertical Head Approved Requests also lists Pending requests where VH WorkFlowJSON step is Approved (status shows Pending with MIS Coordinator until Post to SAP)
 - [x] **CHK-G05** Draft / ReWork shows editable own requests
 - [x] **CHK-G06** Search by Request ID, Plant, Brand, Code, Material works ('Search here' on Pending/Draft; 'Search by Request ID, Plant, Brand, Code, or Material...' on All/Approved)
 - [x] **CHK-G06a** DataTable layout consistently aligned across all NPD components (Request ID, Brand, Material Type, Plant, Products, Status, Current Approver, Created Date, Workflow, Actions) with unified column widths and alignment
@@ -385,6 +398,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G18** Import items from Excel works — Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
 - [x] **CHK-G19** Save Draft saves header + items without submitting
 - [x] **CHK-G20** Submit Request validates and routes to Vertical Head
+- [x] **CHK-G20a** Initiator footer shows SUBMIT REQUEST for new/draft; RESUBMIT when request status is Rework
 - [x] **CHK-G21** Draft Request ID remains blank until submitted
 - [x] **CHK-G21a** Title left empty on new items in NPD_Request (Drafts do not store Brand in Title), NPD_ApproverComments, and NPD_MaterialGroupAuditLogs; existing Request ID generation logic preserved on submit
 - [x] **CHK-G22** Request ID generated as `NPD-YYYY-###` on submit
@@ -409,13 +423,19 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G35** Approved Requests supports search, brand filter, Export (Excel)
 - [x] **CHK-G35a** VH email Approve/Reject/Rework opens NPDApproverMail (`RequestID` + `Action`); updates `NPD_Request` + `NPD_ApproverComments`
 - [x] **CHK-G35b** NPDApproverMail condition-based single-line messages with no icon/header: success → "Your response for this request has been submitted successfully."; already submitted → "Your response for this request has already been submitted."; pending in WorkFlowJSON → "No action is required from you for this request at the moment."; not in WorkFlowJSON → "You are not part of this request workflow."
+- [x] **CHK-G35e** NPDApproverMail: user not in WorkFlowJSON always shows "You are not part of this request workflow." (checked before already-submitted / no-action messages)
+- [x] **CHK-G35d** NPDApproverMail success toast uses success severity (green tick), not warn/approve styling
+- [x] **CHK-G26a** Item Details MultiSelect selected values stay inside the field with ellipsis when overflowing
+- [x] **CHK-G26b** Item Details MultiSelect overlay panel matches each input width/left edge on first paint (no large-then-shrink); long option labels ellipsize (tooltip shows full text); Item Details panel filter slightly wider with smaller search/close icons
 
 ### G.5 MIS Coordinator
 
 - [x] **CHK-G36** Pending Approval shows VH-approved requests for any user in the MIS Coordinator role
 - [x] **CHK-G37** Item Details editable (edit rows, add line items)
 - [x] **CHK-G37a** Newly added Item Details rows by MIS Coordinator highlighted in yellow (`#fefce8`) with amber border (`#eab308`); persists across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
+- [x] **CHK-G37b** NPD Item Details keep original add order (SharePoint Id ascending); MIS-added rows stay at the end — not latest-first (MG lists keep latest-first)
 - [x] **CHK-G38** Other Details section displays all SAP fields
+- [x] **CHK-G38a** Other Details visible only in MIS Coordinator module (`?as=`) before Approved; dual-role VH+MIS must not see it in VH module; after Approved/Post to SAP visible in all modules (Initiator, VH, MIS)
 - [x] **CHK-G39** Storage Location auto-populated from ROCA `PlantMaster`
 - [x] **CHK-G40** MRP Group and MRP Controller auto-populated from ROCA `PlantMaster`
 - [x] **CHK-G41** Material Extension auto-populated from Brand Material Extension (editable)
@@ -427,8 +447,12 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-G47** Post to SAP failure → error shown, status NOT changed to Completed
 - [x] **CHK-G48** Rework routes to Initiator; Reject permanently closes
 - [x] **CHK-G49** Approver Remarks inline (no popup) for VH / MIS; Audit Log from `NPD_ApproverComments`
+- [x] **CHK-G49a** Audit Log ordered chronologically by Action On (Initiated → Rework → Resubmit); UI-only Pending rows from WorkflowJSON for waiting approvers (not stored in lists)
 - [x] **CHK-G50** MIS Rework/Reject updates `NPD_Request` and writes Approver Comments; loader does not show Item-added message
 - [x] **CHK-G51** Profit Center dropdown matches Lookup Type pattern (label + arrow only)
+- [x] **CHK-G52** Initiator has no Remarks/Comments box on NPD form (submit uses system audit comments)
+- [x] **CHK-G53** Last approver Approve / Post to SAP sends Approved email to Initiator when no next pending step remains
+- [x] **CHK-G54** NPD All Requests Export shows page loader while download runs
 
 ---
 
@@ -462,11 +486,16 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-H20** Send Back for ReWork → routes to Initiator
 - [x] **CHK-H21** Reject → permanently closed
 - [x] **CHK-H22** Cancel discards unsaved changes
+- [x] **CHK-H30** Last configured MG approver Complete sends completion email to Initiator
+- [x] **CHK-H31** Initiator has no Remarks box on Material Group form (Consultant remarks only)
 
 ### H.3 Material Group — Validation
 
 - [x] **CHK-H23** Rejected Material Group request cannot be resubmitted
 - [x] **CHK-H24** Consultant cannot Complete without mandatory Code on all rows
+- [x] **CHK-H32** MG form errors (e.g. duplicate Lookup Code on Complete) show a single toast — not duplicated via both unwrap `.catch` and `mgState.error` effect
+- [x] **CHK-H32a** Consultant Complete validates + syncs Lookup Master **before** Status change; on validation/duplicate failure or Cancel, request stays Pending and no workflow completion runs
+- [x] **CHK-H33** Material Group Audit Log ordered chronologically by Action On then Id (Initiated → Rework → Resubmit → …), same as NPD; Pending Consultant placeholder at bottom while Pending
 
 ### H.4 Material Group — Role-based Access & Navigation
 
@@ -716,10 +745,25 @@ Use this table to sign off each phase only when all related checklist items are 
 | 22 Sep 2026 | MIS Other Details UI + auto-populate + persist on action; scrollable form with fixed footer; Brand visible when options empty for MIS | CHK-D17, CHK-G37–G45, CHK-G48 |
 | 22 Sep 2026 | Inline Approver Remarks + Audit Log; Rework/Reject persist request + comments; Profit Center dropdown clean; no Item-added on workflow | CHK-G49–G51 |
 | 23 Sep 2026 | VH email actions open NPDApproverMail web part with RequestID/Action; confirm + persist Status/comments | CHK-G35a |
-| 24 Sep 2026 | NPD Item Details: highlight only rows added by MIS Coordinator (yellow + amber border); persist for Initiator & VH views; Initiator rows unhighlighted; fix MG Initiator row highlight | CHK-G37a |
-| 24 Sep 2026 | NPDApproverMail: condition-based single-line messages with no icon/title; exact success, already submitted, not required, and not part of workflow messages | CHK-G35b |
-| 24 Sep 2026 | Empty Title for spAddItem on NPD_Request (Drafts), NPD_ApproverComments, NPD_MaterialGroupAuditLogs; existing Request ID generation logic preserved on submit | CHK-G21a |
-| 24 Sep 2026 | Keep SharePoint default suite bar visible; add Action Via column to audit log tables (System/Mail); format Action On as DD/MM/YYYY hh:mm A; remove CC on emails (To only); email header background #774dec | CHK-G35c |
+| 24 Sep 2026 | NPD Item Details: highlight only MIS Coordinator-added rows; persist for Initiator & VH views | CHK-G37a |
+| 24 Sep 2026 | NPDApproverMail: condition-based single-line messages with no icon/title | CHK-G35b |
+| 24 Sep 2026 | Empty Title for spAddItem on NPD_Request (Drafts), NPD_ApproverComments, NPD_MaterialGroupAuditLogs | CHK-G21a |
+| 24 Sep 2026 | Keep SharePoint suite bar; Action Via column; Action On DD/MM/YYYY hh:mm A; email To only; header #774dec | CHK-G35c |
+| 25 Sep 2026 | Export loader; dialog closes before save; case-insensitive Lookup duplicates; no Initiator Remarks; last-approver completion email to Initiator (NPD + MG) | CHK-F04k–m, CHK-F09f–i, CHK-G52–G54, CHK-H30–H31 |
+| 25 Sep 2026 | Role-grouped side navigation with `?as=` scoped lists (Initiator brand-scoped vs Admin all-data; separate VH/MIS/Consultant sections) | CHK-B23a, CHK-D07–D08, CHK-D23/D23a, CHK-E09b |
+| 26 Sep 2026 | ApproversMaster System scoping: only New Product Development / New Material Group grant roles; blank and other systems (e.g. Transit Breakage) ignored for nav | CHK-D04, CHK-B23, R-SEC03a |
+| 26 Sep 2026 | MG Consultant Complete / Save / Submit: single error toast (removed duplicate unwrap `.catch` + slice error effect) | CHK-H32, CHK-E20 |
+| 26 Sep 2026 | MG Consultant Complete: validate + sync Lookup Master before Status change so failed validation keeps request Pending | CHK-H19, CHK-H32a |
+| 26 Sep 2026 | NPD Audit Log: chronological order; UI-only Pending from WorkflowJSON for VH/MIS until ApproverComments replace them | CHK-G49a |
+| 26 Sep 2026 | Resubmit label on Rework; MultiSelect ellipsis; ApproverMail success toast uses success severity | CHK-G20a, CHK-G26a, CHK-G35d |
+| 26 Sep 2026 | Audit Log Pending placeholders also on Rework (empty MIS still Pending); hide All Statuses on NPD Pending/Approved | CHK-G49a, CHK-G30a |
+| 27 Sep 2026 | Admin All Requests (NPD + MG) exclude Draft; Admin card label In Rework only | CHK-D23b, T-0480a |
+| 27 Sep 2026 | NPDApproverMail: not-in-WorkFlowJSON message takes priority over already-submitted | CHK-G35e |
+| 27 Sep 2026 | VH Approved Requests includes Pending-with-MIS after VH Approve; status unchanged until Post to SAP | CHK-G04a, T-0603a |
+| 27 Sep 2026 | Preserve `?as=` after toast-state clear; NavRouteSync does not invent Initiator when `?as=` missing | CHK-B23b |
+| 27 Sep 2026 | Other Details gated by MIS module `?as=` until Approved; NPD Item Details chronological Id order | CHK-G38a, CHK-G37b |
+| 27 Sep 2026 | Item Details MultiSelect overlay aligned to each input; option labels ellipsize | CHK-G26b |
+| 28 Sep 2026 | Material Group Audit Log chronological order (same as NPD: Initiated → Rework → Resubmit) | CHK-H33 |
 
 ---
 

@@ -215,7 +215,7 @@ export interface INpdDraftSavePayload {
   id?: number | null;
   brand: string;
   materialType: string;
-  plantSource: string;
+  plantSource?: string | null;
   existingStatus?: string | null;
   existingTitle?: string | null;
 }
@@ -427,11 +427,11 @@ export interface IMaterialGroupHydratePayload {
   latestCommentAction?: string;
 }
 
-/** Audit log row written on Consultant Rework / Reject / Complete. */
+/** Audit log row written on Consultant / Approver / Initiator action. */
 export interface IMaterialGroupAuditLogPayload {
   requestListItemId: number;
-  requestTitle: string;
-  action: "Rework" | "Rejected" | "Completed";
+  requestTitle?: string;
+  action: "Rework" | "Rejected" | "Completed" | "Initiated" | "Resubmit" | string;
   comments: string;
   /** Site user Id for the Consultant Person/Group column. */
   consultantUserId?: number;

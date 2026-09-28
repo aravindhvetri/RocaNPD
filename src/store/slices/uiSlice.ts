@@ -9,16 +9,29 @@ const defaultExpanded = NAV_SECTIONS.reduce<Record<string, boolean>>(
   {},
 );
 
+export interface IGlobalProcessingState {
+  current: number;
+  total: number;
+  percent: number;
+  /** When true, show item progress (Initiator draft/submit only). */
+  showItemProgress: boolean;
+}
+
 export interface IUiState {
   sidebarCollapsed: boolean;
   expandedSections: Record<string, boolean>;
   activeNavItemId: string;
+  /** Survives route changes so Submit can navigate away while work finishes. */
+  globalProcessing: IGlobalProcessingState | null;
+  flashMessage: { severity: "success" | "error"; detail: string } | null;
 }
 
 const initialState: IUiState = {
   sidebarCollapsed: false,
   expandedSections: defaultExpanded,
   activeNavItemId: "",
+  globalProcessing: null,
+  flashMessage: null,
 };
 
 const uiSlice = createSlice({
@@ -38,6 +51,39 @@ const uiSlice = createSlice({
     setExpandedSections(state, action: PayloadAction<Record<string, boolean>>) {
       state.expandedSections = action.payload;
     },
+    setGlobalProcessing(
+      state,
+      action: PayloadAction<IGlobalProcessingState>,
+    ) {
+      state.globalProcessing = action.payload;
+    },
+    updateGlobalProcessing(
+      state,
+      action: PayloadAction<Partial<IGlobalProcessingState>>,
+    ) {
+      if (!state.globalProcessing) {
+        return;
+      }
+      state.globalProcessing = {
+        ...state.globalProcessing,
+        ...action.payload,
+      };
+    },
+    clearGlobalProcessing(state) {
+      state.globalProcessing = null;
+    },
+    setFlashMessage(
+      state,
+      action: PayloadAction<{
+        severity: "success" | "error";
+        detail: string;
+      } | null>,
+    ) {
+      state.flashMessage = action.payload;
+    },
+    clearFlashMessage(state) {
+      state.flashMessage = null;
+    },
   },
 });
 
@@ -46,6 +92,11 @@ export const {
   toggleNavSection,
   setActiveNavItem,
   setExpandedSections,
+  setGlobalProcessing,
+  updateGlobalProcessing,
+  clearGlobalProcessing,
+  setFlashMessage,
+  clearFlashMessage,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

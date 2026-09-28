@@ -55,6 +55,7 @@ const BrandMaterialExtensionMaster: React.FC = () => {
   const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
   const [deleteConfirmSnapshot, setDeleteConfirmSnapshot] =
     React.useState<IDeleteConfirmSnapshot | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const isLoading = status === "loading";
   const isSaving = status === "saving";
@@ -121,8 +122,17 @@ const BrandMaterialExtensionMaster: React.FC = () => {
       return;
     }
 
-    exportBrandMaterialExtensionsToExcel(filteredRows);
-    showSuccessToast(toastRef, "Export completed successfully.");
+    setIsExporting(true);
+    window.setTimeout(() => {
+      try {
+        exportBrandMaterialExtensionsToExcel(filteredRows);
+        showSuccessToast(toastRef, "Export completed successfully.");
+      } catch {
+        showErrorToast(toastRef, "Failed to export brand material extensions.");
+      } finally {
+        setIsExporting(false);
+      }
+    }, 0);
   };
 
   const openCreateDialog = (): void => {
@@ -163,17 +173,22 @@ const BrandMaterialExtensionMaster: React.FC = () => {
   };
 
   const handleSave = async (brand: string, plants: string[]): Promise<void> => {
+    const mode = dialogMode;
+    const editingItem = selectedItem;
+    setDialogVisible(false);
+    setSelectedItem(null);
+
     try {
-      if (dialogMode === "create") {
+      if (mode === "create") {
         await dispatch(createBrandMaterialExtension({ brand, plants })).unwrap();
         showSuccessToast(
           toastRef,
           "Brand material extension created successfully.",
         );
-      } else if (selectedItem) {
+      } else if (editingItem) {
         await dispatch(
           updateBrandMaterialExtension({
-            id: selectedItem.Id,
+            id: editingItem.Id,
             brand,
             plants,
           }),
@@ -183,8 +198,6 @@ const BrandMaterialExtensionMaster: React.FC = () => {
           "Brand material extension updated successfully.",
         );
       }
-      setDialogVisible(false);
-      setSelectedItem(null);
     } catch {
       // Error toast handled via slice error effect.
     }
@@ -217,8 +230,9 @@ const BrandMaterialExtensionMaster: React.FC = () => {
     })();
   };
 
-  const showPageLoader = isLoading || isSaving;
-  const pageLoaderLabel = isSaving ? "Saving..." : "Loading...";
+  const showPageLoader = isLoading || isSaving || isExporting;
+  const pageLoaderLabel = "Processing";
+
 
   return (
     <section className={styles.master}>

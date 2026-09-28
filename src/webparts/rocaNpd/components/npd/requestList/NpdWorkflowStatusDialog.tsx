@@ -48,7 +48,9 @@ const NpdWorkflowStatusDialog: React.FC<INpdWorkflowStatusDialogProps> = ({
                 <td>{row.name}</td>
                 <td>{row.workflowRole}</td>
                 <td>
-                  <span className={statusClass(row.statusLabel)}>
+                  <span
+                    className={`${styles.statusPill} ${statusClass(row.statusLabel)}`}
+                  >
                     {row.statusLabel}
                   </span>
                 </td>

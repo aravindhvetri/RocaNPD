@@ -1,0 +1,1803 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Title>ROCA NPD — SPRINT 2 UNIT TEST CASES</Title>
+  <Author>ROCA NPD</Author>
+  <Version>16.00</Version>
+ </DocumentProperties>
+ <OfficeDocumentSettings xmlns="urn:schemas-microsoft-com:office:office">
+  <AllowPNG/>
+ </OfficeDocumentSettings>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <WindowHeight>8676</WindowHeight>
+  <WindowWidth>23040</WindowWidth>
+  <WindowTopX>32767</WindowTopX>
+  <WindowTopY>32767</WindowTopY>
+  <MaxChange>0.0001</MaxChange>
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Top" ss:WrapText="1"/>
+   <Font ss:FontName="Calibri" ss:Color="#000000"/>
+  </Style>
+  <Style ss:ID="s66">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#0D5C63"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#0D5C63"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#0D5C63"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#0D5C63"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/>
+   <Interior ss:Color="#0D5C63" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s67">
+   <Alignment ss:Vertical="Top" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#D0D7DE"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#D0D7DE"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#D0D7DE"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#D0D7DE"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Color="#000000"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="01_VH_Approve_Rework_Reject">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="23" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Pending Approval queue display</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User mapped as Vertical Head for Brand ROCA; request submitted by Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as VH. 2. Navigate to Pending Approval (/npd/pending).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request is listed in the DataTable. Status badge shows Pending. Current pending role in Workflow column is Vertical Head.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand = ROCA</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">R-NPD15, fetchNpdPendingList</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH brand scope filtering</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User mapped as VH for Brand ROCA only; pending request exists for Brand PARRY</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as VH. 2. Open Pending Approval (/npd/pending).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">PARRY request is not displayed. Only requests matching VH mapped brands appear.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand = PARRY</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">R-NPD15, canActOnPendingNpdStep</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Edit action opens form in action mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Pending request for VH's brand on /npd/pending</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Edit (pencil icon) in Action column.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Opens /npd/new?id={Id}&amp;mode=edit&amp;from=pending. General Information and Item Details are loaded.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mode = edit</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdRequestFormHelpers.buildNpdRequestFormPath</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH form action buttons</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened in VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Scroll to form footer.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Visible buttons: Cancel / Back, Rework, Reject, Approve. Save Draft and SUBMIT REQUEST are hidden.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">resolveNpdFooterMode, NpdRequestFormFooter</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH View action opens read-only</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request on /npd/pending</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click View (eye icon).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Opens /npd/new?id={Id}&amp;mode=view&amp;from=pending. Form is strictly read-only. Approve, Reject, and Rework buttons are not rendered.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mode = view</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">isNpdFormViewMode, resolveNpdFooterMode</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form fields read-only for VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened in VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Attempt to change Material Type, Plant, or Brand. 2. Attempt to edit Item Details cell values or add/delete item rows.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">General Information dropdowns/inputs are disabled. Item Details grid is read-only; Add Row and Delete Row controls are hidden.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useNpdRequestFormController.generalInfoReadOnly</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Approver Remarks field visible</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened in VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Locate Approver Remarks section above footer.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Text area labelled 'Vertical Head Remarks' is visible and editable.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Acting role = VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverRemarks, resolveNpdFooterMode</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Approve with remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode, entered valid remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Looks good, approved'. 2. Click Approve.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request processes. WorkFlowJSON updates VH step to Approved with comments and ActionDate. Pending role advances to MIS Coordinator. Header Status remains Pending.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdWorkflowJsonService, applyNpdWorkflowAction</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Approve without remarks allowed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode, remarks empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Leave remarks empty. 2. Click Approve.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Approval succeeds without error. Remarks are optional for Approve action. WorkFlowJSON step is marked Approved with empty comments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateApproverRemarks, applyNpdWorkflowAction</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Approve updates audit log in NPD_ApproversComments</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH completes Approve action from application</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_ApproversComments for this RequestId.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">New row added: ApproverRole='Vertical Head', Action='Approved', Comments match input, ActionVia='System', ActionOn has date and time.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService.addNpdApproverComment</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Approve audit log leaves Title empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH completes Approve action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Check Title column of newly created row in NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Title is not populated with request ID or brand name.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">spAddItem Title standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Approve notification email to MIS Coordinator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH completes Approve action; MIS Coordinator configured</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Verify outgoing email / mailbox.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Email sent to MIS Coordinator with request details, approved status, and link to request. No Approve/Reject buttons in MIS notification email.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Recipient = MIS</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">sendNpdApprovalNotification</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Rework without remarks blocked</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode, remarks empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Clear remarks. 2. Click Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action is blocked. Validation toast appears: 'Please enter remarks for rework.' No list updates occur.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateApproverRemarks, showActionValidationToast</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Rework with remarks updates status to Rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode, remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Please update UOM'. 2. Click Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkFlowJSON updates VH step to Rework. Header Status changes to Rework. Workflow pending role points back to Initiator.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdWorkflowJsonService.applyWorkflowStepAction</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-015</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Rework saves audit log with ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH completes Rework action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row created with ApproverRole='Vertical Head', Action='Rework', Comments='Please update UOM', ActionVia='System', ActionOn timestamp.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-016</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Rework routes request to Initiator Draft / ReWork</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request reworked by VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as Initiator. 2. Open Draft / ReWork (/npd/draft-rework).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request is visible with Status = Rework. Initiator can click Edit to modify and resubmit.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Status = Rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdDraftRework, fetchNpdDraftReworkList</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-017</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Reject without remarks blocked</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode, remarks empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Clear remarks. 2. Click Reject.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action blocked. Validation toast appears: 'Please enter remarks for rejection.' Workflow is not altered.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateApproverRemarks</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-018</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Reject with remarks terminates workflow</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH edit mode, remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Product line discontinued'. 2. Click Reject.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkFlowJSON VH step set to Rejected. Overall header Status becomes Rejected. Workflow terminates; no subsequent steps are pending.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdWorkflowJsonService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-019</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Reject saves audit log with ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH completes Reject action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row added with ApproverRole='Vertical Head', Action='Rejected', Comments='Product line discontinued', ActionVia='System', Title empty.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-020</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Reject sends email notification to Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH completes Reject action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Check Initiator inbox.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Notification email received stating request has been rejected with VH comments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Email = Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">sendNpdApprovalNotification</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-021</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH Cancel / Back returns to pending list</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened from /npd/pending</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Cancel / Back.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Navigates back to /npd/pending. No data is changed or submitted.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = pending</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">resolveNpdFormCancelRoute</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-VH-022</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable displays VH action in UI</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request opened in View/Edit after VH action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request and view NPD Audit Log section.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Table shows row with Role='Vertical Head', Action='Approved'/'Rework'/'Rejected', Action Via='System', Action On='DD/MM/YYYY HH:MM:SS', Remarks.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Table view</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <Selected/>
+   <LeftColumnVisible>5</LeftColumnVisible>
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="02_MIS_Coordinator_Actions">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="23" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Coordinator Pending Approval display</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User mapped as MIS Coordinator; request approved by VH (pending MIS)</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as MIS. 2. Open Pending Approval (/npd/pending).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request is displayed with Status = Pending, current pending role = MIS Coordinator.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Pending MIS</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">R-NPD15, canActOnPendingNpdStep</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Coordinator sees requests for all brands</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Multiple requests pending MIS across ROCA and PARRY brands</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as MIS. 2. Review Pending Approval list.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Requests for all brands are visible. MIS Coordinator role has enterprise-wide brand visibility.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">All brands</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">R-NPD17, fetchNpdPendingList</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Coordinator Edit opens MIS acting mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request pending MIS step</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Edit (pencil icon).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Opens /npd/new?id={Id}&amp;mode=edit&amp;from=pending. Footer displays Post to SAP, Rework, Reject, Cancel / Back.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mode = edit</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">resolveNpdFooterMode</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section visible to MIS Coordinator before approval</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request pending MIS step, opened by MIS Coordinator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Observe form sections between Item Details and Footer.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section is visible to MIS Coordinator with Plant Code, Profit Center, Material Extension, Valuation Class fields.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Before Approved</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdOtherDetailsSection, showOtherDetails</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section hidden from Initiator before approval</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request pending MIS step, opened by Initiator in View mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as Initiator. 2. Open request in View mode.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section is completely hidden from Initiator before request is approved.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Role = Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">showOtherDetails logic</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section hidden from Vertical Head before approval</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request pending MIS step, opened by VH in View mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as VH. 2. Open request in View mode.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section is completely hidden from Vertical Head before request is approved.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Role = VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">showOtherDetails logic</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details Plant Code auto-populated</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request opened in MIS edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Plant Code field in Other Details.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Plant Code is auto-populated from PlantMaster based on selected Plant / Source and Material Type.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">PlantCode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdOtherDetailsService.fetchPlantDetailsForPlantSource</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details Profit Center options loaded from active lookups</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request opened in MIS edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open Profit Center multi-select dropdown.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dropdown displays active Profit Center lookup values fetched via fetchActiveLookups.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">LookupType = Profit Center</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdOtherDetailsService.fetchProfitCenterOptions</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details Material Extension auto-populated for Brand</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request opened in MIS edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Material Extension field.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Material Extension is auto-populated from NPD_BrandMaterialExtensionMaster for the request's Brand.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand match</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">fetchMaterialExtensionForBrand</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details editable by MIS Coordinator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request opened in MIS edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Modify Profit Center selection. 2. Modify Material Extension.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Fields accept changes. State is updated in Redux npdFormSlice.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS acting</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useNpdRequestFormController</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Post to SAP validation required fields</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS edit mode, clear required SAP fields</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Clear required Other Details fields. 2. Click Post to SAP.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action blocked with validation toast identifying missing required MIS / SAP fields.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Incomplete SAP data</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateNpdOtherDetails</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Post to SAP / Approve execution</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS edit mode, valid Other Details and remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter remarks. 2. Click Post to SAP.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Workflow updates MIS Coordinator step to Approved. Overall header Status becomes Approved. WorkFlowJSON completed.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Valid data</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">applyNpdWorkflowAction, postToSap</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Approved request appears in Approved Requests dashboard</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request approved by MIS Coordinator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to Approved Requests (/npd/approved).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request is listed with green Approved status badge.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Status = Approved</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdRequestDashboard variant='approved'</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section visible to everyone after approval</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request has Status = Approved</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as Initiator, open request View. 2. Log in as VH, open request View. 3. Log in as MIS, open request View.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Other Details section is visible to Initiator, Vertical Head, and MIS Coordinator once request is Approved.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">After Approved</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">showOtherDetails: isApproved || isMisActing</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-015</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Approved request Other Details fields read-only</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Approved request opened in View mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Other Details fields as any user.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">All Other Details inputs and dropdowns are disabled / read-only. No action footer buttons appear.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mode = view</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">otherDetailsReadOnly, resolveNpdFooterMode</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-016</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Post to SAP writes audit log with ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS completes Post to SAP from application UI</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_ApproversComments for this RequestId.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row added: ApproverRole='MIS Coordinator', Action='Approved'/'Post to SAP', ActionVia='System', ActionOn has date and time.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-017</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Post to SAP audit log leaves Title empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS completes Post to SAP action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Title column in NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Request ID is stored in RequestId column.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">spAddItem Title standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-018</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Rework without remarks blocked</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS edit mode, remarks empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Leave remarks empty. 2. Click Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action blocked. Toast notification: 'Please enter remarks for rework.'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateApproverRemarks</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-019</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Rework with remarks returns request to Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS edit mode, remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Valuation class mismatch'. 2. Click Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkFlowJSON step set to Rework, pending role = Initiator, header Status = Rework. Email sent to Initiator.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">applyNpdWorkflowAction</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-020</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS Reject with remarks terminates workflow</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MIS edit mode, remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Duplicate request'. 2. Click Reject.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkFlowJSON step set to Rejected, header Status = Rejected. Audit log saved with ActionVia='System'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">applyNpdWorkflowAction</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-021</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Multi-role user acting as MIS Coordinator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User is both Initiator and MIS Coordinator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request pending at MIS Coordinator step.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">System detects pendingRole = MIS Coordinator and presents MIS action footer (Post to SAP, Rework, Reject).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dual role</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">resolveActorWorkflowRole, resolveNpdFooterMode</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MIS-022</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable displays complete approval chain</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request with Initiator submit, VH approve, and MIS approve</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request and inspect NPD Audit Log.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Shows sequential entries: Initiator (Submit), Vertical Head (Approved, ActionVia=System), MIS Coordinator (Approved, ActionVia=System).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Full chain</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="03_Mail_Approval_Webpart">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="21" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NPDApproverMail webpart loads with URL parameters</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">URL contains valid requestId, action=Approve, token, approverEmail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to mail webpart URL in browser.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Webpart initializes and parses query parameters without throwing errors.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">action=Approve</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMailWebPart, useNpdMailApproval</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Centered loader with two circular rings</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail webpart action processing</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Trigger action in mail webpart. 2. Observe loader display.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Loader is positioned exactly at the center of the viewport (vertical &amp; horizontal). Two concentric circular rings are visible.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Processing state</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMailLoader.module.scss, .centerContainer</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Loader inner circle continuously rotates</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail webpart loader active</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect inner circular ring animation.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Inner circular ring continuously rotates 360 degrees smoothly using CSS keyframe animation.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Animation = rotate</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">.innerRing, @keyframes spin</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Loader outer circle remains stationary</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail webpart loader active</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect outer circular ring.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Outer circular ring remains stationary with fixed border / track styling. It does not rotate with the inner ring.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Stationary</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">.outerRing</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Both rings visible simultaneously</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail webpart loader active</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Verify visual presence of both rings.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Both the stationary outer ring and rotating inner ring are clearly visible concurrently in the loader container.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dual rings</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMailLoader.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Success message positioned at top of page</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action completes successfully</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Complete approval via mail webpart. 2. Observe confirmation message.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Success message banner ('Action processed successfully') is displayed at the top of the page. Not pushed to center.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Top position</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMail.module.scss, .topMessageContainer</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Already-submitted message positioned at top of page</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Link re-clicked after request has already been acted upon</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open mail link for already approved request.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Informational / warning banner ('Request has already been processed') appears at the top of the page.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Top position</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMail.module.scss, .topAlertBanner</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve advances workflow</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request pending VH; valid mail approval token for VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Execute Approve via mail webpart.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkFlowJSON step for VH marked Approved. Pending role advances to MIS Coordinator. Status remains Pending.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">action=Approve</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">processMailWorkflowAction</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve records ActionVia = Mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve executed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_ApproversComments list for this RequestId.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">New comment row created with ApproverRole='Vertical Head', Action='Approved', ActionVia='Mail'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = Mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService, ActionVia standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve records date and time in ActionOn</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve executed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect ActionOn column in NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionOn contains complete ISO timestamp with both date and time (e.g. 2026-09-25T10:30:00Z).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Date + Time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionOn column formatting</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve leaves Title empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Approve executed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Title column in NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Title is not populated with brand or request ID.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">spAddItem Title standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Rework prompts for remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User opens mail action link with action=Rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open mail link for Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User is prompted with a remarks input dialog before submission. Remarks are required.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">action=Rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMailRemarksDialog</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Rework records ActionVia = Mail and remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User submits Rework with remarks via mail webpart</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Please revise item quantity'. 2. Submit.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request Status becomes Rework. Row added to NPD_ApproversComments with ActionVia='Mail', Action='Rework', Comments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = Mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action Reject records ActionVia = Mail and remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User submits Reject with remarks via mail webpart</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter 'Budget rejected'. 2. Submit.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request Status becomes Rejected. Row added to NPD_ApproversComments with ActionVia='Mail', Action='Rejected', Comments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = Mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-015</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Re-clicking already approved link blocks duplicate action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request already approved in previous step</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open the same Approve link again in browser.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">System detects step is no longer pending for this approver. Displays 'Already Submitted' banner at top. No duplicate records written.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Duplicate click</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateMailActionEligibility</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-016</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Invalid token rejected</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">URL token modified or corrupted</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open mail link with altered token.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Webpart displays error banner at top: 'Invalid or expired approval token.' Action is not executed.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Invalid token</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateMailToken</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-017</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mismatched approver email rejected</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Logged-in user email differs from email in token/link</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open mail link intended for user A while logged in as user B.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action rejected with unauthorized message at top: 'You are not authorized to perform this action.'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Unauthorized email</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateMailApproverIdentity</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-018</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mail action updates visible in main application immediately</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action completed via mail webpart</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in to main NPD app as Initiator or MIS. 2. Open request.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Header status, workflow status dialog, and audit log table immediately reflect the action completed via mail.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Real-time sync</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdWorkflowStatusView</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-019</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable displays Action Via = Mail for mail action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request approved via mail webpart</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request in main application. 2. View NPD Audit Log table.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action Via column displays 'Mail' (not 'System'). Action On displays formatted date and time.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action Via = Mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MAL-020</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Multiple approvers acting via mail sequentially</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request submitted; VH approves via mail; MIS approves via mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. VH clicks Approve in Outlook. 2. MIS clicks Approve in Outlook.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Both steps complete successfully. Audit log shows two rows with ActionVia='Mail'. Request becomes Approved.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">End-to-end mail flow</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdApproverMail, npdWorkflowJsonService</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="04_Material_Group_New_Draft">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="21" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Material Group New Request form mounts</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User has Material Group Initiator role</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to /mg/new.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form mounts with Category Selection cards and dynamic entry tables. Title displays 'New Material Group Request'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /mg/new</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupRequestForm, useMaterialGroupFormController</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Side navigation items for Material Group Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User has MG Initiator role</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Material Group section in side nav.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Visible: New Request (/mg/new), All Requests (/mg/all), Draft / ReWork (/mg/draft-rework), Pending (/mg/pending), Completed (/mg/completed).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NAV_SECTIONS, filterNavigationByRoles</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category master cards rendered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened at /mg/new</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect master category selection area.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Cards for active categories (e.g. MG2 Product Group, MG3 Product Sub Group, MG4 Finish, MG5 Category) are displayed with checkboxes.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Active configs</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">fetchMaterialGroupConfigsThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Selecting category renders dynamic data table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened at /mg/new</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click checkbox for 'Product Group (MG2)'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dynamic data table for Product Group (MG2) renders below with columns: S.No, Code, Description, Actions. Initial empty row created.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Config = MG2</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">toggleConfigId, useMaterialGroupFormController</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Deselecting category removes data table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category MG2 selected with entered rows</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Uncheck checkbox for 'Product Group (MG2)'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category table is removed from view. Rows for that category are cleared from state.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Deselect MG2</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">toggleConfigId</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Selecting multiple categories renders multiple tables</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened at /mg/new</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Check MG2 (Product Group) and MG4 (Finish).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Two separate tables render sequentially with appropriate column definitions for each category.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG2 + MG4</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupCategoryCard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Add Row in category table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category table rendered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click '+ Add Row' button in table header/footer.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">New row appended with unique tempId, blank Code, blank Description. S.No increments sequentially.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Add Row</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">addRow, materialGroupSlice</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remove Row in category table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category table has multiple rows</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click trash icon on row 2.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row 2 is removed. Remaining rows re-index sequentially.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Remove Row</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">removeRow, materialGroupSlice</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit blocked with zero categories selected</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened, no checkboxes selected</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click 'SUBMIT REQUEST'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submission blocked. Toast warning: 'Please select at least one master category to configure.'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Zero categories</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateEntries, showWarningToast</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit blocked with empty category table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category selected, all rows deleted</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Select MG2. 2. Delete all rows. 3. Click 'SUBMIT REQUEST'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submission blocked. Toast warning: 'Please add at least one entry for Product Group (MG2).'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Empty rows</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateEntries</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit blocked when required Code is empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category selected, Code left blank, Description entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter Description 'Ceramic Basin'. Leave Code empty. 2. Click 'SUBMIT REQUEST'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submission blocked. Toast warning: 'Code is required for row 1 in Product Group (MG2).'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Blank Code</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateEntries</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit blocked when required Description is empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category selected, Code entered, Description blank</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter Code 'CB01'. Leave Description blank. 2. Click 'SUBMIT REQUEST'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submission blocked. Toast warning: 'Description is required for row 1 in Product Group (MG2).'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Blank Desc</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateEntries</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit blocked on duplicate Code within category</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Two rows entered with identical Code 'CB01'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Row 1 Code='CB01'. 2. Row 2 Code='CB01'. 3. Click 'SUBMIT REQUEST'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submission blocked. Toast warning: 'Duplicate code 'CB01' found in Product Group (MG2).'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Duplicate code</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateEntries</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Save Draft with partial entries succeeds</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Category selected, row partially filled</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Select MG2. 2. Enter Code 'CB01'. 3. Click 'Save Draft'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Draft saved to NPD_MaterialGroupRequests with Status = 'Draft'. Success toast displayed. Redirects to /mg/draft-rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Save Draft</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">saveMaterialGroupDraftThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-015</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Save Draft leaves Title column empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Save Draft executed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query newly created row in NPD_MaterialGroupRequests.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Draft does not populate Title with brand or category names.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">spAddItem Title standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-016</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Saved draft appears in Draft / ReWork list</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Draft saved in TC-MG-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to /mg/draft-rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Draft request is listed with Status = Draft, date, and Edit action icon.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Status = Draft</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupDashboard variant='draft-rework'</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-017</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Edit draft reloads all categories and rows</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request on /mg/draft-rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Edit icon.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Opens /mg/new?id={Id}&amp;mode=edit. Previously selected categories and all entered row values are restored in state.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Hydrate draft</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">fetchMaterialGroupRequestByIdThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-018</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit Request generates unique Request ID</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Valid entries across selected categories</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click 'SUBMIT REQUEST'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">System generates unique Request ID (e.g. MG-2026-0001). Request saved with Status = 'Pending'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">submitMaterialGroupRequestThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-019</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit Request leaves Title column empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Submit Request executed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query submitted row in NPD_MaterialGroupRequests.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Generated Request ID is stored in RequestId column.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">spAddItem Title standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MG-020</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Cancel / Back returns to All Requests</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opened at /mg/new with changes</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click 'Cancel / Back'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form state reset. Navigates to /mg/all without creating or saving list items.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Cancel</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">handleCancel</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="05_MG_VH_And_Consultant_Flow">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="21" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG Vertical Head views pending requests</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User mapped as MG Vertical Head; MG request submitted</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as MG VH. 2. Navigate to /mg/pending.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request is listed in Pending Approval dashboard with Status = Pending, step = Vertical Head.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Pending MG VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupDashboard variant='pending'</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH opens request in edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request on /mg/pending</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Edit (pencil icon).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Opens /mg/new?id={Id}&amp;mode=edit&amp;from=pending. Category selection and row entries are read-only. Footer shows action buttons.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Mode = edit</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useMaterialGroupFormController</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH action footer buttons</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form in MG VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect footer controls.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Visible: Cancel / Back, Rework, Reject, Approve. Save Draft and Submit Request are hidden.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">VH footer</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">resolveActiveApproverRole</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH Approve advances to Consultant</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH edit mode, enter optional remarks</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter remarks 'Approved for configuration'. 2. Click Approve.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request status remains Pending. Pending role advances from Vertical Head to Consultant. Notification sent to Consultant.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action = Approve</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">consultantActionMaterialGroupThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH Approve writes audit log with ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH Approve completed from application</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_MaterialGroupAuditLogs for this RequestId.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Audit row created: ApproverRole='Vertical Head', Action='Approved', ActionVia='System', ActionOn has date and time, Title empty.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">materialGroupAuditLogService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH Rework requires remarks and returns to Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH edit mode</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Leave remarks empty. Click Rework. (Verify blocked). 2. Enter remarks. Click Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Empty remarks blocked with toast. With remarks: Status becomes Rework, routes back to Initiator Draft / ReWork list.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action = Rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">consultantActionMaterialGroupThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH Reject terminates request</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG VH edit mode, remarks entered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter rejection remarks. 2. Click Reject.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request Status becomes Rejected. Audit log saved with ActionVia='System'. Workflow terminates.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action = Reject</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">consultantActionMaterialGroupThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant views pending requests</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User mapped as Consultant; request approved by MG VH</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Log in as Consultant. 2. Open /mg/pending.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request is visible with pending step = Consultant.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Pending Consultant</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupDashboard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant opens request — SAP Configuration panel rendered</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request pending Consultant step</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Edit icon.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Form opens. Category entries are read-only. Dedicated panel 'Consultant Remarks / SAP Configuration Note' is displayed.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant edit</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">getApproverRemarksLabel</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant Complete Request without note blocked</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Negative</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant edit mode, configuration note empty</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Leave SAP note empty. 2. Click 'Complete Request' (Approve).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action blocked. Validation toast: 'Please enter Consultant Remarks / SAP Configuration Note.'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Empty note</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">validateApproverRemarks</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant Complete Request updates Status to Completed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant edit mode, entered SAP configuration note</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Enter SAP note 'Configured in SAP S/4HANA under MG2 table'. 2. Click Complete.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request Status updates to 'Completed'. Request moves to Completed Requests dashboard (/mg/completed).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action = Complete</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">consultantActionMaterialGroupThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant Complete automatically creates records in NPD_Lookup</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request completed in TC-MGC-011 with entries in MG2 and MG3</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query SharePoint list NPD_Lookup.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">New lookup records created for each row in the request. LookupName (Title) matches Description, LookupCode matches Code, LookupTypeId matches category.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NPD_Lookup</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">createLookupFromMaterialGroupEntries</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Created lookups have IsDeleted = false</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Query created rows in NPD_Lookup</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Check IsDeleted column in newly created lookups.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">IsDeleted is 'No' (active). Lookup items are immediately eligible for active queries.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">IsDeleted = No</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">lookupService.fetchActiveLookups</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Created lookups leave Title properly mapped to Description</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Inspect created lookup records in NPD_Lookup</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Verify list Title column equals UI Lookup Name (Item Description).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">In NPD_Lookup, Title column stores Lookup Name (Description), LookupCode stores Code. Correct schema preserved.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = Name</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">R-LK04, Config.FieldNames.Lookup</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-015</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant Complete writes audit log with ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant action performed from application UI</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_MaterialGroupAuditLogs.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Audit row created: ApproverRole='Consultant', Action='Completed', ActionVia='System', ActionOn timestamp with time, Title empty.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = System</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">materialGroupAuditLogService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-016</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant Rework returns request to Initiator</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant edit mode, enter remarks 'Code already exists in SAP'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click Rework.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Status becomes Rework. Initiator sees request in Draft / ReWork with Consultant remarks visible.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action = Rework</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">consultantActionMaterialGroupThunk</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-017</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Completed request is read-only for all roles</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request has Status = Completed</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request as Initiator, VH, and Consultant in View mode.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">All category cards, tables, consultant notes, and audit trails are completely read-only. No action buttons rendered.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Read-only</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupRequestForm</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-018</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupAuditLogTable displays all workflow steps</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Completed Material Group request</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request and view Material Group Audit Log table.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Displays all sequential actions: Initiator (Submitted), Vertical Head (Approved, ActionVia=System), Consultant (Completed, ActionVia=System).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Full audit</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupAuditLogTable</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-019</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Material Group audit log displays Action Via column</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">View Material Group audit log table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect table column headers and cells.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dedicated 'Action Via' column is present. Shows 'System' or 'Mail' based on SharePoint list value.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action Via</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupAuditLogTable.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-MGC-020</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Material Group audit log displays date and time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">View Material Group audit log table</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect 'Action On' column.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Formatted as date and time (e.g. 25/09/2026 14:45:10). Not date-only.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Date + Time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">formatDateTime, MaterialGroupAuditLogTable</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="06_Lookup_AutoRefresh_Nav">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="15" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant completes MG request adding new lookup</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Consultant completes MG request adding 'Wall Hung Basin' under Product Group (MG2)</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Verify item added to NPD_Lookup list in SharePoint.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Record exists in SharePoint list NPD_Lookup with Title='Wall Hung Basin', LookupType='Product Group (MG2)'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title='Wall Hung Basin'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">createLookupFromMaterialGroupEntries</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Navigation to New NPD Request triggers auto-fetch</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User on /mg/completed; clicks 'New NPD Request' in side nav</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click 'New NPD Request' (/npd/new).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Router navigates to /npd/new. Form mounts. fetchNpdLookupOptions is automatically dispatched without requiring hard refresh.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /npd/new</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useNpdRequestFormController.useEffect</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">fetchNpdLookupOptions condition allows re-fetch</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Redux store already contains cached lookupOptionsByType from app start</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Verify thunk execution in Redux.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">fetchNpdLookupOptions condition returns true (not blocked by existing keys). SharePoint SPReadItems query executes.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Condition = true</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdFormThunks.fetchNpdLookupOptions</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Item Details MultiSelect displays newly added Material Group</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Navigated to /npd/new after TC-REF-001 completion</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Scroll to Item Details section. 2. Click MultiSelect for 'Product Group (MG2)'.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Newly added option 'Wall Hung Basin' appears in the dropdown list immediately. No browser refresh (F5) was performed.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">'Wall Hung Basin'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useNpdItemDetailsColumns, getLookupOptionsByFieldName</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Re-navigating to /npd/new re-invokes lookup fetch</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Medium</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User currently on /npd/new; clicks 'New NPD Request' in side nav again</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Click 'New NPD Request' link again.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">location.key changes. useEffect triggers and re-dispatches fetchNpdLookupOptions. Store updates with latest lookup data.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">location.key</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useNpdRequestFormController</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand options in General Information auto-refresh on navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">New brand mapping added to ApproversMaster for user</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to /npd/new.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">fetchNpdInitiatorBrandOptions condition returns true and fetches latest brands for the user. Brand dropdown shows fresh options.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand refresh</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdFormThunks.fetchNpdInitiatorBrandOptions</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Admin Lookup Master auto-fetches on navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Lookup added in background</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to Admin &gt; Lookup (/admin/lookup).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">LookupMaster mounts. fetchLookups and fetchLookupTypes execute. DataTable displays latest lookups without page reload.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /admin/lookup</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">LookupMaster.tsx, fetchLookups</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Admin Lookup Type Master auto-fetches on navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Lookup type added in background</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to Admin &gt; Lookup Type (/admin/lookup-type).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">LookupTypeMaster mounts. fetchLookupTypes executes and populates latest lookup types without hard refresh.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /admin/lookup-type</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">LookupTypeMaster.tsx, fetchLookupTypes</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand Material Extension Master auto-fetches on navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Brand extension modified</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to Admin &gt; Brand Material Extension.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">BrandMaterialExtensionMaster mounts. fetchBrandMaterialExtensions, fetchRocaBrandOptions, fetchRocaPlantOptions execute.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /admin/brand-extension</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">BrandMaterialExtensionMaster.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Workflow Configuration Master auto-fetches on navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Workflow steps updated</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to Admin &gt; Workflow Configuration.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkflowConfigurationMaster mounts. fetchWorkflowConfigurations and fetchNpdRoleOptions execute.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /admin/workflow-config</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">WorkflowConfigurationMaster.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Material Group New Request auto-fetches configs on navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Config updated in NPD_MaterialGroupConfigs</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to /mg/new.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useMaterialGroupFormController dispatches fetchMaterialGroupConfigsThunk and renders latest category cards.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Route = /mg/new</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">useMaterialGroupFormController</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Background lookup fetch does not show blocking full-page loader</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User navigating to /npd/new with existing cached lookups</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to /npd/new. 2. Observe UI during background lookup re-fetch.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Full-page LoaderOverlay remains hidden because lookupOptionsByType already has keys. Form is interactive immediately.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Non-blocking</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdRequestForm.tsx loader visible condition</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Existing form inputs preserved during background option refresh</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">User enters General Info fields while background fetch resolves</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Type in Project Name. 2. Wait for lookup thunk to fulfill.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Project Name text is not reset or erased. Form input state remains intact.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">State preservation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdFormSlice</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-REF-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Soft-deleted lookup omitted after navigation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Lookup marked IsDeleted='Yes' in Admin screen</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Navigate to /npd/new. 2. Open corresponding Item Details MultiSelect.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Soft-deleted value is excluded from options list automatically after navigation.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Soft delete</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">lookupService.fetchActiveLookups</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <LeftColumnVisible>5</LeftColumnVisible>
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>10</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+     <ActiveRow>1</ActiveRow>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="07_Audit_Logs_And_Chrome">
+  <Table ss:ExpandedColumnCount="9" ss:ExpandedRowCount="15" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="13.8" ss:FullColumns="1" ss:FullRows="1">
+   <Column ss:Width="94.8"/>
+   <Column ss:Width="210"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="70.2"/>
+   <Column ss:Width="229.8"/>
+   <Column ss:Width="250.20000000000002" ss:Span="1"/>
+   <Column ss:Index="8" ss:Width="150"/>
+   <Column ss:Width="190.2"/>
+   <Row ss:AutoFitHeight="0" ss:Height="22.05">
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Case ID</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Title</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Priority</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Preconditions</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Steps</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Expected Result</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Test Data</Data></Cell>
+    <Cell ss:StyleID="s66"><Data ss:Type="String">Related Rule / Code</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-001</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Application action sets ActionVia = System in NPD_ApproversComments</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Vertical Head approves request from application UI</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. VH clicks Approve on /npd/new form. 2. Query NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row created with ActionVia = 'System'. Value is dynamically passed from application controller.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = 'System'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService.addNpdApproverComment</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-002</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Email action sets ActionVia = Mail in NPD_ApproversComments</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Vertical Head approves request from Outlook email link</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. VH clicks Approve in email. 2. Query NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row created with ActionVia = 'Mail'. Value is dynamically set by NPDApproverMail webpart.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = 'Mail'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">processMailWorkflowAction, ActionVia standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-003</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Application action sets ActionVia = System in NPD_MaterialGroupAuditLogs</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG Vertical Head approves request from application UI</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. MG VH clicks Approve on /mg/new form. 2. Query NPD_MaterialGroupAuditLogs.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row created with ActionVia = 'System'. Value saved to SharePoint list.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = 'System'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">materialGroupAuditLogService.addMaterialGroupAuditLog</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-004</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Email action sets ActionVia = Mail in NPD_MaterialGroupAuditLogs</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG action completed via email webhook/service</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Complete action via email. 2. Query NPD_MaterialGroupAuditLogs.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Row created with ActionVia = 'Mail'. Value saved to SharePoint list.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">ActionVia = 'Mail'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">materialGroupAuditLogService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-005</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable displays list ActionVia dynamically</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NPD_ApproversComments contains rows with ActionVia='System' and ActionVia='Mail'</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open request in View/Edit mode. 2. Inspect NPD Audit Log table.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action Via column shows 'System' for row 1 and 'Mail' for row 2 matching actual list column values. No hardcoded 'System' fallback.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dynamic display</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NpdAuditLogTable.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-006</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupAuditLogTable displays list ActionVia dynamically</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">NPD_MaterialGroupAuditLogs contains rows with System and Mail</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Open MG request. 2. Inspect Material Group Audit Log table.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action Via column displays exact values from SharePoint list ('System' or 'Mail').</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Dynamic display</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MaterialGroupAuditLogTable.tsx</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-007</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action On column in NpdAuditLogTable includes time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action performed at 2026-09-25T14:32:15Z</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Action On column in NPD Audit Log table.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Displays formatted date AND time (e.g. '25/09/2026 14:32' or locale equivalent). Not date only.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Date + Time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">formatDateTime, NpdAuditLogTable</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-008</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Action On column in MaterialGroupAuditLogTable includes time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">MG action performed at 2026-09-25T15:10:45Z</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect Action On column in Material Group Audit Log table.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Displays formatted date AND time (e.g. '25/09/2026 15:10'). Not date only.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Date + Time</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">formatDateTime, MaterialGroupAuditLogTable</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-009</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Empty Title standard on NPD_Request creation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Initiator submits new NPD request</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query created row in NPD_Request list.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Request ID is stored in RequestId column.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">spAddItem Title standard</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-010</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Empty Title standard on NPD_Request Draft save</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Initiator saves Draft in NPD request</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query draft row in NPD_Request list.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Brand is NOT saved into Title column.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">saveNpdDraft, spAddItem</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-011</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request ID generation unaffected by empty Title</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Multiple requests submitted with empty Title</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Submit request 1. 2. Submit request 2.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Request ID generation logic functions normally (queries ID/RequestId, generates NPD-2026-0001, NPD-2026-0002).</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">RequestId generation</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">generateNpdRequestId</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-012</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Empty Title standard in NPD_ApproversComments</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Approver comments added for any action</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Query NPD_ApproversComments.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title column is empty string (''). Approver role, action, and comments stored in designated columns.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Title = ''</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">npdApproverCommentsService</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-013</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">SharePoint default top header remains visible</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">App loaded on SharePoint page</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect top area of browser page.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Default SharePoint suite bar (login profile, settings gear, waffle/app launcher) is visible and accessible. Chrome hiding targets navigation only.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Suite bar visible</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">hideSharePointChrome.ts</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:Height="48">
+    <Cell ss:StyleID="s67"><Data ss:Type="String">TC-AUD-014</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">App header spacing properly adjusted</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Positive</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">High</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">App loaded with visible SharePoint header</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">1. Inspect positioning and margin/padding of ROCA NPD header.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">App header sits cleanly below SharePoint top suite bar without overlap or abnormal whitespace gap. Layout height fits viewport seamlessly.</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">Clean alignment</Data></Cell>
+    <Cell ss:StyleID="s67"><Data ss:Type="String">AppShell.module.scss, themeStyles</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+   <ActivePane>2</ActivePane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>

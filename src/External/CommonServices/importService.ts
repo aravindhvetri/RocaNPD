@@ -256,6 +256,7 @@ export interface IImportValidationRow {
 export const ImportValidationMessages = {
   duplicateLookupType: "Duplicate Lookup Type Name",
   duplicateLookupName: "Duplicate Lookup Name under this Type",
+  duplicateLookupCode: "Duplicate Lookup Code",
   duplicateNpdItemDetails: "Duplicate Item Details record",
 } as const;
 

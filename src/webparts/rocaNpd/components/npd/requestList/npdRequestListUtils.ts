@@ -1,4 +1,9 @@
-import { FieldLabels, RequestStatus } from "../../../../../External/CommonServices/Config";
+import {
+  Config,
+  FieldLabels,
+  RequestStatus,
+  WorkflowStepStatus,
+} from "../../../../../External/CommonServices/Config";
 import type { INpdWorkflowStepJson } from "../../../../../External/CommonServices/Interface";
 import {
   getFirstPendingApproverRole,
@@ -203,6 +208,50 @@ export function isApprovedNpdStatus(status: string): boolean {
   );
 }
 
+/** True when WorkFlowJSON Vertical Head step Status is Approved. */
+export function hasVerticalHeadApprovedStep(
+  steps: readonly INpdWorkflowStepJson[] | undefined,
+): boolean {
+  if (!steps?.length) {
+    return false;
+  }
+
+  const approved = WorkflowStepStatus.Approved.toLowerCase();
+  return steps.some(
+    (step) =>
+      isVerticalHeadWorkflowRole(step.Role || "") &&
+      (step.Status || "").trim().toLowerCase() === approved,
+  );
+}
+
+/**
+ * Approved Requests list membership.
+ * - Default (Initiator / MIS): request Status is Approved / Completed.
+ * - Vertical Head module only: also include Pending requests where VH already
+ *   approved in WorkFlowJSON (status display stays Pending with MIS Coordinator).
+ */
+export function isNpdApprovedListItem(
+  item: {
+    Status: string;
+    WorkflowSteps?: INpdWorkflowStepJson[];
+  },
+  viewRole?: string | null,
+): boolean {
+  if (isApprovedNpdStatus(item.Status)) {
+    return true;
+  }
+
+  const role = (viewRole || "").trim().toLowerCase();
+  if (role !== Config.Roles.VerticalHead.toLowerCase()) {
+    return false;
+  }
+
+  return (
+    isPendingNpdStatus(item.Status) &&
+    hasVerticalHeadApprovedStep(item.WorkflowSteps)
+  );
+}
+
 export function isPendingNpdStatus(status: string): boolean {
   return status.trim().toLowerCase() === RequestStatus.Pending.toLowerCase();
 }
@@ -211,13 +260,16 @@ export function isDraftNpdStatus(status: string): boolean {
   return status.trim().toLowerCase() === RequestStatus.Draft.toLowerCase();
 }
 
-export function isDraftOrReworkNpdStatus(status: string): boolean {
+export function isReworkNpdStatus(status: string): boolean {
   const normalized = status.trim().toLowerCase();
   return (
-    normalized === RequestStatus.Draft.toLowerCase() ||
     normalized === RequestStatus.Rework.toLowerCase() ||
     normalized === "in rework"
   );
+}
+
+export function isDraftOrReworkNpdStatus(status: string): boolean {
+  return isDraftNpdStatus(status) || isReworkNpdStatus(status);
 }
 
 export function getDashboardStatusOptions(): IDropdownOption[] {

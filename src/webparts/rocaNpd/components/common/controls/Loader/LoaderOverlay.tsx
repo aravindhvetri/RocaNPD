@@ -10,7 +10,7 @@ import type { ILoaderOverlayProps } from "./ILoaderOverlayProps";
  */
 const LoaderOverlay: React.FC<ILoaderOverlayProps> = ({
   visible,
-  label = "Loading...",
+  label = "Processing",
   progressCurrent,
   progressTotal,
   progressPercent,

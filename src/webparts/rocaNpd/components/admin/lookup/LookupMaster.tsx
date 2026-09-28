@@ -84,6 +84,7 @@ const LookupMaster: React.FC = () => {
     React.useState(false);
   const [importPreview, setImportPreview] =
     React.useState<ILookupImportParseResult | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const isLoading = status === "loading" || lookupTypeStatus === "loading";
   const isSaving = status === "saving";
@@ -219,16 +220,22 @@ const LookupMaster: React.FC = () => {
     lookupName: string,
     lookupCode: string,
   ): Promise<void> => {
+    const mode = dialogMode;
+    const editingItem = selectedItem;
+    // Close immediately so the page loader (not the dialog) shows during save.
+    setDialogVisible(false);
+    setSelectedItem(null);
+
     try {
-      if (dialogMode === "create") {
+      if (mode === "create") {
         await dispatch(
           createLookup({ lookupTypeId, lookupName, lookupCode }),
         ).unwrap();
         showSuccessToast(toastRef, "Lookup created successfully.");
-      } else if (selectedItem) {
+      } else if (editingItem) {
         await dispatch(
           updateLookup({
-            id: selectedItem.Id,
+            id: editingItem.Id,
             lookupTypeId,
             lookupName,
             lookupCode,
@@ -236,8 +243,6 @@ const LookupMaster: React.FC = () => {
         ).unwrap();
         showSuccessToast(toastRef, "Lookup updated successfully.");
       }
-      setDialogVisible(false);
-      setSelectedItem(null);
     } catch {
       // Error toast handled via slice error effect.
     }
@@ -351,16 +356,22 @@ const LookupMaster: React.FC = () => {
       return;
     }
 
-    try {
-      exportLookupsToExcel(filteredRows);
-      showSuccessToast(toastRef, "Export completed successfully.");
-    } catch {
-      showErrorToast(toastRef, "Failed to export lookups.");
-    }
+    setIsExporting(true);
+    window.setTimeout(() => {
+      try {
+        exportLookupsToExcel(filteredRows);
+        showSuccessToast(toastRef, "Export completed successfully.");
+      } catch {
+        showErrorToast(toastRef, "Failed to export lookups.");
+      } finally {
+        setIsExporting(false);
+      }
+    }, 0);
   };
 
-  const showPageLoader = isLoading || isSaving;
-  const pageLoaderLabel = isSaving ? "Saving..." : "Loading...";
+  const showPageLoader = isLoading || isSaving || isExporting;
+  const pageLoaderLabel = "Processing";
+
 
   return (
     <section className={styles.master}>

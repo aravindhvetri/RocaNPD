@@ -7,6 +7,10 @@ export interface IDataTableColumn<T> {
   body?: (row: T, rowIndex: number) => React.ReactNode;
   style?: React.CSSProperties;
   headerStyle?: React.CSSProperties;
+  alignHeader?: "left" | "right" | "center";
+  align?: "left" | "right" | "center";
+  headerClassName?: string;
+  className?: string;
 }
 
 export interface IDataTableProps<T extends Record<string, unknown>> {

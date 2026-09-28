@@ -95,40 +95,12 @@
   line-height: 1.4;
 }
 
-.statusRework,
-.statusRejected,
-.statusCompleted,
-.statusPending,
-.statusDefault {
-  font-size: 0.75rem !important;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 0.15rem 0.5rem;
-}
-
-.statusRework {
-  background: #fff4e5 !important;
-  color: #d97706 !important;
-}
-
-.statusRejected {
-  background: $roca-color-status-rejected-bg !important;
-  color: $roca-color-error !important;
-}
-
-.statusCompleted {
-  background: $roca-color-status-approved-bg !important;
-  color: $roca-color-success !important;
-}
-
-.statusPending {
-  background: $roca-color-status-pending-bg !important;
-  color: $roca-color-status-pending !important;
-}
-
-.statusDefault {
-  background: $roca-color-status-draft-bg !important;
-  color: $roca-color-text-secondary !important;
+.actionText {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $roca-color-text-primary;
+  white-space: nowrap;
+  font-family: "Poppins", sans-serif;
 }
 
 .actionViaSystem {
@@ -150,8 +122,8 @@
   font-weight: 600;
   border-radius: 999px;
   padding: 0.15rem 0.625rem;
-  background: #ede9fe;
-  color: #6d28d9;
+  background: #d1fae5;
+  color: #059669;
   white-space: nowrap;
   font-family: "Poppins", sans-serif;
   text-align: center;

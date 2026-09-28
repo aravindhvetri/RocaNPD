@@ -84,7 +84,7 @@ export const showApproveToast = (
   summary = "Validation",
 ): void => {
   showToast(toastRef, {
-    severity: "success",
+    severity: "warn",
     summary,
     detail,
     className: "toastActionApprove",
@@ -97,7 +97,7 @@ export const showCompleteToast = (
   summary = "Validation",
 ): void => {
   showToast(toastRef, {
-    severity: "success",
+    severity: "warn",
     summary,
     detail,
     className: "toastActionComplete",
@@ -110,18 +110,12 @@ export const showActionValidationToast = (
   detail: string,
   summary = "Validation",
 ): void => {
-  const norm = (action || "").trim().toLowerCase();
-  if (norm === "rework") {
-    showReworkToast(toastRef, detail, summary);
-  } else if (norm === "reject" || norm === "rejected") {
-    showRejectToast(toastRef, detail, summary);
-  } else if (norm === "approve" || norm === "approved") {
-    showApproveToast(toastRef, detail, summary);
-  } else if (norm === "complete" || norm === "completed") {
-    showCompleteToast(toastRef, detail, summary);
-  } else {
-    showWarningToast(toastRef, detail, summary);
-  }
+  showToast(toastRef, {
+    severity: "warn",
+    summary,
+    detail,
+    className: "toastActionValidation",
+  });
 };
 
 export default Toast;

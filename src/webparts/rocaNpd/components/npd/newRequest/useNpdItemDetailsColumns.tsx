@@ -27,7 +27,7 @@ function renderColumnHeader(fieldDef: INpdItemDetailsFieldDef): React.ReactNode 
 
 export interface IUseNpdItemDetailsColumnsParams {
   visibleFields: INpdItemDetailsFieldDef[];
-  latestRowId: string | null;
+  latestRowId?: string | null;
   first?: number;
   lookupOptionsByType: Record<string, ISelectOption[]>;
   readOnly?: boolean;
@@ -36,7 +36,8 @@ export interface IUseNpdItemDetailsColumnsParams {
     field: NpdItemDetailFieldKey,
     value: NpdItemDetailFieldValue,
   ) => void;
-  onAddLatestRow: () => void;
+  onAddLatestRow?: () => void;
+  onAddRow?: (rowId: string) => void;
   onDeleteRow: (rowId: string) => void;
 }
 
@@ -50,6 +51,7 @@ export function useNpdItemDetailsColumns({
   lookupOptionsByType,
   onFieldChange,
   onAddLatestRow,
+  onAddRow,
   onDeleteRow,
   readOnly = false,
 }: IUseNpdItemDetailsColumnsParams): IDataTableColumn<INpdItemDetailRow>[] {
@@ -107,38 +109,36 @@ export function useNpdItemDetailsColumns({
         minWidth: "4.5rem",
         textAlign: CENTER_ALIGN,
       },
-      body: (row) => {
-        const isLatestRow = row.id === latestRowId;
-
-        return (
-          <div className={styles.actionCell}>
-            {isLatestRow ? (
-              <Button
-                variant="text"
-                icon="pi pi-plus"
-                iconOnly
-                size="xs"
-                title="Add item line"
-                aria-label="Add item line"
-                className={styles.addRowAction}
-                onClick={onAddLatestRow}
-              />
-            ) : (
-              <span className={styles.actionPlaceholder} aria-hidden="true" />
-            )}
-            <Button
-              variant="text"
-              icon="pi pi-trash"
-              iconOnly
-              size="xs"
-              title="Delete row"
-              aria-label="Delete row"
-              className={styles.deleteRowAction}
-              onClick={() => onDeleteRow(row.id)}
-            />
-          </div>
-        );
-      },
+      body: (row) => (
+        <div className={styles.actionCell}>
+          <Button
+            variant="text"
+            icon="pi pi-plus"
+            iconOnly
+            size="xs"
+            title="Add item line"
+            aria-label="Add item line"
+            className={styles.addRowAction}
+            onClick={() => {
+              if (onAddRow) {
+                onAddRow(row.id);
+              } else if (onAddLatestRow) {
+                onAddLatestRow();
+              }
+            }}
+          />
+          <Button
+            variant="text"
+            icon="pi pi-trash"
+            iconOnly
+            size="xs"
+            title="Delete row"
+            aria-label="Delete row"
+            className={styles.deleteRowAction}
+            onClick={() => onDeleteRow(row.id)}
+          />
+        </div>
+      ),
     };
 
     const columns: IDataTableColumn<INpdItemDetailRow>[] = [

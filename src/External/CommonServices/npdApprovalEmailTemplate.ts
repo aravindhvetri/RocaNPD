@@ -38,7 +38,7 @@ function cellValue(text: string): string {
 }
 
 function actionButton(label: string, href: string, background: string): string {
-  return `<a href="${escapeHtml(href)}" style="background:${background};color:${Config.NpdEmail.ButtonColor};padding:10px 22px;text-decoration:none;border-radius:4px;display:inline-block;font-weight:600;font-size:14px;margin-right:10px;">${escapeHtml(label)}</a>`;
+  return `<a href="${escapeHtml(href)}" style="background:${background};color:${Config.NpdEmail.ButtonColor};padding:5px 20px 10px 20px;text-decoration:none;border-radius:4px;display:inline-block;font-weight:600;font-size:14px;margin-right:10px;">${escapeHtml(label)}</a>`;
 }
 
 export function buildNpdApprovalEmailHtml(params: {
@@ -75,7 +75,7 @@ export function buildNpdApprovalEmailHtml(params: {
   return `
 <table width="100%" cellpadding="0" cellspacing="0" style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#222;border-collapse:collapse;">
   <tr>
-    <td style="background:${theme.HeaderBackground};padding:12px 20px;">
+    <td style="background:${theme.HeaderBackground};padding:12px 20px;border-radius:6px">
       <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
         <tr>
           <td style="color:${theme.HeaderColor};font-weight:600;font-size:16px;vertical-align:middle;">NPD Request</td>
@@ -121,7 +121,7 @@ export function buildNpdApprovalEmailHtml(params: {
       </table>
       <p style="margin:0 0 16px;">Please <a href="${escapeHtml(params.loginUrl)}">log in</a> to the NPD system to continue the approval process.</p>
       ${actionButtons}
-      <p style="margin:24px 0 4px;">Regards,<br/>NPD System</p>
+      <p style="margin:24px 0 4px;">Thanks & Regards,<br/>NPD System</p>
       <p style="margin:12px 0 0;"><strong>Note:</strong> This is an auto-generated email from the NPD System. Please do not reply directly to this message</p>
     </td>
   </tr>
@@ -134,6 +134,9 @@ export function getNpdEmailIntro(
 ): string {
   if (action === "Submitted") {
     return "A new NPD request has been submitted and requires your approval.";
+  }
+  if (action === "Approved") {
+    return "An NPD request has been approved.";
   }
   if (action === "Approve") {
     return includeActionButtons
@@ -155,6 +158,9 @@ export function getNpdEmailLoginUrl(
   includeActionButtons: boolean,
   siteUrl?: string,
 ): string {
+  if (action === "Approved" || action === "Reject") {
+    return buildNpdEmailLoginUrl(requestId, "view", siteUrl);
+  }
   if (requestId && requestId > 0) {
     return buildNpdEmailLoginUrl(requestId, "edit", siteUrl);
   }

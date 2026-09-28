@@ -2,6 +2,12 @@ import { ApproverSystems, Config, type UserRole } from "./Config";
 import type {
   INavItemConfig,
   INavSectionConfig,
+  NavViewRole,
+} from "./navigationConfig";
+import {
+  buildNavHref,
+  getNavPermissionKey,
+  NAV_SECTIONS,
 } from "./navigationConfig";
 import type {
   IRequestAccessInput,
@@ -58,15 +64,8 @@ const ACTION_ROLES: Record<PermissionAction, UserRole[]> = {
 };
 
 /**
- * Nav item id → roles that can see it.
- * Source of truth: ROCA_NPD_Project_Master.md §6 + TechnicalArchitecture §6.2.
- *
- * Admin (SharePoint Admins group only): NPD All Requests, MG All Requests,
- * Administration, Reports — never New / Draft / Pending / Approved as nav items.
- * Consultant: MG All / Pending / Completed + Reports — never NPD or MG New/Draft.
- * Vertical Head: NPD All / Pending / Approved + Reports — never MG / Admin / New / Draft.
- * MIS Coordinator: NPD All / Pending / Approved + Reports — never MG / Admin / New / Draft.
- * Initiator: full NPD + full MG + Reports — never Administration.
+ * Nav permission key → roles that can see that item type.
+ * Role-specific sections further require `section.viewRole` to be assigned.
  */
 export const NAV_ITEM_ALLOWED_ROLES: Record<string, UserRole[]> = {
   "npd-new": [Initiator],
@@ -88,16 +87,11 @@ export const NAV_ITEM_ALLOWED_ROLES: Record<string, UserRole[]> = {
 };
 
 const ROUTE_ALLOWED_ROLES: Record<string, UserRole[]> = {
-  // Admin may open the form only to View from All Requests (no create nav item).
   [Config.Routes.NpdNew]: [Initiator, VerticalHead, MisCoordinator, Admin],
   [Config.Routes.NpdAll]: NAV_ITEM_ALLOWED_ROLES["npd-all"],
   [Config.Routes.NpdPending]: NAV_ITEM_ALLOWED_ROLES["npd-pending"],
   [Config.Routes.NpdApproved]: NAV_ITEM_ALLOWED_ROLES["npd-approved"],
   [Config.Routes.NpdDraftRework]: NAV_ITEM_ALLOWED_ROLES["npd-draft"],
-  // The /mg/new route is shared for create (Initiator) AND consultant-edit / view (Consultant, Admin).
-  // NAV_ITEM_ALLOWED_ROLES["mg-new"] keeps the side-nav item Initiator-only so Consultants don't
-  // see "New Material Group" in the menu, but the route itself must allow Consultant and Admin
-  // so they can open pending requests or view any request from the table.
   [Config.Routes.MgNew]: [Initiator, Consultant, Admin],
   [Config.Routes.MgAll]: NAV_ITEM_ALLOWED_ROLES["mg-all"],
   [Config.Routes.MgPending]: NAV_ITEM_ALLOWED_ROLES["mg-pending"],
@@ -117,15 +111,6 @@ const ROUTE_ALLOWED_ROLES: Record<string, UserRole[]> = {
     Admin,
   ],
 };
-
-const DEFAULT_ROUTE_PRIORITY: string[] = [
-  Config.Routes.NpdAll,
-  Config.Routes.NpdPending,
-  Config.Routes.MgAll,
-  Config.Routes.MgPending,
-  Config.Routes.Reports,
-  Config.Routes.AdminLookupType,
-];
 
 export function hasRole(
   assignedRoles: readonly string[],
@@ -148,13 +133,6 @@ export function hasPermission(
   return hasAnyRole(assignedRoles, ACTION_ROLES[action]);
 }
 
-/**
- * True when ApproversMaster assigned this role for the module System.
- * - Initiator: any Initiator assignment unlocks both NPD and MG (Project Master §6.1).
- * - Consultant: any Consultant assignment unlocks Material Group (stored as MG System).
- * - VH / MIS: require New Product Development.
- * Admin is not an ApproversMaster role — use hasRole(..., Admin).
- */
 export function hasSystemRole(
   access: IResolvedUserAccess,
   role: UserRole,
@@ -165,20 +143,35 @@ export function hasSystemRole(
     return false;
   }
 
+  const npdKey = ApproverSystems.NewProductDevelopment.toLowerCase();
+  const mgKey = ApproverSystems.NewMaterialGroup.toLowerCase();
+
+  // R-SEC03a: Initiator under NPD or MG unlocks both modules' navigation.
+  // Assignments from other ApproversMaster systems must not count.
   if (role === Initiator) {
-    return access.assignments.some(
-      (assignment) => assignment.role === Initiator,
-    );
+    if (systemKey !== npdKey && systemKey !== mgKey) {
+      return false;
+    }
+    return access.assignments.some((assignment) => {
+      if (assignment.role !== Initiator) {
+        return false;
+      }
+      const assignedSystem = (assignment.system ?? "").trim().toLowerCase();
+      return assignedSystem === npdKey || assignedSystem === mgKey;
+    });
   }
 
   if (role === Consultant) {
-    const mgKey = ApproverSystems.NewMaterialGroup.toLowerCase();
     if (systemKey !== mgKey) {
       return false;
     }
-    return access.assignments.some(
-      (assignment) => assignment.role === Consultant,
-    );
+    return access.assignments.some((assignment) => {
+      if (assignment.role !== Consultant) {
+        return false;
+      }
+      const assignedSystem = (assignment.system ?? "").trim().toLowerCase();
+      return assignedSystem === mgKey;
+    });
   }
 
   return access.assignments.some((assignment) => {
@@ -191,15 +184,13 @@ export function hasSystemRole(
   });
 }
 
-function navSystemForItem(itemId: string): string | null {
-  if (itemId.startsWith("npd-") || itemId === "reports") {
+function navSystemForPermissionKey(permissionKey: string): string | null {
+  if (permissionKey.startsWith("npd-") || permissionKey === "reports") {
     return ApproverSystems.NewProductDevelopment;
   }
-
-  if (itemId.startsWith("mg-")) {
+  if (permissionKey.startsWith("mg-")) {
     return ApproverSystems.NewMaterialGroup;
   }
-
   return null;
 }
 
@@ -207,20 +198,12 @@ function routeSystemForPath(pathname: string): string | null {
   if (pathname.startsWith("/npd/") || pathname === Config.Routes.Reports) {
     return ApproverSystems.NewProductDevelopment;
   }
-
   if (pathname.startsWith("/mg/")) {
     return ApproverSystems.NewMaterialGroup;
   }
-
   return null;
 }
 
-/**
- * Admin grants only when the allowed list includes Admin.
- * ApproversMaster roles require a matching System for NPD/MG items.
- * Reports is cross-module: grant when the role is held for its home system
- * (NPD for Initiator/VH/MIS, MG for Consultant) or Admin group.
- */
 function roleGrantsAccess(
   access: IResolvedUserAccess,
   role: UserRole,
@@ -239,18 +222,18 @@ function roleGrantsAccess(
         ApproverSystems.NewMaterialGroup,
       );
     }
-    if (role === Initiator) {
+    if (
+      role === Initiator ||
+      role === VerticalHead ||
+      role === MisCoordinator
+    ) {
       return hasSystemRole(
         access,
-        Initiator,
+        role,
         ApproverSystems.NewProductDevelopment,
       );
     }
-    return hasSystemRole(
-      access,
-      role,
-      ApproverSystems.NewProductDevelopment,
-    );
+    return hasRole(access.assignedRoles, role);
   }
 
   if (system) {
@@ -271,11 +254,34 @@ function hasAllowedAccess(
   );
 }
 
+export function parseViewAsRole(
+  value?: string | null,
+): UserRole | undefined {
+  const trimmed = (value || "").trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const roles: UserRole[] = [
+    Initiator,
+    VerticalHead,
+    MisCoordinator,
+    Consultant,
+    Admin,
+  ];
+  return roles.find(
+    (role) => role.toLowerCase() === trimmed.toLowerCase(),
+  );
+}
+
 export function canAccessRoute(
   access: IResolvedUserAccess,
   pathname: string,
 ): boolean {
-  if (pathname === Config.Routes.Home || pathname === Config.Routes.Unauthorized) {
+  if (
+    pathname === Config.Routes.Home ||
+    pathname === Config.Routes.Unauthorized
+  ) {
     return access.assignedRoles.length > 0;
   }
 
@@ -297,26 +303,131 @@ export function canAccessRoute(
 }
 
 export function getDefaultRoute(access: IResolvedUserAccess): string {
+  return getDefaultNavTarget(access)?.href ?? Config.Routes.Unauthorized;
+}
+
+export function getDefaultNavTarget(
+  access: IResolvedUserAccess,
+): { href: string; itemId: string } | null {
   if (!access.assignedRoles.length) {
-    return Config.Routes.Unauthorized;
+    return null;
   }
 
-  const match = DEFAULT_ROUTE_PRIORITY.find((route) =>
-    canAccessRoute(access, route),
+  const sections = filterNavigationByRoles(NAV_SECTIONS, access);
+  const items = sections
+    .filter((section) => section.id !== "analytics")
+    .flatMap((section) => section.items);
+
+  // Prefer the first All Requests tab across role sections (NPD then MG order).
+  const allRequests = items.find((item) => {
+    const key = getNavPermissionKey(item);
+    return key === "npd-all" || key === "mg-all";
+  });
+  if (allRequests) {
+    return {
+      href: buildNavHref(allRequests.route, allRequests.viewRole),
+      itemId: allRequests.id,
+    };
+  }
+
+  for (const section of sections) {
+    if (section.id === "analytics") {
+      continue;
+    }
+    const listItem = section.items.find((item) => !item.isPrimaryAction);
+    const item = listItem || section.items[0];
+    if (item) {
+      return {
+        href: buildNavHref(item.route, item.viewRole),
+        itemId: item.id,
+      };
+    }
+  }
+
+  const reports = items.find(
+    (item) => getNavPermissionKey(item) === "reports",
   );
-  return match ?? Config.Routes.Unauthorized;
+  if (reports) {
+    return { href: reports.route, itemId: reports.id };
+  }
+
+  return null;
 }
 
 export function canAccessNavItem(
   access: IResolvedUserAccess,
-  itemId: string,
+  item: INavItemConfig | string,
 ): boolean {
-  const allowed = NAV_ITEM_ALLOWED_ROLES[itemId];
+  if (typeof item === "string") {
+    const allowed = NAV_ITEM_ALLOWED_ROLES[item];
+    if (!allowed) {
+      return false;
+    }
+    return hasAllowedAccess(
+      access,
+      allowed,
+      navSystemForPermissionKey(item),
+      item,
+    );
+  }
+
+  const permissionKey = getNavPermissionKey(item);
+  const allowed = NAV_ITEM_ALLOWED_ROLES[permissionKey];
   if (!allowed) {
     return false;
   }
 
-  return hasAllowedAccess(access, allowed, navSystemForItem(itemId), itemId);
+  if (permissionKey === "reports") {
+    return hasAllowedAccess(
+      access,
+      allowed,
+      navSystemForPermissionKey(permissionKey),
+      permissionKey,
+    );
+  }
+
+  if (!allowed.includes(item.viewRole as UserRole)) {
+    return false;
+  }
+
+  return roleGrantsAccess(
+    access,
+    item.viewRole as UserRole,
+    navSystemForPermissionKey(permissionKey),
+    permissionKey,
+  );
+}
+
+function canAccessSectionRole(
+  access: IResolvedUserAccess,
+  section: INavSectionConfig,
+): boolean {
+  if (section.id === "analytics") {
+    return hasAllowedAccess(
+      access,
+      NAV_ITEM_ALLOWED_ROLES.reports,
+      null,
+      "reports",
+    );
+  }
+
+  if (section.viewRole === Admin) {
+    return hasRole(access.assignedRoles, Admin);
+  }
+
+  if (section.id.includes("-mg") || section.id === "consultant-mg") {
+    return hasSystemRole(
+      access,
+      section.viewRole as UserRole,
+      ApproverSystems.NewMaterialGroup,
+    );
+  }
+
+  return hasSystemRole(
+    access,
+    section.viewRole as UserRole,
+    ApproverSystems.NewProductDevelopment,
+  );
 }
 
 export function filterNavigationByRoles(
@@ -325,15 +436,48 @@ export function filterNavigationByRoles(
 ): INavSectionConfig[] {
   return sections
     .map((section) => {
-      const items = section.items.filter((item: INavItemConfig) =>
-        canAccessNavItem(access, item.id),
+      if (!canAccessSectionRole(access, section)) {
+        return { ...section, items: [] as INavItemConfig[] };
+      }
+
+      const items = section.items.filter((item) =>
+        canAccessNavItem(access, item),
       );
       return { ...section, items };
     })
     .filter((section) => section.items.length > 0);
 }
 
-export function getNpdViewScope(access: IResolvedUserAccess): IRequestViewScope {
+/**
+ * NPD list scope for a specific nav role context.
+ * When `viewRole` is omitted, falls back to the legacy union of all assigned roles.
+ */
+export function getNpdViewScope(
+  access: IResolvedUserAccess,
+  viewRole?: UserRole | NavViewRole | null,
+): IRequestViewScope {
+  const role = parseViewAsRole(viewRole ?? undefined);
+
+  if (role === Admin || role === MisCoordinator) {
+    return { includeOwn: true, brandFilter: null };
+  }
+
+  if (role === Initiator) {
+    const brands = uniqueTitles(access.npdInitiatorBrands);
+    return {
+      includeOwn: true,
+      brandFilter: brands.length ? brands : [],
+    };
+  }
+
+  if (role === VerticalHead) {
+    const brands = uniqueTitles(access.npdVerticalHeadBrands);
+    return {
+      includeOwn: false,
+      brandFilter: brands.length ? brands : [],
+    };
+  }
+
   if (
     hasRole(access.assignedRoles, Admin) ||
     hasSystemRole(access, MisCoordinator, ApproverSystems.NewProductDevelopment)
@@ -368,7 +512,34 @@ export function getNpdViewScope(access: IResolvedUserAccess): IRequestViewScope 
   };
 }
 
-export function getMgViewScope(access: IResolvedUserAccess): IRequestViewScope {
+export function getMgViewScope(
+  access: IResolvedUserAccess,
+  viewRole?: UserRole | NavViewRole | null,
+): IRequestViewScope {
+  const role = parseViewAsRole(viewRole ?? undefined);
+
+  if (role === Admin) {
+    return { includeOwn: true, brandFilter: null };
+  }
+
+  if (role === Initiator) {
+    const brands = uniqueTitles(access.mgInitiatorBrands);
+    return {
+      includeOwn: true,
+      brandFilter: brands.length ? brands : [],
+    };
+  }
+
+  if (role === Consultant) {
+    if (access.mgConsultantBrands.length === 0) {
+      return { includeOwn: false, brandFilter: null };
+    }
+    return {
+      includeOwn: false,
+      brandFilter: uniqueTitles(access.mgConsultantBrands),
+    };
+  }
+
   if (hasRole(access.assignedRoles, Admin)) {
     return { includeOwn: true, brandFilter: null };
   }
@@ -401,9 +572,12 @@ export function canViewRequest(
   access: IResolvedUserAccess,
   request: IRequestAccessInput,
   currentUserEmail: string,
+  viewRole?: UserRole | NavViewRole | null,
 ): boolean {
   const scope =
-    request.module === "npd" ? getNpdViewScope(access) : getMgViewScope(access);
+    request.module === "npd"
+      ? getNpdViewScope(access, viewRole)
+      : getMgViewScope(access, viewRole);
 
   if (scope.brandFilter === null) {
     return true;
@@ -491,7 +665,11 @@ export function canActOnNpdBrand(
     );
   }
 
-  if (action === "npd.create" || action === "npd.submit" || action === "npd.editDraft") {
+  if (
+    action === "npd.create" ||
+    action === "npd.submit" ||
+    action === "npd.editDraft"
+  ) {
     if (
       !hasSystemRole(access, Initiator, ApproverSystems.NewProductDevelopment)
     ) {

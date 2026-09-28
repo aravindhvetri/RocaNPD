@@ -51,16 +51,30 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     setFirst((current) => (current > maxFirst ? maxFirst : current));
   }, [pageSize, rows.length]);
 
-  const handleAddItem = React.useCallback(() => {
-    if (readOnly) {
-      return;
-    }
-    onRowsChange((currentRows) => [
-      ...currentRows,
-      createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing)),
-    ]);
-    setFirst(Math.floor(rows.length / pageSize) * pageSize);
-  }, [isMisCoordinatorActing, onRowsChange, pageSize, readOnly, rows.length]);
+  const handleAddItem = React.useCallback(
+    (afterRowId?: string) => {
+      if (readOnly) {
+        return;
+      }
+      onRowsChange((currentRows) => {
+        const newRow = createEmptyNpdItemDetailRow(
+          Boolean(isMisCoordinatorActing),
+        );
+        if (!afterRowId) {
+          return [...currentRows, newRow];
+        }
+        const index = currentRows.findIndex((r) => r.id === afterRowId);
+        if (index === -1) {
+          return [...currentRows, newRow];
+        }
+        const updated = [...currentRows];
+        updated.splice(index + 1, 0, newRow);
+        return updated;
+      });
+      setFirst(Math.floor(rows.length / pageSize) * pageSize);
+    },
+    [isMisCoordinatorActing, onRowsChange, pageSize, readOnly, rows.length],
+  );
 
   const handleFieldChange = React.useCallback(
     (
@@ -85,11 +99,14 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
       if (readOnly) {
         return;
       }
-      onRowsChange((currentRows) =>
-        currentRows.filter((row) => row.id !== rowId),
-      );
+      onRowsChange((currentRows) => {
+        const filtered = currentRows.filter((row) => row.id !== rowId);
+        return filtered.length > 0
+          ? filtered
+          : [createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))];
+      });
     },
-    [onRowsChange, readOnly],
+    [isMisCoordinatorActing, onRowsChange, readOnly],
   );
 
   const columns = useNpdItemDetailsColumns({
@@ -99,7 +116,8 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     lookupOptionsByType,
     readOnly,
     onFieldChange: handleFieldChange,
-    onAddLatestRow: handleAddItem,
+    onAddRow: handleAddItem,
+    onAddLatestRow: () => handleAddItem(),
     onDeleteRow: handleDeleteRow,
   });
 

@@ -42,15 +42,28 @@ const SideNavigation: React.FC = () => {
         <SideNavigationCompact onNavigate={handleNavigate} />
       ) : (
         <div className={styles.navScroll}>
-          {navigation.map((section) => (
-            <NavSection
-              key={section.id}
-              section={section}
-              expanded={!!expandedSections[section.id]}
-              onToggle={handleToggleSection}
-              onNavigate={handleNavigate}
-            />
-          ))}
+          {navigation.map((section, index) => {
+            const previous = navigation[index - 1];
+            const showRoleGroup =
+              section.roleGroup !== "Analytics" &&
+              (!previous || previous.roleGroup !== section.roleGroup);
+
+            return (
+              <React.Fragment key={section.id}>
+                {showRoleGroup ? (
+                  <div className={styles.roleGroup} role="presentation">
+                    {section.roleGroup}
+                  </div>
+                ) : null}
+                <NavSection
+                  section={section}
+                  expanded={!!expandedSections[section.id]}
+                  onToggle={handleToggleSection}
+                  onNavigate={handleNavigate}
+                />
+              </React.Fragment>
+            );
+          })}
         </div>
       )}
     </aside>
