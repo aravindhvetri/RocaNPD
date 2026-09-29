@@ -11,7 +11,7 @@ import {
   ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
-import { parseNpdItemDetailsImportFile } from "../../../../../External/CommonServices/npdItemDetailsImportService";
+import { parseNpdItemDetailsImportFile, getNpdItemDetailsRequiredHeaders } from "../../../../../External/CommonServices/npdItemDetailsImportService";
 import {
   downloadTemplateFile,
   fetchTemplateByType,
@@ -139,6 +139,7 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         maxFileSizeBytes={Config.ImportExport.MaxFileSizeBytes}
         accept={Config.ImportExport.AcceptedSpreadsheetAccept}
         importing={importing}
+        expectedHeaders={getNpdItemDetailsRequiredHeaders(brand)}
         onHide={onHide}
         onDownloadTemplate={
           templateDocument
@@ -156,7 +157,10 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         visible={validationVisible}
         sectionTitle="Item Details import validation"
         validationRows={validationRows}
-        canProceed={Boolean(preview?.toCreate.length)}
+        canProceed={
+          Boolean(preview?.toCreate.length) &&
+          !(preview?.duplicates.length)
+        }
         proceeding={importing}
         onHide={() => {
           setValidationVisible(false);

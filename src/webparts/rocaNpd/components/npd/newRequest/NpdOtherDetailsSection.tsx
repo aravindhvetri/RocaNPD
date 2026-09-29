@@ -5,6 +5,7 @@ import type {
   ISelectOption,
 } from "../../../../../External/CommonServices/Interface";
 import { InputText, MultiSelect } from "../../common/controls";
+import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
 import styles from "./NpdOtherDetailsSection.module.scss";
 
@@ -120,7 +121,9 @@ const NpdOtherDetailsSection: React.FC<INpdOtherDetailsSectionProps> = ({
             label={FieldLabels.MaterialExtension}
             value={details.materialExtension}
             disabled={readOnly || loading}
-            onChange={onMaterialExtensionChange}
+            onChange={(value) =>
+              onMaterialExtensionChange(sanitizeAlphanumericTextInput(value))
+            }
           />
         </div>
       </div>

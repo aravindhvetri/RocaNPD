@@ -4,8 +4,12 @@ import { Config } from "../../../../../External/CommonServices/Config";
 import { Button, DataTable } from "../../common/controls";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
 import {
+  NpdItemDetailsActionsContext,
+} from "./NpdItemDetailsActionCell";
+import {
   createEmptyNpdItemDetailRow,
   getVisibleNpdItemDetailFields,
+  isEmptyItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
@@ -38,10 +42,11 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     () => getVisibleNpdItemDetailFields(brand),
     [brand],
   );
-  const latestRowId = rows.length ? rows[rows.length - 1].id : null;
   const pageSize = Config.NpdItemDetailsPageSize;
   const [first, setFirst] = React.useState(0);
   const showPaginator = rows.length > pageSize;
+  const sectionRef = React.useRef<HTMLDivElement>(null);
+  const allowDeleteRows = rows.length > 1;
 
   React.useEffect(() => {
     const maxFirst =
@@ -50,6 +55,74 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         : Math.floor((rows.length - 1) / pageSize) * pageSize;
     setFirst((current) => (current > maxFirst ? maxFirst : current));
   }, [pageSize, rows.length]);
+
+  /**
+   * Tabbing into off-screen Item Details cells makes the browser scroll overflow:hidden
+   * ancestors horizontally, which clips the form layout. Keep sideways scroll only inside
+   * the DataTable wrapper and reset every other ancestor.
+   */
+  React.useEffect(() => {
+    const root = sectionRef.current;
+    if (!root) {
+      return undefined;
+    }
+
+    const resetAncestorHorizontalScroll = (wrapper: HTMLElement): void => {
+      let node: HTMLElement | null = wrapper.parentElement;
+      while (node) {
+        if (node.scrollLeft !== 0) {
+          node.scrollLeft = 0;
+        }
+        node = node.parentElement;
+      }
+      if (document.documentElement.scrollLeft) {
+        document.documentElement.scrollLeft = 0;
+      }
+      if (document.body.scrollLeft) {
+        document.body.scrollLeft = 0;
+      }
+    };
+
+    const scrollFocusedCellIntoWrapper = (
+      wrapper: HTMLElement,
+      target: HTMLElement,
+    ): void => {
+      const focusEl =
+        (target.closest("td") as HTMLElement | null) ?? target;
+      const focusRect = focusEl.getBoundingClientRect();
+      const wrapRect = wrapper.getBoundingClientRect();
+      const pad = 12;
+
+      if (focusRect.right > wrapRect.right - pad) {
+        wrapper.scrollLeft += focusRect.right - wrapRect.right + pad;
+      } else if (focusRect.left < wrapRect.left + pad) {
+        wrapper.scrollLeft -= wrapRect.left - focusRect.left + pad;
+      }
+    };
+
+    const handleFocusIn = (event: FocusEvent): void => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !root.contains(target)) {
+        return;
+      }
+
+      const wrapper = root.querySelector(
+        ".p-datatable-wrapper",
+      ) as HTMLElement | null;
+      if (!wrapper || !wrapper.contains(target)) {
+        return;
+      }
+
+      resetAncestorHorizontalScroll(wrapper);
+      requestAnimationFrame(() => {
+        resetAncestorHorizontalScroll(wrapper);
+        scrollFocusedCellIntoWrapper(wrapper, target);
+      });
+    };
+
+    root.addEventListener("focusin", handleFocusIn);
+    return () => root.removeEventListener("focusin", handleFocusIn);
+  }, []);
 
   const handleAddItem = React.useCallback(
     (afterRowId?: string) => {
@@ -109,16 +182,43 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     [isMisCoordinatorActing, onRowsChange, readOnly],
   );
 
+  const handleBulkDeleteRows = React.useCallback(() => {
+    if (readOnly) {
+      return;
+    }
+    onRowsChange([createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))]);
+    setFirst(0);
+  }, [isMisCoordinatorActing, onRowsChange, readOnly]);
+
+  const showBulkDelete = React.useMemo(
+    () =>
+      rows.length > 1 ||
+      rows.some((row) => !isEmptyItemDetailRow(row)),
+    [rows],
+  );
+
+  const handleAddRowFromActions = React.useCallback(
+    (rowId: string) => {
+      handleAddItem(rowId);
+    },
+    [handleAddItem],
+  );
+
+  const actionsContextValue = React.useMemo(
+    () => ({
+      allowDeleteRows,
+      onAddRow: handleAddRowFromActions,
+      onDeleteRow: handleDeleteRow,
+    }),
+    [allowDeleteRows, handleAddRowFromActions, handleDeleteRow],
+  );
+
   const columns = useNpdItemDetailsColumns({
     visibleFields,
-    latestRowId,
-    first,
+    allowDeleteRows,
     lookupOptionsByType,
     readOnly,
     onFieldChange: handleFieldChange,
-    onAddRow: handleAddItem,
-    onAddLatestRow: () => handleAddItem(),
-    onDeleteRow: handleDeleteRow,
   });
 
   const headerActions = readOnly ? null : (
@@ -128,7 +228,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         icon="pi pi-plus"
         size="xs"
         className={styles.headerAddButton}
-        onClick={handleAddItem}
+        onClick={() => handleAddItem()}
       />
       <Button
         label="Import"
@@ -137,39 +237,56 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         className={styles.headerImportButton}
         onClick={onImportClick}
       />
+      {showBulkDelete ? (
+        <Button
+          label="Delete"
+          icon="pi pi-trash"
+          size="xs"
+          title="Delete all item lines"
+          aria-label="Delete all item lines"
+          className={styles.headerDeleteButton}
+          onClick={handleBulkDeleteRows}
+        />
+      ) : null}
     </>
   );
 
   return (
-    <NpdFormSectionPanel
-      title="Item Details"
-      actions={headerActions}
-      className={styles.sectionPanel}
-      bodyClassName={styles.sectionBody}
-    >
-      <DataTable<INpdItemDetailRow>
-        value={rows}
-        columns={columns}
-        loading={false}
-        dataKey="id"
-        paginator={showPaginator}
-        rows={pageSize}
-        rowsPerPageOptions={[pageSize]}
-        first={first}
-        onPage={(event) => setFirst(event.first)}
-        paginatorPosition="bottom"
-        paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-        className={styles.itemDetailsTable}
-        rowClassName={(row) => (row.isMisAdded ? styles.misAddedRow : undefined)}
-        emptyMessage={Config.FieldLabels.NoItemsFound}
-      />
+    <div ref={sectionRef} className={styles.sectionHost}>
+      <NpdFormSectionPanel
+        title="Item Details"
+        actions={headerActions}
+        className={styles.sectionPanel}
+        bodyClassName={styles.sectionBody}
+      >
+        <NpdItemDetailsActionsContext.Provider value={actionsContextValue}>
+          <DataTable<INpdItemDetailRow>
+            value={rows}
+            columns={columns}
+            loading={false}
+            dataKey="id"
+            paginator={showPaginator}
+            rows={pageSize}
+            rowsPerPageOptions={[pageSize]}
+            first={first}
+            onPage={(event) => setFirst(event.first)}
+            paginatorPosition="bottom"
+            paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+            className={styles.itemDetailsTable}
+            rowClassName={(row) =>
+              row.isMisAdded ? styles.misAddedRow : undefined
+            }
+            emptyMessage={Config.FieldLabels.NoItemsFound}
+          />
+        </NpdItemDetailsActionsContext.Provider>
 
-      <div className={styles.footer}>
-        <span className={styles.footerCount}>
-          Total Item Lines: {rows.length}
-        </span>
-      </div>
-    </NpdFormSectionPanel>
+        <div className={styles.footer}>
+          <span className={styles.footerCount}>
+            Total Item Lines: {rows.length}
+          </span>
+        </div>
+      </NpdFormSectionPanel>
+    </div>
   );
 };
 

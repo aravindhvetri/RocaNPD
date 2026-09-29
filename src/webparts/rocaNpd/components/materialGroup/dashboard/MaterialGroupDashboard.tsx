@@ -5,6 +5,7 @@ import { Config } from "../../../../../External/CommonServices/Config";
 import type { IMaterialGroupGroupedRequest } from "../../../../../External/CommonServices/Interface";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
+import { matchesAnySearchField } from "../../../../../External/CommonServices/searchTextUtils";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import { fetchGroupedMaterialGroupRequestsThunk } from "../../../../../store/thunks/materialGroupThunks";
 import {
@@ -14,6 +15,7 @@ import {
   MasterToolbarSearch,
   Toast,
 } from "../../common/controls";
+import { useListPageFetch } from "../../common/hooks";
 import MaterialGroupTable from "./MaterialGroupTable";
 import styles from "./MaterialGroupDashboard.module.scss";
 import masterStyles from "../../common/master/MasterToolbar/MasterToolbar.module.scss";
@@ -61,13 +63,14 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
       ));
   const showNewRequestButton = isInitiatorView && !isConsultantView && !isAdminView;
 
-  React.useEffect(() => {
-    if (appState.initialized) {
-      void dispatch(
+  const listFetchPending = useListPageFetch(
+    () =>
+      dispatch(
         fetchGroupedMaterialGroupRequestsThunk({ variant, viewRole: viewAs }),
-      );
-    }
-  }, [appState.initialized, dispatch, variant, viewAs]);
+      ),
+    [dispatch, variant, viewAs],
+    appState.initialized,
+  );
 
   const title = React.useMemo(() => {
     switch (variant) {
@@ -83,20 +86,18 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
   }, [variant]);
 
   const filteredRequests = React.useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      return mgState.groupedRequests;
-    }
-
-    return mgState.groupedRequests.filter((item) => {
-      const matchId = (item.requestId || "").toLowerCase().includes(q);
-      const matchInitiator = (item.initiatorName || "").toLowerCase().includes(q);
-      const matchStatus = (item.status || "").toLowerCase().includes(q);
-      const matchMasters = item.configuredMasters.some((m) =>
-        m.toLowerCase().includes(q),
-      );
-      return matchId || matchInitiator || matchStatus || matchMasters;
-    });
+    return mgState.groupedRequests.filter((item) =>
+      matchesAnySearchField(
+        [
+          item.requestId,
+          item.initiatorName,
+          item.currentApprover,
+          item.status,
+          ...item.configuredMasters,
+        ],
+        searchQuery,
+      ),
+    );
   }, [mgState.groupedRequests, searchQuery]);
 
   const appendViewAs = React.useCallback(
@@ -153,7 +154,9 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
     <div className={styles.page}>
       <Toast ref={toastRef} />
       <LoaderOverlay
-        visible={mgState.groupedRequestsStatus === "loading"}
+        visible={
+          listFetchPending || mgState.groupedRequestsStatus === "loading"
+        }
         label="Processing"
       />
 

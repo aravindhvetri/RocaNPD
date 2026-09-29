@@ -25,6 +25,7 @@ export type { IDatePickerProps } from "./DatePicker";
 
 export { DataTable } from "./DataTable";
 export type { IDataTableProps, IDataTableColumn } from "./DataTable";
+export { EmptyDash, wrapDataTableCellContent } from "./DataTable";
 
 export { MultiValueCell } from "./MultiValueCell";
 export type { IMultiValueCellProps } from "./MultiValueCell";

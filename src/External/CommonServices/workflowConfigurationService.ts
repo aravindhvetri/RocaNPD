@@ -38,10 +38,38 @@ export async function fetchActiveWorkflowSteps(): Promise<IWorkflowConfigStep[]>
   return rows.map(mapWorkflowStep).filter(isActiveRecord);
 }
 
+/**
+ * Re-reads SharePoint before create/edit so multi-tab stale Redux cannot
+ * insert a second workflow for the same Request Type.
+ */
+async function assertWorkflowRequestTypeNotDuplicate(
+  requestType: string,
+  excludeStepIds?: number[],
+): Promise<void> {
+  const existing = await fetchActiveWorkflowSteps();
+  const typeKey = requestType.trim().toLowerCase();
+  const excluded = new Set(excludeStepIds ?? []);
+
+  const isDuplicate = existing.some(
+    (step) =>
+      !excluded.has(step.Id) &&
+      step.RequestType.trim().toLowerCase() === typeKey,
+  );
+
+  if (isDuplicate) {
+    throw new Error(`Workflow for "${requestType.trim()}" already exists.`);
+  }
+}
+
 export async function saveWorkflowConfiguration(
   payload: IWorkflowConfigSavePayload,
 ): Promise<void> {
   const requestType = payload.requestType.trim();
+
+  await assertWorkflowRequestTypeNotDuplicate(
+    requestType,
+    payload.existingStepIds,
+  );
 
   if (payload.existingStepIds?.length) {
     for (const stepId of payload.existingStepIds) {

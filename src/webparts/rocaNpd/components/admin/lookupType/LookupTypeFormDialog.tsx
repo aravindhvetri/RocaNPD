@@ -1,6 +1,7 @@
 import * as React from "react";
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { ILookupType } from "../../../../../External/CommonServices/Interface";
+import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
 import { Button, Dialog, InputText } from "../../common/controls";
 import { validateLookupTypeTitle } from "./lookupTypeValidation";
 import styles from "./LookupTypeFormDialog.module.scss";
@@ -94,7 +95,7 @@ const LookupTypeFormDialog: React.FC<ILookupTypeFormDialogProps> = ({
         disabled={saving}
         maxLength={255}
         className={styles.formField}
-        onChange={setTitle}
+        onChange={(value) => setTitle(sanitizeAlphanumericTextInput(value))}
       />
     </Dialog>
   );

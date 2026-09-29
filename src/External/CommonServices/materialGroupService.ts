@@ -6,6 +6,10 @@ import type {
   IMaterialGroupHydratePayload,
   IMaterialGroupRequestJsonEntry,
 } from "./Interface";
+import {
+  collectMaterialGroupDescriptions,
+  findDuplicateMaterialGroupDescription,
+} from "./materialGroupValidation";
 import { getLookupTitles } from "./lookupFieldUtils";
 import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
 import { fetchActiveLookupTypes } from "./lookupTypeService";
@@ -459,6 +463,18 @@ export async function submitMaterialGroupRequest(
     throw new Error("Please add at least one entry before submitting.");
   }
 
+  const withinFormDuplicate = findDuplicateMaterialGroupDescription(
+    selectedConfigIds,
+    entriesByConfigId,
+  );
+  if (withinFormDuplicate) {
+    throw new Error(withinFormDuplicate);
+  }
+
+  await assertMaterialGroupDescriptionsAvailable(
+    collectMaterialGroupDescriptions(selectedConfigIds, entriesByConfigId),
+  );
+
   const requestId =
     existingRequestId && isMgRequestIdTitle(existingRequestId)
       ? existingRequestId
@@ -589,12 +605,8 @@ function isOwnedByCurrentUser(
     }
   }
 
-  // If we cannot resolve owner identity, do not hide the row for the list owner
-  // (avoids empty Draft/ReWork when Initiator/EMail expand is missing).
-  if (!ownerEmail && (!owner.userId || owner.userId <= 0)) {
-    return true;
-  }
-
+  // Match the stored Initiator (or Author when Initiator was never written).
+  // Unresolved owners stay hidden so other Initiators do not see them.
   return false;
 }
 
@@ -631,9 +643,6 @@ export async function fetchGroupedMaterialGroupRequests(
         (role) =>
           role.trim().toLowerCase() === Config.Roles.Consultant.toLowerCase(),
       ));
-  const isInitiatorView =
-    normalizedViewRole === Config.Roles.Initiator.toLowerCase() ||
-    (!normalizedViewRole && !isAdminView && !isConsultantView);
 
   // RequestsJSON + Status only for row content — do not Expand MaterialGroupConfig here
   const selectFields = [
@@ -706,22 +715,19 @@ export async function fetchGroupedMaterialGroupRequests(
     }
 
     // Role filtering — scoped by active nav role (`?as=`).
-    // Admin: all requests. Initiator: own only. Consultant: non-draft + own drafts.
-    if (!isAdminView) {
+    // Admin / Consultant: never show Draft. Initiator: own requests only (incl. Draft).
+    if (isAdminView || isConsultantView) {
+      if (statusEquals(status, Config.MaterialGroupStatus.Draft)) {
+        continue;
+      }
+    } else {
       const isOwner = isOwnedByCurrentUser(
         owner,
         normalizedUserEmail,
         userId,
         userLoginName,
       );
-
-      if (isConsultantView) {
-        if (statusEquals(status, Config.MaterialGroupStatus.Draft) && !isOwner) {
-          continue;
-        }
-      } else if (isInitiatorView && !isOwner) {
-        continue;
-      } else if (!isConsultantView && !isOwner) {
+      if (!isOwner) {
         continue;
       }
     }
@@ -742,13 +748,6 @@ export async function fetchGroupedMaterialGroupRequests(
       if (!statusEquals(status, Config.MaterialGroupStatus.Completed)) {
         continue;
       }
-    } else if (
-      variant === "all" &&
-      normalizedViewRole === Config.Roles.Admin.toLowerCase() &&
-      statusEquals(status, Config.MaterialGroupStatus.Draft)
-    ) {
-      // Admin module All Requests only: exclude Draft completely.
-      continue;
     }
 
     let currentApprover = "—";
@@ -1064,6 +1063,40 @@ export interface IConsultantActionParams {
 }
 
 /**
+ * Description must be unique within the request and against NPD_Lookup Title
+ * (LookupName), same family of rule as Lookup Code uniqueness.
+ */
+export async function assertMaterialGroupDescriptionsAvailable(
+  descriptions: string[],
+): Promise<void> {
+  const trimmed = descriptions
+    .map((value) => value.trim())
+    .filter((value) => Boolean(value));
+
+  const batchTitles = new Set<string>();
+  for (const description of trimmed) {
+    const key = description.toLowerCase();
+    if (batchTitles.has(key)) {
+      throw new Error(`"${description}" already exists.`);
+    }
+    batchTitles.add(key);
+  }
+
+  const existing = await fetchActiveLookups().catch(() => []);
+  const existingTitles = new Set(
+    existing
+      .map((item) => item.LookupName.trim().toLowerCase())
+      .filter((value) => Boolean(value)),
+  );
+
+  for (const description of trimmed) {
+    if (existingTitles.has(description.toLowerCase())) {
+      throw new Error(`"${description}" already exists.`);
+    }
+  }
+}
+
+/**
  * Resolves LookupType + validates uniqueness for Complete entries.
  * Throws before any SharePoint write when Code is missing or already exists.
  */
@@ -1092,7 +1125,13 @@ async function prepareLookupMasterEntries(
   const existingCodes = new Set(
     existing.map((item) => item.LookupCode.trim().toLowerCase()),
   );
+  const existingTitles = new Set(
+    existing
+      .map((item) => item.LookupName.trim().toLowerCase())
+      .filter((value) => Boolean(value)),
+  );
   const batchCodes = new Set<string>();
+  const batchTitles = new Set<string>();
   const prepared: Array<{
     lookupTypeId: number;
     lookupTypeTitle: string;
@@ -1134,16 +1173,12 @@ async function prepareLookupMasterEntries(
 
     const name = description || code;
     const nameKey = name.toLowerCase();
-    const duplicateName = existing.some(
-      (item) =>
-        item.LookupTypeId === lookupTypeId &&
-        item.LookupName.trim().toLowerCase() === nameKey,
-    );
-    if (duplicateName) {
+    if (existingTitles.has(nameKey) || batchTitles.has(nameKey)) {
       throw new Error(`"${name}" already exists.`);
     }
 
     batchCodes.add(codeKey);
+    batchTitles.add(nameKey);
     prepared.push({
       lookupTypeId,
       lookupTypeTitle: resolvedType.Title || lookupName,

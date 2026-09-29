@@ -9,6 +9,8 @@ import type {
   ILookupType,
 } from "./Interface";
 import {
+  assertRequiredImportHeaders,
+  findBestHeaderRowIndex,
   findColumnIndex,
   readSpreadsheetRows,
 } from "./importService";
@@ -28,6 +30,13 @@ import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.Lookup;
 const LOOKUP_FIELDS = Config.FieldNames.Lookup;
+
+/** Excel headers required for Lookup Import (must match FieldLabels). */
+export const LOOKUP_IMPORT_HEADERS = [
+  FieldLabels.LookupType,
+  FieldLabels.LookupCode,
+  FieldLabels.LookupName,
+] as const;
 
 /** Title = Lookup Name. LookupType/Title requires Expand on LookupType. */
 const SELECT_FIELDS =
@@ -261,12 +270,19 @@ export async function bulkCreateLookups(
     return;
   }
 
-  // Final server-side guard: Lookup Codes must stay unique across all types.
+  // Final SharePoint guard — do not trust Redux/list state from page load (multi-tab).
   const existing = await fetchActiveLookups();
   const existingCodes = new Set(
     existing.map((item) => item.LookupCode.trim().toLowerCase()),
   );
+  const existingNameKeys = new Set(
+    existing.map(
+      (item) =>
+        `${item.LookupTypeId}:${item.LookupName.trim().toLowerCase()}`,
+    ),
+  );
   const batchCodes = new Set<string>();
+  const batchNameKeys = new Set<string>();
 
   for (const record of records) {
     const codeKey = (record.lookupCode ?? "").trim().toLowerCase();
@@ -278,7 +294,14 @@ export async function bulkCreateLookups(
         `"${(record.lookupCode ?? "").trim()}" already exists as a Lookup Code.`,
       );
     }
+
+    const nameKey = `${record.lookupTypeId}:${record.lookupName.trim().toLowerCase()}`;
+    if (existingNameKeys.has(nameKey) || batchNameKeys.has(nameKey)) {
+      throw new Error(`"${record.lookupName.trim()}" already exists.`);
+    }
+
     batchCodes.add(codeKey);
+    batchNameKeys.add(nameKey);
   }
 
   await SPServices.batchInsert({
@@ -303,15 +326,14 @@ export async function parseLookupImportFile(
     throw new Error("The uploaded file is empty.");
   }
 
-  const headerRowIndex = rows.findIndex((row) =>
-    row.some((cell) => cell.trim().length > 0),
-  );
+  const headerRowIndex = findBestHeaderRowIndex(rows, [...LOOKUP_IMPORT_HEADERS]);
 
   if (headerRowIndex < 0) {
     throw new Error("The uploaded file does not contain a header row.");
   }
 
   const headerRow = rows[headerRowIndex];
+  assertRequiredImportHeaders(headerRow, [...LOOKUP_IMPORT_HEADERS]);
   const lookupTypeColumnIndex = findColumnIndex(
     headerRow,
     FieldLabels.LookupType,
@@ -324,16 +346,6 @@ export async function parseLookupImportFile(
     headerRow,
     FieldLabels.LookupCode,
   );
-
-  if (
-    lookupTypeColumnIndex < 0 ||
-    lookupNameColumnIndex < 0 ||
-    lookupCodeColumnIndex < 0
-  ) {
-    throw new Error(
-      `The uploaded file must include "${FieldLabels.LookupType}", "${FieldLabels.LookupName}", and "${FieldLabels.LookupCode}" columns.`,
-    );
-  }
 
   const lookupTypeByTitle = new Map<string, ILookupType>();
   lookupTypes.forEach((lookupType) => {

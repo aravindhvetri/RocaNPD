@@ -7,6 +7,7 @@ import type {
   IMaterialGroupHydratePayload,
 } from "../../External/CommonServices/Interface";
 import * as materialGroupService from "../../External/CommonServices/materialGroupService";
+import { findDuplicateMaterialGroupDescription } from "../../External/CommonServices/materialGroupValidation";
 import type { RootState } from "../rootState";
 
 function getErrorMessage(error: unknown): string {
@@ -121,6 +122,14 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
           );
         }
       }
+    }
+
+    const duplicateDescription = findDuplicateMaterialGroupDescription(
+      selectedConfigIds,
+      entriesByConfigId,
+    );
+    if (duplicateDescription) {
+      return rejectWithValue(duplicateDescription);
     }
 
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);

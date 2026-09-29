@@ -1,9 +1,19 @@
 import * as React from "react";
+import { FilterService } from "primereact/api";
 import { DataTable as PrimeDataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { FieldLabels } from "../../../../../../External/CommonServices/Config";
+import { matchesSearchText } from "../../../../../../External/CommonServices/searchTextUtils";
 import type { IDataTableProps } from "./IDataTableProps";
+import { wrapDataTableCellContent } from "./EmptyDash";
 import styles from "./DataTable.module.scss";
+
+/** Override Prime "contains" so list search is space-insensitive + lowercase. */
+FilterService.register(
+  "contains",
+  (value: unknown, filter: unknown): boolean =>
+    matchesSearchText(value, filter),
+);
 
 function DataTable<T extends Record<string, unknown>>({
   value,
@@ -26,20 +36,24 @@ function DataTable<T extends Record<string, unknown>>({
   rowClassName,
 }: IDataTableProps<T>): React.ReactElement {
   const mergedClassName = [styles.dataTable, className].filter(Boolean).join(" ");
+  const pageSize = rows > 0 ? rows : 15;
+  // Hide pagination until a second page is actually needed.
+  const showPaginator = Boolean(paginator) && value.length > pageSize;
 
   return (
     <PrimeDataTable
       value={value}
       loading={loading}
       emptyMessage={<div className={styles.emptyMessage}>{emptyMessage}</div>}
-      paginator={paginator}
-      rows={rows}
+      paginator={showPaginator}
+      rows={pageSize}
       rowsPerPageOptions={rowsPerPageOptions}
       dataKey={dataKey}
       className={mergedClassName}
       header={header}
       globalFilter={globalFilter}
       globalFilterFields={globalFilterFields}
+      globalFilterMatchMode="contains"
       paginatorPosition={paginatorPosition}
       paginatorTemplate={paginatorTemplate}
       currentPageReportTemplate={currentPageReportTemplate}
@@ -68,7 +82,7 @@ function DataTable<T extends Record<string, unknown>>({
 
         return (
           <Column
-            key={`${String(col.field)}-${columnIndex}`}
+            key={col.columnKey ?? `${String(col.field)}-${columnIndex}`}
             field={col.field}
             header={col.header}
             sortable={col.sortable}
@@ -76,12 +90,12 @@ function DataTable<T extends Record<string, unknown>>({
             align={isCentered ? "center" : col.align}
             headerClassName={headerCls || undefined}
             className={bodyCls || undefined}
-            body={
-              col.body
-                ? (row: T, options: { rowIndex: number }) =>
-                    col.body!(row, options.rowIndex)
-                : undefined
-            }
+            body={(row: T, options: { rowIndex: number }) => {
+              const content = col.body
+                ? col.body(row, options.rowIndex)
+                : ((row as Record<string, unknown>)[col.field] as React.ReactNode);
+              return wrapDataTableCellContent(content);
+            }}
             style={col.style}
             headerStyle={col.headerStyle}
           />

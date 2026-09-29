@@ -9,7 +9,7 @@ export interface IMultiSelectProps extends IBaseControlProps {
   filter?: boolean;
   display?: "comma" | "chip";
   selectAll?: boolean;
-  /** When set, limits how many options can be selected (e.g. 1 = single select). */
+  /** When 1, behaves as searchable single-select (dropdown): one value, all options stay enabled. */
   selectionLimit?: number;
   emptyMessage?: string;
   /** Extra class on the portaled overlay panel (e.g. Item Details-only filter chrome). */

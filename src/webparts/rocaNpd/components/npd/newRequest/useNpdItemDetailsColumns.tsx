@@ -1,8 +1,8 @@
 import * as React from "react";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
 import { getLookupOptionsByFieldName } from "../../../../../External/CommonServices/lookupOptionUtils";
-import { Button } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
+import NpdItemDetailsActionCell from "./NpdItemDetailsActionCell";
 import NpdItemDetailsTableCell from "./NpdItemDetailsTableCell";
 import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
 import type {
@@ -27,8 +27,7 @@ function renderColumnHeader(fieldDef: INpdItemDetailsFieldDef): React.ReactNode 
 
 export interface IUseNpdItemDetailsColumnsParams {
   visibleFields: INpdItemDetailsFieldDef[];
-  latestRowId?: string | null;
-  first?: number;
+  allowDeleteRows: boolean;
   lookupOptionsByType: Record<string, ISelectOption[]>;
   readOnly?: boolean;
   onFieldChange: (
@@ -36,9 +35,6 @@ export interface IUseNpdItemDetailsColumnsParams {
     field: NpdItemDetailFieldKey,
     value: NpdItemDetailFieldValue,
   ) => void;
-  onAddLatestRow?: () => void;
-  onAddRow?: (rowId: string) => void;
-  onDeleteRow: (rowId: string) => void;
 }
 
 const CENTER_ALIGN: React.CSSProperties["textAlign"] = "center";
@@ -46,13 +42,9 @@ const EMPTY_LOOKUP_OPTIONS: ISelectOption[] = [];
 
 export function useNpdItemDetailsColumns({
   visibleFields,
-  latestRowId,
-  first = 0,
+  allowDeleteRows,
   lookupOptionsByType,
   onFieldChange,
-  onAddLatestRow,
-  onAddRow,
-  onDeleteRow,
   readOnly = false,
 }: IUseNpdItemDetailsColumnsParams): IDataTableColumn<INpdItemDetailRow>[] {
   return React.useMemo(() => {
@@ -96,49 +88,24 @@ export function useNpdItemDetailsColumns({
         textAlign: CENTER_ALIGN,
       },
       body: (_row, rowIndex) => (
-        <span className={styles.rowIndex}>{first + rowIndex + 1}</span>
+        // PrimeReact rowIndex is absolute across the full value array (not page-local).
+        <span className={styles.rowIndex}>{rowIndex + 1}</span>
       ),
     };
 
+    // Remount Actions when 1 ↔ 2+ rows so Delete appears/hides immediately
+    // (PrimeReact otherwise keeps stale cells until an unrelated row edit).
     const actionColumn: IDataTableColumn<INpdItemDetailRow> = {
-      field: "id",
+      field: "actions",
+      columnKey: `npd-item-actions-${allowDeleteRows ? "multi" : "single"}`,
       header: "Actions",
-      style: { width: "4.5rem", minWidth: "4.5rem", textAlign: CENTER_ALIGN },
+      style: { width: "5rem", minWidth: "5rem", textAlign: CENTER_ALIGN },
       headerStyle: {
-        width: "4.5rem",
-        minWidth: "4.5rem",
+        width: "5rem",
+        minWidth: "5rem",
         textAlign: CENTER_ALIGN,
       },
-      body: (row) => (
-        <div className={styles.actionCell}>
-          <Button
-            variant="text"
-            icon="pi pi-plus"
-            iconOnly
-            size="xs"
-            title="Add item line"
-            aria-label="Add item line"
-            className={styles.addRowAction}
-            onClick={() => {
-              if (onAddRow) {
-                onAddRow(row.id);
-              } else if (onAddLatestRow) {
-                onAddLatestRow();
-              }
-            }}
-          />
-          <Button
-            variant="text"
-            icon="pi pi-trash"
-            iconOnly
-            size="xs"
-            title="Delete row"
-            aria-label="Delete row"
-            className={styles.deleteRowAction}
-            onClick={() => onDeleteRow(row.id)}
-          />
-        </div>
-      ),
+      body: (row) => <NpdItemDetailsActionCell rowId={row.id} />,
     };
 
     const columns: IDataTableColumn<INpdItemDetailRow>[] = [
@@ -151,11 +118,8 @@ export function useNpdItemDetailsColumns({
 
     return columns;
   }, [
-    latestRowId,
-    first,
+    allowDeleteRows,
     lookupOptionsByType,
-    onAddLatestRow,
-    onDeleteRow,
     onFieldChange,
     readOnly,
     visibleFields,

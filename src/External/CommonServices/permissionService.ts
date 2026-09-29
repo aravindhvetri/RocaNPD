@@ -459,22 +459,20 @@ export function getNpdViewScope(
   const role = parseViewAsRole(viewRole ?? undefined);
 
   if (role === Admin || role === MisCoordinator) {
-    return { includeOwn: true, brandFilter: null };
+    return { ownerOnly: false, brandFilter: null };
   }
 
   if (role === Initiator) {
-    const brands = uniqueTitles(access.npdInitiatorBrands);
     return {
-      includeOwn: true,
-      brandFilter: brands.length ? brands : [],
+      ownerOnly: true,
+      brandFilter: uniqueTitles(access.npdInitiatorBrands),
     };
   }
 
   if (role === VerticalHead) {
-    const brands = uniqueTitles(access.npdVerticalHeadBrands);
     return {
-      includeOwn: false,
-      brandFilter: brands.length ? brands : [],
+      ownerOnly: false,
+      brandFilter: uniqueTitles(access.npdVerticalHeadBrands),
     };
   }
 
@@ -482,34 +480,35 @@ export function getNpdViewScope(
     hasRole(access.assignedRoles, Admin) ||
     hasSystemRole(access, MisCoordinator, ApproverSystems.NewProductDevelopment)
   ) {
-    return { includeOwn: true, brandFilter: null };
+    return { ownerOnly: false, brandFilter: null };
   }
 
-  const brands = uniqueTitles([
-    ...(hasSystemRole(access, Initiator, ApproverSystems.NewProductDevelopment)
-      ? access.npdInitiatorBrands
-      : []),
-    ...(hasSystemRole(
-      access,
-      VerticalHead,
-      ApproverSystems.NewProductDevelopment,
-    )
-      ? access.npdVerticalHeadBrands
-      : []),
-  ]);
+  const isInitiator = hasSystemRole(
+    access,
+    Initiator,
+    ApproverSystems.NewProductDevelopment,
+  );
+  const isVerticalHead = hasSystemRole(
+    access,
+    VerticalHead,
+    ApproverSystems.NewProductDevelopment,
+  );
 
-  if (brands.length) {
-    return { includeOwn: false, brandFilter: brands };
+  if (isInitiator && !isVerticalHead) {
+    return {
+      ownerOnly: true,
+      brandFilter: uniqueTitles(access.npdInitiatorBrands),
+    };
   }
 
-  return {
-    includeOwn: hasSystemRole(
-      access,
-      Initiator,
-      ApproverSystems.NewProductDevelopment,
-    ),
-    brandFilter: [],
-  };
+  if (isVerticalHead) {
+    return {
+      ownerOnly: false,
+      brandFilter: uniqueTitles(access.npdVerticalHeadBrands),
+    };
+  }
+
+  return { ownerOnly: true, brandFilter: [] };
 }
 
 export function getMgViewScope(
@@ -518,54 +517,32 @@ export function getMgViewScope(
 ): IRequestViewScope {
   const role = parseViewAsRole(viewRole ?? undefined);
 
-  if (role === Admin) {
-    return { includeOwn: true, brandFilter: null };
+  if (role === Admin || role === Consultant) {
+    return { ownerOnly: false, brandFilter: null };
   }
 
   if (role === Initiator) {
-    const brands = uniqueTitles(access.mgInitiatorBrands);
-    return {
-      includeOwn: true,
-      brandFilter: brands.length ? brands : [],
-    };
-  }
-
-  if (role === Consultant) {
-    if (access.mgConsultantBrands.length === 0) {
-      return { includeOwn: false, brandFilter: null };
-    }
-    return {
-      includeOwn: false,
-      brandFilter: uniqueTitles(access.mgConsultantBrands),
-    };
+    // MG requests have no Brand column. Initiator scope is the Initiator person.
+    return { ownerOnly: true, brandFilter: null };
   }
 
   if (hasRole(access.assignedRoles, Admin)) {
-    return { includeOwn: true, brandFilter: null };
+    return { ownerOnly: false, brandFilter: null };
   }
 
-  const includeOwn = hasSystemRole(
-    access,
-    Initiator,
-    ApproverSystems.NewMaterialGroup,
-  );
-  const isUnscopedConsultant =
-    hasSystemRole(access, Consultant, ApproverSystems.NewMaterialGroup) &&
-    access.mgConsultantBrands.length === 0;
-
-  if (isUnscopedConsultant) {
-    return { includeOwn, brandFilter: null };
+  if (
+    hasSystemRole(access, Consultant, ApproverSystems.NewMaterialGroup)
+  ) {
+    return { ownerOnly: false, brandFilter: null };
   }
 
-  const brands = uniqueTitles([
-    ...access.mgInitiatorBrands,
-    ...access.mgConsultantBrands,
-  ]);
+  if (
+    hasSystemRole(access, Initiator, ApproverSystems.NewMaterialGroup)
+  ) {
+    return { ownerOnly: true, brandFilter: null };
+  }
 
-  return {
-    includeOwn,
-    brandFilter: includeOwn && !brands.length ? [] : brands,
-  };
+  return { ownerOnly: true, brandFilter: [] };
 }
 
 export function canViewRequest(
@@ -579,19 +556,18 @@ export function canViewRequest(
       ? getNpdViewScope(access, viewRole)
       : getMgViewScope(access, viewRole);
 
-  if (scope.brandFilter === null) {
-    return true;
-  }
-
   if (
-    scope.includeOwn &&
-    emailsMatch(request.createdByEmail, currentUserEmail)
+    scope.brandFilter !== null &&
+    !brandInList(request.brand, scope.brandFilter)
   ) {
-    return true;
+    return false;
   }
 
-  const brand = (request.brand ?? "").trim();
-  return Boolean(brand) && (scope.brandFilter ?? []).includes(brand);
+  if (scope.ownerOnly) {
+    return emailsMatch(request.createdByEmail, currentUserEmail);
+  }
+
+  return true;
 }
 
 export function canActOnPendingNpdStep(
@@ -697,7 +673,15 @@ function emailsMatch(left?: string, right?: string): boolean {
   return Boolean(normalizedLeft && normalizedLeft === normalizedRight);
 }
 
+function normalizeBrandTitle(value: string | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
 function brandInList(brand: string | undefined, brands: string[]): boolean {
-  const title = (brand ?? "").trim();
-  return Boolean(title) && brands.includes(title);
+  const title = normalizeBrandTitle(brand);
+  if (!title) {
+    return false;
+  }
+
+  return brands.some((entry) => normalizeBrandTitle(entry) === title);
 }

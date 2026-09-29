@@ -153,7 +153,7 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
       {
         field: "Status",
         header: FieldLabels.Status,
-        sortable: true,
+        sortable: false,
         ...columnSize("11rem"),
         body: (row) => (
           <Tag

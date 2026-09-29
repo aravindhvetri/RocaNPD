@@ -11,6 +11,8 @@ export interface IDataTableColumn<T> {
   align?: "left" | "right" | "center";
   headerClassName?: string;
   className?: string;
+  /** Stable React key — include mode flags so column bodies remount when UI rules change. */
+  columnKey?: string;
 }
 
 export interface IDataTableProps<T extends Record<string, unknown>> {

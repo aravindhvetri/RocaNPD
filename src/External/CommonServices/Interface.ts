@@ -185,6 +185,9 @@ export interface INpdRequestGeneralInfo {
   WorkflowSteps: INpdWorkflowStepJson[];
   AuthorEmail: string;
   AuthorTitle: string;
+  /** Person column `Initiator` — set on Draft save and Submit. */
+  InitiatorEmail: string;
+  InitiatorId: number;
   Created: string;
   Modified: string;
   PlantCode?: string;
@@ -310,8 +313,16 @@ export interface IResolvedUserAccess {
 
 /** Brand/ownership scope used by list queries and request-level checks. */
 export interface IRequestViewScope {
-  includeOwn: boolean;
-  /** `null` = no brand restriction (Admin or MIS Coordinator). */
+  /**
+   * When true, the row is visible only if the logged-in user is the request
+   * Initiator (Initiator person, else Author). Used for Initiator lists.
+   * Admin, MIS Coordinator, and Vertical Head keep this false.
+   */
+  ownerOnly: boolean;
+  /**
+   * `null` = no brand restriction (Admin, MIS Coordinator, MG Consultant).
+   * Empty array = no configured brands, so brand-scoped rows are hidden.
+   */
   brandFilter: string[] | null;
 }
 

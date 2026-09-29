@@ -228,6 +228,7 @@ export const saveNpdDraft = createAsyncThunk<
       items,
       state.app.userEmail || state.app.userLoginName,
       state.app.siteUrl || undefined,
+      state.app.userId,
     );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
@@ -257,6 +258,7 @@ export const submitNpdRequest = createAsyncThunk<
       state.app.userEmail || state.app.userLoginName,
       state.app.siteUrl || undefined,
       comments,
+      state.app.userId,
     );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
@@ -285,6 +287,13 @@ export const applyNpdWorkflowAction = createAsyncThunk<
       (input.actorRole || "").trim().toLowerCase() ===
         Config.Roles.MisCoordinator.toLowerCase() ||
       Boolean(input.includeOtherDetails);
+
+    if (isMisActor) {
+      const profitCenter = (state.npdForm.otherDetails.profitCenter || "").trim();
+      if (!profitCenter) {
+        return rejectWithValue("Profit Center is required.");
+      }
+    }
 
     return await npdRequestGeneralInfoService.applyNpdWorkflowAction({
       requestId: state.npdForm.requestId,

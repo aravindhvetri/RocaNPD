@@ -127,13 +127,23 @@ const SPReadItems = async (params: IListItems): Promise<[]> => {
 
   let query = getSP()
     .web.lists.getByTitle(params.Listname)
-    .items.select(params.Select || "*");
+    .items.select(
+      ...String(params.Select || "*")
+        .split(",")
+        .map((field) => field.trim())
+        .filter(Boolean),
+    );
 
   if (filterValue) {
     query = query.filter(filterValue);
   }
   if (params.Expand) {
-    query = query.expand(params.Expand);
+    const expandFields = params.Expand.split(",")
+      .map((field) => field.trim())
+      .filter(Boolean);
+    if (expandFields.length) {
+      query = query.expand(...expandFields);
+    }
   }
 
   return (await query
@@ -147,10 +157,19 @@ const SPReadItemUsingId = async (params: IListItemUsingId): Promise<[]> => {
     .items.getById(params.SelectedId);
 
   if (params.Select) {
-    query = query.select(params.Select);
+    query = query.select(
+      ...params.Select.split(",")
+        .map((field) => field.trim())
+        .filter(Boolean),
+    );
   }
   if (params.Expand) {
-    query = query.expand(params.Expand);
+    const expandFields = params.Expand.split(",")
+      .map((field) => field.trim())
+      .filter(Boolean);
+    if (expandFields.length) {
+      query = query.expand(...expandFields);
+    }
   }
 
   return (await query()) as [];

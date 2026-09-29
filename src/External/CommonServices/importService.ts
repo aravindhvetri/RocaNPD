@@ -151,6 +151,73 @@ export function countMatchingHeaders(
   );
 }
 
+/** Required FieldLabels missing from the Excel header row (trim / case / whitespace tolerant). */
+export function findMissingRequiredHeaders(
+  headerRow: string[],
+  requiredHeaders: string[],
+): string[] {
+  return requiredHeaders.filter(
+    (header) => findColumnIndex(headerRow, header) < 0,
+  );
+}
+
+export function buildMissingImportHeadersError(
+  _missingHeaders: string[],
+): string {
+  return Config.ImportExport.MissingRequiredColumnsMessage;
+}
+
+export function assertRequiredImportHeaders(
+  headerRow: string[],
+  requiredHeaders: string[],
+): void {
+  const missingHeaders = findMissingRequiredHeaders(headerRow, requiredHeaders);
+  if (missingHeaders.length) {
+    throw new Error(buildMissingImportHeadersError(missingHeaders));
+  }
+}
+
+/**
+ * Early gate for ImportDialog (select / drop): parse the workbook and require every
+ * expected FieldLabels header to be present before the file can be accepted.
+ */
+export async function validateRequiredImportHeaders(
+  file: File,
+  requiredHeaders: string[],
+): Promise<void> {
+  if (!requiredHeaders.length) {
+    return;
+  }
+
+  const sheets = await readSpreadsheetWorkbook(file);
+  if (!sheets.some((sheet) => sheet.rows.length)) {
+    throw new Error("The uploaded file is empty.");
+  }
+
+  let bestHeaderRow: string[] | null = null;
+  let bestScore = 0;
+
+  sheets.forEach((sheet) => {
+    const headerRowIndex = findBestHeaderRowIndex(sheet.rows, requiredHeaders);
+    if (headerRowIndex < 0) {
+      return;
+    }
+
+    const headerRow = sheet.rows[headerRowIndex];
+    const score = countMatchingHeaders(headerRow, requiredHeaders);
+    if (score > bestScore) {
+      bestScore = score;
+      bestHeaderRow = headerRow;
+    }
+  });
+
+  if (!bestHeaderRow || bestScore === 0) {
+    throw new Error(buildMissingImportHeadersError(requiredHeaders));
+  }
+
+  assertRequiredImportHeaders(bestHeaderRow, requiredHeaders);
+}
+
 export function findBestHeaderRowIndex(
   rows: string[][],
   expectedHeaders: string[],
@@ -257,7 +324,7 @@ export const ImportValidationMessages = {
   duplicateLookupType: "Duplicate Lookup Type Name",
   duplicateLookupName: "Duplicate Lookup Name under this Type",
   duplicateLookupCode: "Duplicate Lookup Code",
-  duplicateNpdItemDetails: "Duplicate Item Details record",
+  duplicateNpdItemDetails: "Already exists",
 } as const;
 
 export function buildImportValidationRows(

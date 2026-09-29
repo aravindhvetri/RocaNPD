@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
+import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
 import { InputNumber, InputText, MultiSelect } from "../../common/controls";
 import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
 import type {
@@ -53,7 +54,9 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
         readOnly={readOnly}
         disabled={readOnly}
         className={controlClassName}
-        onChange={handleChange}
+        onChange={(value) =>
+          handleChange(sanitizeAlphanumericTextInput(value))
+        }
       />
     );
   }

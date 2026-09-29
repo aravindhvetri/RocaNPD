@@ -69,6 +69,38 @@
   }
 }
 
+/* selectionLimit=1: searchable dropdown look (no checkboxes, search only) */
+.singleSelectPanel {
+  :global(.p-multiselect-header .p-checkbox),
+  :global(.p-multiselect-header .p-multiselect-close) {
+    display: none !important;
+  }
+
+  :global(.p-multiselect-item .p-checkbox) {
+    display: none !important;
+  }
+
+  /* Options must stay fully clickable (Prime selectionLimit greys them out). */
+  :global(.p-multiselect-item.p-disabled),
+  :global(.p-multiselect-item.p-disabled *) {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    color: inherit !important;
+  }
+
+  :global(.p-multiselect-item) {
+    gap: 0 !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  :global(.p-multiselect-filter-container) {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
+}
+
 .optionLabel {
   flex: 1 1 auto;
   min-width: 0;
