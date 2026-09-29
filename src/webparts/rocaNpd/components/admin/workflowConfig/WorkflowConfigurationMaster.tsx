@@ -20,6 +20,7 @@ import {
   showWarningToast,
   Toast,
 } from "../../common/controls";
+import { useListPageFetch } from "../../common/hooks";
 import WorkflowConfigFormDialog, {
   type WorkflowConfigDialogMode,
 } from "./WorkflowConfigFormDialog";
@@ -55,14 +56,15 @@ const WorkflowConfigurationMaster: React.FC = () => {
   const isLoading = status === "loading";
   const isSaving = status === "saving";
 
-  React.useEffect(() => {
-    if (!initialized) {
-      return;
-    }
-
-    void dispatch(fetchWorkflowConfigurations());
-    void dispatch(fetchNpdRoleOptions());
-  }, [dispatch, initialized]);
+  const listFetchPending = useListPageFetch(
+    () =>
+      Promise.all([
+        dispatch(fetchWorkflowConfigurations()),
+        dispatch(fetchNpdRoleOptions()),
+      ]),
+    [dispatch],
+    initialized,
+  );
 
   React.useEffect(() => {
     if (!error) {
@@ -89,33 +91,42 @@ const WorkflowConfigurationMaster: React.FC = () => {
     [steps],
   );
 
-  const configuredRequestTypes = React.useMemo(
-    () => new Set(tableRows.map((row) => row.RequestType.trim())),
-    [tableRows],
-  );
-
   const openCreateDialog = (): void => {
-    const allRequestTypes = Object.values(Config.WorkflowRequestTypes);
-    const availableRequestTypes = allRequestTypes.filter(
-      (requestType) => !configuredRequestTypes.has(requestType),
-    );
+    void (async () => {
+      if (npdRolesStatus === "loading") {
+        showWarningToast(toastRef, "NPD role options are still loading. Please wait.");
+        return;
+      }
 
-    if (!availableRequestTypes.length) {
-      showWarningToast(
-        toastRef,
-        "Workflow configuration already exists for all request types.",
+      // Re-fetch so multi-tab creates are reflected before offering Request Types.
+      let latestSteps = steps;
+      try {
+        latestSteps = await dispatch(fetchWorkflowConfigurations()).unwrap();
+      } catch {
+        // Fall back to in-memory steps; service still blocks duplicates on save.
+      }
+
+      const latestRows = groupWorkflowStepsByRequestType(latestSteps);
+      const configured = new Set(
+        latestRows.map((row) => row.RequestType.trim()),
       );
-      return;
-    }
+      const allRequestTypes = Object.values(Config.WorkflowRequestTypes);
+      const availableRequestTypes = allRequestTypes.filter(
+        (requestType) => !configured.has(requestType),
+      );
 
-    if (npdRolesStatus === "loading") {
-      showWarningToast(toastRef, "NPD role options are still loading. Please wait.");
-      return;
-    }
+      if (!availableRequestTypes.length) {
+        showWarningToast(
+          toastRef,
+          "Workflow configuration already exists for all request types.",
+        );
+        return;
+      }
 
-    setDialogMode("create");
-    setSelectedRow(null);
-    setDialogVisible(true);
+      setDialogMode("create");
+      setSelectedRow(null);
+      setDialogVisible(true);
+    })();
   };
 
   const openEditDialog = (row: IWorkflowConfigTableRow): void => {
@@ -198,7 +209,7 @@ const WorkflowConfigurationMaster: React.FC = () => {
     })();
   };
 
-  const showPageLoader = isLoading || isSaving;
+  const showPageLoader = listFetchPending || isLoading || isSaving;
   const pageLoaderLabel = "Processing";
 
 

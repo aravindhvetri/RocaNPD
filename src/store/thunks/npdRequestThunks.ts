@@ -31,15 +31,20 @@ function sortByModified<T extends { Modified?: string; Created?: string }>(
 
 export const fetchNpdDraftReworkList = createAsyncThunk<
   INpdRequestListItemRow[],
-  void,
+  string | void,
   { rejectValue: string; state: RootState }
->("npdRequest/fetchDraftRework", async (_, { getState, rejectWithValue }) => {
+>("npdRequest/fetchDraftRework", async (viewRole, { getState, rejectWithValue }) => {
   try {
-    const email = getState().app.userEmail || getState().app.userLoginName;
+    const state = getState();
+    const email = state.app.userEmail || state.app.userLoginName;
     return sortByModified(
-      (await npdRequestListService.fetchNpdDraftReworkItems(email)).map(
-        toDashboardRow,
-      ),
+      (
+        await npdRequestListService.fetchNpdDraftReworkItems(
+          email,
+          selectResolvedAccess(state),
+          viewRole || undefined,
+        )
+      ).map(toDashboardRow),
     );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));

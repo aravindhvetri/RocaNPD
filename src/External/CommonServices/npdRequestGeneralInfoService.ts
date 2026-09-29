@@ -65,8 +65,11 @@ const SELECT_FIELDS = [
   "Author/Id",
   "Author/Title",
   "Author/EMail",
+  "Initiator/Id",
+  "Initiator/Title",
+  "Initiator/EMail",
 ].join(",");
-const EXPAND_FIELDS = "Author";
+const EXPAND_FIELDS = "Author,Initiator";
 
 /** Minimal select when Other Details columns are not yet provisioned. */
 const SELECT_FIELDS_CORE =
@@ -101,6 +104,36 @@ function getAuthorEmail(item: Record<string, unknown>): string {
   return emails[0] ?? "";
 }
 
+function getInitiatorEmail(item: Record<string, unknown>): string {
+  const emails = extractPersonEmails(item.Initiator);
+  return emails[0] ?? "";
+}
+
+function getInitiatorId(item: Record<string, unknown>): number {
+  const direct = Number(item.InitiatorId);
+  if (Number.isFinite(direct) && direct > 0) {
+    return direct;
+  }
+
+  const person = item.Initiator;
+  if (person && typeof person === "object") {
+    const id = Number((person as Record<string, unknown>).Id);
+    if (Number.isFinite(id) && id > 0) {
+      return id;
+    }
+  }
+
+  return 0;
+}
+
+/** Initiator person when stored; otherwise the SharePoint Author (older rows). */
+export function getNpdRequestOwnerEmail(item: {
+  InitiatorEmail?: string;
+  AuthorEmail?: string;
+}): string {
+  return (item.InitiatorEmail || item.AuthorEmail || "").trim();
+}
+
 function getAuthorTitle(item: Record<string, unknown>): string {
   const author = item.Author;
   if (!author || typeof author !== "object") {
@@ -125,6 +158,8 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     WorkflowSteps: parseWorkflowJson(item[FIELDS.WorkFlowJSON] ?? workflowJson),
     AuthorEmail: getAuthorEmail(item),
     AuthorTitle: getAuthorTitle(item),
+    InitiatorEmail: getInitiatorEmail(item),
+    InitiatorId: getInitiatorId(item),
     Created: String(item.Created ?? ""),
     Modified: String(item.Modified ?? item.Created ?? ""),
     PlantCode: String(item[FIELDS.PlantCode] ?? "").trim(),
@@ -186,14 +221,44 @@ function buildItemPayload(
   };
 }
 
+async function resolveInitiatorSiteUserId(
+  email: string,
+  userId?: number,
+): Promise<number> {
+  if (userId && userId > 0) {
+    return userId;
+  }
+
+  const trimmed = email.trim();
+  if (!trimmed) {
+    return 0;
+  }
+
+  try {
+    return (await SPServices.ensureSiteUserId(trimmed)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function persistHeaderAndItems(
   payload: INpdDraftSavePayload,
   workflowJson: string,
   status: string,
   title: string,
   items: INpdItemDetailRecord[],
+  initiatorEmail: string,
+  initiatorUserId?: number,
 ): Promise<INpdRequestGeneralInfo> {
   const requestJson = buildItemPayload(payload, workflowJson, status, title);
+  const initiatorId = await resolveInitiatorSiteUserId(
+    initiatorEmail,
+    initiatorUserId,
+  );
+  if (initiatorId > 0) {
+    requestJson[FIELDS.InitiatorId] = initiatorId;
+  }
+
   const isNewRequest = !(payload.id && payload.id > 0);
   let requestId = payload.id && payload.id > 0 ? payload.id : 0;
 
@@ -226,6 +291,7 @@ export async function saveNpdGeneralInfoDraft(
   items: INpdItemDetailRecord[],
   initiatorEmail: string,
   contextSiteUrl?: string,
+  initiatorUserId?: number,
 ): Promise<INpdRequestGeneralInfo> {
   const workflowSteps = await buildNpdDraftWorkflowJson(
     payload.brand.trim(),
@@ -240,7 +306,15 @@ export async function saveNpdGeneralInfoDraft(
       ? payload.existingTitle.trim()
       : "";
 
-  return persistHeaderAndItems(payload, workflowJson, status, title, items);
+  return persistHeaderAndItems(
+    payload,
+    workflowJson,
+    status,
+    title,
+    items,
+    initiatorEmail,
+    initiatorUserId,
+  );
 }
 
 export async function submitNpdRequest(
@@ -249,6 +323,7 @@ export async function submitNpdRequest(
   initiatorEmail: string,
   contextSiteUrl?: string,
   initiatorComments?: string,
+  initiatorUserId?: number,
 ): Promise<INpdRequestGeneralInfo> {
   const workflowSteps = applySubmitWorkflowStatuses(
     await buildNpdDraftWorkflowJson(
@@ -270,6 +345,8 @@ export async function submitNpdRequest(
     RequestStatus.Pending,
     requestIdTitle,
     items,
+    initiatorEmail,
+    initiatorUserId,
   );
 
   const isRework =
@@ -333,7 +410,7 @@ export async function fetchActiveNpdRequests(): Promise<INpdRequestGeneralInfo[]
     rows = (await SPServices.SPReadItems({
       Listname: LIST_NAME(),
       Select: SELECT_FIELDS_CORE,
-      Expand: EXPAND_FIELDS,
+      Expand: "Author",
       Filter: getActiveRecordFilters(),
       Orderby: "Modified",
       Orderbydecorasc: false,
@@ -487,7 +564,7 @@ export async function applyNpdWorkflowAction(params: {
   if (params.action === "Approve") {
     if (isFinalApproval) {
       // Last approver in WorkflowConfiguration chain completed the request.
-      recipients = [saved.AuthorEmail];
+      recipients = [getNpdRequestOwnerEmail(saved)];
       recipientRole = Config.Roles.Initiator;
       notificationAction = "Approved";
       includeActionButtons = false;
@@ -497,7 +574,7 @@ export async function applyNpdWorkflowAction(params: {
       includeActionButtons = shouldIncludeNpdEmailActions(nextPendingRole);
     }
   } else {
-    recipients = [saved.AuthorEmail];
+    recipients = [getNpdRequestOwnerEmail(saved)];
     recipientRole = Config.Roles.Initiator;
   }
 
@@ -534,7 +611,7 @@ export async function fetchNpdGeneralInfoById(
       Listname: LIST_NAME(),
       SelectedId: id,
       Select: SELECT_FIELDS_CORE,
-      Expand: EXPAND_FIELDS,
+      Expand: "Author",
     });
   }
 
@@ -564,7 +641,9 @@ export async function fetchNpdDraftReworkItems(
 
   return (await fetchActiveNpdRequests())
     .filter((item) => isDraftOrReworkStatus(item.Status))
-    .filter((item) => normalizeEmail(item.AuthorEmail) === loginEmail);
+    .filter(
+      (item) => normalizeEmail(getNpdRequestOwnerEmail(item)) === loginEmail,
+    );
 }
 
 export async function softDeleteNpdRequest(id: number): Promise<void> {

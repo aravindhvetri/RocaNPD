@@ -5,9 +5,11 @@ import type {
   ISelectOption,
 } from "./Interface";
 import {
+  buildMissingImportHeadersError,
   findBestHeaderRowIndex,
   findColumnIndex,
   readSpreadsheetWorkbook,
+  validateRequiredImportHeaders,
 } from "./importService";
 import { getLookupOptionsByFieldName, lookupValuesMatch } from "./lookupOptionUtils";
 
@@ -192,6 +194,33 @@ const SP_HEADER_ALIASES: Partial<Record<keyof INpdItemDetailRecord, string[]>> =
   minQtyBoxQty: [ITEM_FIELDS.MinQty, "MinQty", "Min Qty/Box Qty", "minQtyBoxQty"],
 };
 
+function requiresRocaGlobalCode(brand: string | null): boolean {
+  return Config.NpdRocaGlobalCodeBrands.some(
+    (value) => value.toLowerCase() === (brand ?? "").trim().toLowerCase(),
+  );
+}
+
+/** FieldLabels headers required for Item Details Import (brand may add Roca Global Code). */
+export function getNpdItemDetailsRequiredHeaders(brand: string | null): string[] {
+  const requireRocaGlobalCode = requiresRocaGlobalCode(brand);
+  return IMPORT_COLUMNS.filter(
+    (column) =>
+      column.required &&
+      (column.conditional !== "rocaGlobalCode" || requireRocaGlobalCode),
+  ).map((column) => column.header);
+}
+
+/** Early ImportDialog gate — required FieldLabels must be present before preview/import. */
+export async function validateNpdItemDetailsImportHeaders(
+  file: File,
+  brand: string | null,
+): Promise<void> {
+  await validateRequiredImportHeaders(
+    file,
+    getNpdItemDetailsRequiredHeaders(brand),
+  );
+}
+
 function getColumnMatchLabels(column: IImportColumn): string[] {
   return [
     column.header,
@@ -277,16 +306,62 @@ function isEmptyRecord(record: INpdItemDetailRecord): boolean {
   return !record.materialCode.trim() && !record.materialDescription.trim();
 }
 
-function duplicateKey(record: INpdItemDetailRecord): string {
-  return [
-    record.materialCode,
-    record.materialDescription,
-    record.productGroupMg2.join("|"),
-    record.uom.join("|"),
-  ]
-    .join("::")
-    .trim()
-    .toLowerCase();
+function normalizeUniqueText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/** Collect Already exists messages for Roca Global Code / Material Code / Description. */
+function collectUniqueFieldDuplicates(
+  record: INpdItemDetailRecord,
+  excelRowNumber: number,
+  requireRocaGlobalCode: boolean,
+  seenRocaGlobalCodes: Set<string>,
+  seenMaterialCodes: Set<string>,
+  seenMaterialDescriptions: Set<string>,
+): string[] {
+  const duplicates: string[] = [];
+  const candidates: Array<{ raw: string; label: string; seen: Set<string> }> =
+    [];
+
+  if (requireRocaGlobalCode) {
+    candidates.push({
+      raw: record.rocaGlobalCode,
+      label: "Roca Global Code",
+      seen: seenRocaGlobalCodes,
+    });
+  }
+  candidates.push({
+    raw: record.materialCode,
+    label: "Material Code",
+    seen: seenMaterialCodes,
+  });
+  candidates.push({
+    raw: record.materialDescription,
+    label: "Material Description",
+    seen: seenMaterialDescriptions,
+  });
+
+  candidates.forEach(({ raw, label, seen }) => {
+    const key = normalizeUniqueText(raw);
+    if (!key) {
+      return;
+    }
+    if (seen.has(key)) {
+      duplicates.push(`${label}: ${raw.trim()}`);
+    }
+  });
+
+  // Only reserve unique keys when the row itself is not a duplicate.
+  if (!duplicates.length) {
+    candidates.forEach(({ raw, seen }) => {
+      const key = normalizeUniqueText(raw);
+      if (key) {
+        seen.add(key);
+      }
+    });
+  }
+
+  return duplicates.map((entry) => `Row ${excelRowNumber} — ${entry}`);
 }
 
 export async function parseNpdItemDetailsImportFile(
@@ -300,9 +375,7 @@ export async function parseNpdItemDetailsImportFile(
     throw new Error("The uploaded file is empty.");
   }
 
-  const requireRocaGlobalCode = Config.NpdRocaGlobalCodeBrands.some(
-    (value) => value.toLowerCase() === (brand ?? "").trim().toLowerCase(),
-  );
+  const requireRocaGlobalCode = requiresRocaGlobalCode(brand);
   const expectedColumns = IMPORT_COLUMNS.filter(
     (column) =>
       column.conditional !== "rocaGlobalCode" || requireRocaGlobalCode,
@@ -357,18 +430,27 @@ export async function parseNpdItemDetailsImportFile(
     .map(({ column }) => column.header);
 
   if (missingHeaders.length) {
-    throw new Error(
-      `The uploaded file must include: ${missingHeaders.join(", ")}.`,
-    );
+    throw new Error(buildMissingImportHeadersError(missingHeaders));
   }
 
   const toCreate: INpdItemDetailRecord[] = [];
   const duplicates: string[] = [];
   const errors: string[] = [];
-  const seen = new Set(
-    existingRecords
-      .filter((record) => !isEmptyRecord(record))
-      .map((record) => duplicateKey(record)),
+  const existingFilled = existingRecords.filter((record) => !isEmptyRecord(record));
+  const seenRocaGlobalCodes = new Set(
+    existingFilled
+      .map((record) => normalizeUniqueText(record.rocaGlobalCode))
+      .filter(Boolean),
+  );
+  const seenMaterialCodes = new Set(
+    existingFilled
+      .map((record) => normalizeUniqueText(record.materialCode))
+      .filter(Boolean),
+  );
+  const seenMaterialDescriptions = new Set(
+    existingFilled
+      .map((record) => normalizeUniqueText(record.materialDescription))
+      .filter(Boolean),
   );
 
   let dataRowCount = 0;
@@ -465,13 +547,19 @@ export async function parseNpdItemDetailsImportFile(
       continue;
     }
 
-    const key = duplicateKey(record);
-    if (seen.has(key)) {
-      duplicates.push(record.materialCode || `Row ${excelRowNumber}`);
+    const fieldDuplicates = collectUniqueFieldDuplicates(
+      record,
+      excelRowNumber,
+      requireRocaGlobalCode,
+      seenRocaGlobalCodes,
+      seenMaterialCodes,
+      seenMaterialDescriptions,
+    );
+    if (fieldDuplicates.length) {
+      duplicates.push(...fieldDuplicates);
       continue;
     }
 
-    seen.add(key);
     toCreate.push(record);
   }
 

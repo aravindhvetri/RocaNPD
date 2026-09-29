@@ -15,6 +15,7 @@ import {
   updateBrandMaterialExtension,
 } from "../../../../../store/thunks/brandMaterialExtensionThunks";
 import { exportBrandMaterialExtensionsToExcel } from "../../../../../External/CommonServices/brandMaterialExtensionService";
+import { matchesAnySearchField } from "../../../../../External/CommonServices/searchTextUtils";
 import {
   DeleteConfirmDialog,
   LoaderOverlay,
@@ -24,6 +25,7 @@ import {
   showWarningToast,
   Toast,
 } from "../../common/controls";
+import { useListPageFetch } from "../../common/hooks";
 import BrandMaterialExtensionFormDialog, {
   type BrandMaterialExtensionDialogMode,
 } from "./BrandMaterialExtensionFormDialog";
@@ -60,15 +62,16 @@ const BrandMaterialExtensionMaster: React.FC = () => {
   const isLoading = status === "loading";
   const isSaving = status === "saving";
 
-  React.useEffect(() => {
-    if (!initialized) {
-      return;
-    }
-
-    void dispatch(fetchBrandMaterialExtensions());
-    void dispatch(fetchRocaBrandOptions());
-    void dispatch(fetchRocaPlantOptions());
-  }, [dispatch, initialized]);
+  const listFetchPending = useListPageFetch(
+    () =>
+      Promise.all([
+        dispatch(fetchBrandMaterialExtensions()),
+        dispatch(fetchRocaBrandOptions()),
+        dispatch(fetchRocaPlantOptions()),
+      ]),
+    [dispatch],
+    initialized,
+  );
 
   React.useEffect(() => {
     if (!error) {
@@ -104,15 +107,8 @@ const BrandMaterialExtensionMaster: React.FC = () => {
   );
 
   const filteredRows = React.useMemo(() => {
-    const query = globalFilter.trim().toLowerCase();
-    if (!query) {
-      return tableRows;
-    }
-
-    return tableRows.filter(
-      (row) =>
-        row.Brand.toLowerCase().includes(query) ||
-        row.Plant.toLowerCase().includes(query),
+    return tableRows.filter((row) =>
+      matchesAnySearchField([row.Brand, row.Plant], globalFilter),
     );
   }, [globalFilter, tableRows]);
 
@@ -230,7 +226,8 @@ const BrandMaterialExtensionMaster: React.FC = () => {
     })();
   };
 
-  const showPageLoader = isLoading || isSaving || isExporting;
+  const showPageLoader =
+    listFetchPending || isLoading || isSaving || isExporting;
   const pageLoaderLabel = "Processing";
 
 

@@ -13,6 +13,7 @@ import {
 } from "../../../../../External/CommonServices/npdWorkflowJsonService";
 import { resolveNpdWorkflowDisplayName } from "../../../../../External/CommonServices/npdWorkflowStatusView";
 import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
+import { matchesAnySearchField } from "../../../../../External/CommonServices/searchTextUtils";
 import type { IDropdownOption } from "../../common/controls";
 
 export type NpdRequestDashboardVariant = "all" | "approved";
@@ -137,6 +138,31 @@ export function getNpdCurrentApproverName(row: {
   return getNpdCurrentApprover(row).name;
 }
 
+/** Fields included in NPD list global search (All / Draft / Pending). */
+export function buildNpdListSearchHaystack(item: {
+  Title: string;
+  ProjectName?: string;
+  Brand: string;
+  MaterialType: string;
+  Plant: string;
+  Status: string;
+  AuthorEmail: string;
+  AuthorTitle: string;
+  WorkflowSteps?: INpdWorkflowStepJson[];
+}): string[] {
+  const currentApprover = getNpdCurrentApproverName(item);
+  return [
+    item.Title,
+    item.ProjectName ?? "",
+    item.Brand,
+    item.MaterialType,
+    item.Plant,
+    item.Status,
+    formatNpdRequestListStatus(item.Status, item.WorkflowSteps),
+    currentApprover === "—" ? "" : currentApprover,
+  ];
+}
+
 export function getNpdStatusFilterKey(status: string): string {
   const normalized = status.trim().toLowerCase();
   if (normalized === "in rework") {
@@ -168,12 +194,7 @@ export function matchesNpdListSearch(
   haystack: string[],
   searchValue: string,
 ): boolean {
-  const query = searchValue.trim().toLowerCase();
-  if (!query) {
-    return true;
-  }
-
-  return haystack.some((value) => value.toLowerCase().includes(query));
+  return matchesAnySearchField(haystack, searchValue);
 }
 
 export function matchesNpdStatusFilter(

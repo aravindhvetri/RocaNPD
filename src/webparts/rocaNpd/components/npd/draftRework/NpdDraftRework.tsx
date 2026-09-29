@@ -16,6 +16,7 @@ import {
   showSuccessToast,
   Toast,
 } from "../../common/controls";
+import { useListPageFetch } from "../../common/hooks";
 import NpdDraftReworkTable from "./NpdDraftReworkTable";
 import NpdDraftReworkToolbar from "./NpdDraftReworkToolbar";
 import {
@@ -27,6 +28,7 @@ import {
 import {
   ALL_BRAND_VALUE,
   ALL_STATUS_VALUE,
+  buildNpdListSearchHaystack,
   buildStatusFilterOptionsFromData,
   matchesNpdBrandFilter,
   matchesNpdListSearch,
@@ -91,24 +93,14 @@ const NpdDraftRework: React.FC = () => {
       actionSaved?: boolean;
     } | null) ?? {};
 
-  React.useEffect(() => {
-    // Wait until Save Draft / Submit finishes. Navigating here starts before
-    // the list item exists, so an early fetch would show an empty table.
-    if (!initialized || globalProcessing) {
-      return;
-    }
-    void dispatch(
-      isPendingList ? fetchNpdPendingList(viewAs) : fetchNpdDraftReworkList(),
-    );
-  }, [
-    dispatch,
-    globalProcessing,
-    initialized,
-    isPendingList,
-    location.key,
-    userEmail,
-    viewAs,
-  ]);
+  const listFetchPending = useListPageFetch(
+    () =>
+      dispatch(
+        isPendingList ? fetchNpdPendingList(viewAs) : fetchNpdDraftReworkList(viewAs),
+      ),
+    [dispatch, isPendingList, location.key, userEmail, viewAs],
+    initialized && !globalProcessing,
+  );
 
   React.useEffect(() => {
     setSearchValue("");
@@ -176,23 +168,18 @@ const NpdDraftRework: React.FC = () => {
     (item) =>
       matchesNpdStatusFilter(item.Status, statusFilter) &&
       matchesNpdBrandFilter(item.Brand, brandFilter) &&
-      matchesNpdListSearch(
-        [
-          item.Title,
-          item.ProjectName,
-          item.Brand,
-          item.MaterialType,
-          item.Plant,
-          item.Status,
-        ],
-        searchValue,
-      ),
+      matchesNpdListSearch(buildNpdListSearchHaystack(item), searchValue),
   );
 
   return (
     <section className={styles.page}>
       <Toast ref={toastRef} />
-      <LoaderOverlay visible={status === "loading"} label="Processing" />
+      <LoaderOverlay
+        visible={
+          listFetchPending || status === "loading" || Boolean(globalProcessing)
+        }
+        label="Processing"
+      />
       <NpdDraftReworkToolbar
         title={isPendingList ? "Pending Approval" : "Draft / Rework"}
         searchId={isPendingList ? "npdPendingSearch" : "npdDraftReworkSearch"}

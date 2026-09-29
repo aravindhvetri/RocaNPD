@@ -19,6 +19,7 @@ import {
   showErrorToast,
   Toast,
 } from "../../common/controls";
+import { useListPageFetch } from "../../common/hooks";
 import { buildNpdRequestFormPath, canEditNpdListRow } from "../newRequest/npdRequestFormHelpers";
 import NpdRequestListTable from "./NpdRequestListTable";
 import NpdRequestListToolbar from "./NpdRequestListToolbar";
@@ -53,12 +54,14 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
   const viewAs =
     parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) ||
     undefined;
+  const isInitiatorModuleView =
+    (viewAs || "").toLowerCase() === Config.Roles.Initiator.toLowerCase();
   const isAdminModuleView =
     (viewAs || "").toLowerCase() === Config.Roles.Admin.toLowerCase();
   const scopedItems = React.useMemo(() => {
     let items = dashboardItems;
-    // Admin All Requests: exclude Draft completely (Initiator All still shows Drafts).
-    if (variant === "all" && isAdminModuleView) {
+    // Drafts stay on Initiator All Requests only — never Admin / VH / MIS All.
+    if (variant === "all" && !isInitiatorModuleView) {
       items = items.filter((item) => !isDraftNpdStatus(item.Status));
     }
     if (variant === "approved") {
@@ -66,15 +69,15 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
       items = items.filter((item) => isNpdApprovedListItem(item, viewAs));
     }
     return items;
-  }, [dashboardItems, isAdminModuleView, variant, viewAs]);
+  }, [dashboardItems, isInitiatorModuleView, variant, viewAs]);
   const filters = useNpdRequestListFilters(scopedItems, variant);
   const [isExporting, setIsExporting] = React.useState(false);
 
-  React.useEffect(() => {
-    if (initialized) {
-      void dispatch(fetchNpdDashboardList(viewAs));
-    }
-  }, [dispatch, initialized, userEmail, viewAs]);
+  const listFetchPending = useListPageFetch(
+    () => dispatch(fetchNpdDashboardList(viewAs)),
+    [dispatch, userEmail, viewAs],
+    initialized,
+  );
 
   React.useEffect(() => {
     if (error) {
@@ -128,7 +131,7 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
     <section className={styles.page}>
       <Toast ref={toastRef} />
       <LoaderOverlay
-        visible={status === "loading" || isExporting}
+        visible={listFetchPending || status === "loading" || isExporting}
         label="Processing"
       />
       {variant === "all" ? (

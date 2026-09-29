@@ -12,7 +12,11 @@ import {
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { validateLookupTypeDeleteAllowed } from "../../../../../External/CommonServices/dependencyValidationService";
-import { exportLookupTypesToExcel } from "../../../../../External/CommonServices/lookupTypeService";
+import { exportLookupTypesToExcel, LOOKUP_TYPE_IMPORT_HEADERS } from "../../../../../External/CommonServices/lookupTypeService";
+import {
+  matchesSearchText,
+  normalizeSearchText,
+} from "../../../../../External/CommonServices/searchTextUtils";
 import {
   downloadTemplateFile,
   fetchTemplateByType,
@@ -38,6 +42,7 @@ import {
   showWarningToast,
   Toast,
 } from "../../common/controls";
+import { useListPageFetch } from "../../common/hooks";
 import LookupTypeFormDialog, {
   type LookupTypeDialogMode,
 } from "./LookupTypeFormDialog";
@@ -85,9 +90,10 @@ const LookupTypeMaster: React.FC = () => {
   const isLoading = status === "loading";
   const isSaving = status === "saving";
 
-  React.useEffect(() => {
-    void dispatch(fetchLookupTypes());
-  }, [dispatch]);
+  const listFetchPending = useListPageFetch(
+    () => dispatch(fetchLookupTypes()),
+    [dispatch],
+  );
 
   React.useEffect(() => {
     if (!error) {
@@ -146,14 +152,11 @@ const LookupTypeMaster: React.FC = () => {
   );
 
   const filteredRows = React.useMemo<ILookupTypeRow[]>(() => {
-    const query = globalFilter.trim().toLowerCase();
-    if (!query) {
+    if (!normalizeSearchText(globalFilter)) {
       return tableRows;
     }
 
-    return tableRows.filter((row) =>
-      row.Title.toLowerCase().includes(query),
-    );
+    return tableRows.filter((row) => matchesSearchText(row.Title, globalFilter));
   }, [globalFilter, tableRows]);
 
   const openCreateDialog = (): void => {
@@ -360,7 +363,8 @@ const LookupTypeMaster: React.FC = () => {
     }, 0);
   };
 
-  const showPageLoader = isLoading || isSaving || isExporting;
+  const showPageLoader =
+    listFetchPending || isLoading || isSaving || isExporting;
   const pageLoaderLabel = "Processing";
 
 
@@ -403,6 +407,7 @@ const LookupTypeMaster: React.FC = () => {
         maxFileSizeBytes={Config.ImportExport.MaxFileSizeBytes}
         accept={Config.ImportExport.AcceptedSpreadsheetAccept}
         importing={isSaving}
+        expectedHeaders={LOOKUP_TYPE_IMPORT_HEADERS}
         onHide={closeImportDialog}
         onDownloadTemplate={handleDownloadTemplate}
         onFileRejected={(message) => showWarningToast(toastRef, message)}

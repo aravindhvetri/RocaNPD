@@ -216,6 +216,11 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0410** Implement Lookup Master list screen (toolbar, table, pagination — same pattern as LookupType)
 - [x] **T-0411** Implement Add/Edit Lookup popup (Lookup Type dropdown + Lookup Name — wireframe)
 - [x] **T-0411a** Lookup Code field + validation order Type → Code → Name; Import/Export includes Lookup Code
+- [x] **T-0411b** Lookup / Lookup Type: block special characters on Add/Edit (letters, numbers, spaces only)
+- [x] **T-0411c** Shared DataTable: hide paginator when records ≤ page size (all list screens)
+- [x] **T-0411d** Shared list search: space-insensitive + lowercase matching via `searchTextUtils` + DataTable filter
+- [x] **T-0411e** DataTable Status column: disable sorting / sort icon (NPD + MG request lists only); other columns unchanged
+- [x] **T-0411f** DataTable empty cells: shared centered `EmptyDash` wrapper for dash / blank values
 - [x] **T-0412** Implement Edit Lookup
 - [x] **T-0413** Implement soft delete Lookup with dependency validation
 - [x] **T-0414** Implement Lookup → Lookup Type mapping (`NPD_Lookup.LookupType` → `NPD_LookupType`)
@@ -250,6 +255,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0463a** Block save until all available Next Role options are selected (Toast when chain incomplete)
 - [x] **T-0464** Lock earlier step Next Role when chain grows; only latest step editable/removable
 - [x] **T-0465** Workflow form dialog consistent font size (`0.8125rem`) and standard Add Step icon sizing
+- [x] **T-0466** Multi-tab duplicate guard: service re-fetches SharePoint before Workflow / BME / Lookup Type import / Lookup import persist; Workflow Add re-fetches before offering Request Types
 
 ### 4.8 Global UI Standards (All Masters)
 
@@ -266,6 +272,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0496d** Side navigation: removed separator line below Reports at the very bottom while preserving all other section separators (`NavSection.module.scss`, `SideNavigation.module.scss`)
 - [x] **T-0497** Export `{Name}_Export_{DD-MM-YYYY}` + themed Excel header via `xlsx-js-style` (`exportService.ts`)
 - [x] **T-0498** Import duplicate validation table in `ImportDialog` (preview/commit thunks; Proceed imports valid rows)
+- [x] **T-0498a** Centralize required Excel header validation (`validateRequiredImportHeaders`); `ImportDialog` rejects on browse/drop when FieldLabels columns missing; Lookup / Lookup Type / NPD Item Details wired
+- [x] **T-0498b** Short shared missing-columns Import Toast; `downloadTemplateFile` strips Excel data validations (plain template)
 - [x] **T-0499** Taller form dialog footer buttons (`_form-dialog-standard.scss`)
 - [x] **T-0500** Workflow: editable Next Role on all steps except Initiator on edit; Current Role derived from prior Next Role
 - [x] **T-0500a** RoleMaster filter uses `System/Title eq "New Product Development"` for NPD workflow roles
@@ -302,6 +310,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 ### 5.1 List Views
 
 - [x] **T-0501** Implement NPD All Requests table (own requests, summary cards)
+- [x] **T-0501d** NPD list global search includes Current Approver (shared `buildNpdListSearchHaystack` for All / Draft / Pending)
+- [x] **T-0501b** Initiator lists are own Initiator person + configured brands on every NPD tab; VH is brand-only; MIS/Admin see all; MG Initiator matches `Initiator` person only
 - [x] **T-0502** Implement NPD Pending Approval table (view-only, own requests)
 - [x] **T-0503** Implement NPD Approved Requests table (view-only, own requests)
 - [x] **T-0504** Implement NPD Draft / ReWork table (edit; resubmit pending Submit phase)
@@ -320,11 +330,12 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [ ] **T-0512** Filter Plant/Source by Brand Material Extension
 - [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
 - [x] **T-0514** Implement Item Details grid (all BRD columns; MultiSelect options from `NPD_Lookup` by Lookup Type matching field name); paginate at 7 rows when there are more than 7 items
-- [x] **T-0514a** Prefetch Item Details lookup options on app init; selection fields single-select only (`selectionLimit={1}`)
+- [x] **T-0514a** Prefetch Item Details lookup options on app init; selection fields single-select only (`selectionLimit={1}`); no checkboxes — searchable dropdown look
 - [x] **T-0514b** MultiSelect overlay panel matches each Item Details input width/position; long option labels ellipsize with full-text tooltip
 - [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
+- [x] **T-0515a** Item Details header bulk Delete (Add/Import style, red icon) clears all rows when any lines exist
 - [x] **T-0516** Implement + Add Another Item Line with small inline plus icon next to label
-- [x] **T-0517** Implement Import items (Excel) — header mapping is trim + lowercase + whitespace-insensitive so template columns match Item Details fields; up to 200 rows
+- [x] **T-0517** Implement Import items (Excel) — required FieldLabels validated on select/drop; header mapping is trim + lowercase + whitespace-insensitive so template columns match Item Details fields; up to 200 rows
 - [x] **T-0518** Implement Total Item Lines counter in section footer
 - [x] **T-0519** Implement Cancel / Back, Save Draft + Submit Request buttons — Save Draft persists header + items (`Status=Draft`); Submit generates Request ID and routes to Vertical Head; Cancel/Back returns to the source list via `from`
 
@@ -334,6 +345,12 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0521** Validate Material Code max 18 characters — Toast on Submit
 - [x] **T-0522** Validate Material Description max 40 characters — Toast on Submit
 - [x] **T-0523** Validate all mandatory item fields — Toast on Submit
+- [x] **T-0523a** Submit / Approve validates every Item Details grid row (do not skip blank added lines); required fields must be filled on each line
+- [x] **T-0523d** MIS Coordinator Post to SAP / Approve validates Item Details via `validateNpdItemDetailsRows` (same required-field rule as Initiator Submit)
+- [x] **T-0523e** MIS Rework / Reject / Post to SAP all use `validateMisCoordinatorAction` (every Item Details row + required Profit Center) before any workflow action
+- [x] **T-0523b** Block Save Draft / Submit when Roca Global Code, Material Code, or Material Description is duplicated in Item Details; Excel import shows “Already exists” in validation popup
+- [x] **T-0523c** Item Details S.No uses absolute Prime `rowIndex + 1` across pages
+- [x] **T-0501c** NPD/MG Drafts visible only in Initiator module lists — not Admin / VH / MIS / Consultant All Requests
 - [x] **T-0524** Validate Roca Global Code when applicable — Toast on Submit
 - [x] **T-0525** Validate at least one item row on submit — Toast on Submit
 
@@ -382,6 +399,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0703** Implement MIS Approved Requests table (posted to SAP by self)
 - [x] **T-0704** Implement MIS Request Detail — read-only General Information
 - [x] **T-0705** Implement editable Item Details grid
+- [x] **T-0705a** MIS Post to SAP / Approve requires every Item Details row’s mandatory fields (parity with Initiator Submit)
+- [x] **T-0705b** MIS Profit Center mandatory on Rework / Reject / Post to SAP (UI toast + workflow thunk)
 - [x] **T-0706** Implement Add Line Item
 - [x] **T-0707** Implement Other Details section (SAP fields)
 - [x] **T-0708** Auto-populate Storage Location, MRP Group, MRP Controller from ROCA `PlantMaster`
@@ -415,6 +434,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0809** Implement Cancel, Save as Draft, Submit to Consultant
 - [x] **T-0810** Validate at least one master selected
 - [x] **T-0811** Validate Description mandatory per row
+- [x] **T-0811a** Block MG Submit / Complete when Description duplicates within the request or matches existing `NPD_Lookup` Title (LookupName)
 - [x] **T-0812** Create `materialGroupSlice.ts` and `materialGroupThunks.ts`
 - [x] **T-0813** Create `materialGroupService.ts`
 - [x] **T-0814** Implement batch save for header + items
@@ -445,6 +465,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0920** Fix duplicate MG error toasts — show once via `mgState.error` effect (Consultant Complete / Save Draft / Submit)
 - [x] **T-0921** Consultant Complete: validate + batch-sync Lookup Master before Status; failed validation keeps Pending (Cancel does not complete)
 - [x] **T-0922** Material Group Audit Log: chronological Action On / Id order (Initiated → Rework → Resubmit), matching NPD; Pending Consultant row at bottom
+- [x] **T-0923** Fix DataTable flicker on side-nav — shared `useListPageFetch` gate so stale Redux rows do not paint before list refetch
 - [ ] **T-0914** Verify Consultant cannot access NPD module
 
 ---
@@ -634,6 +655,18 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 27 Sep 2026 | Other Details MIS-module-only until Approved; NPD Item Details chronological order | T-0720, T-0721 |
 | 27 Sep 2026 | Item Details MultiSelect overlay aligned to trigger; option labels ellipsize | T-0514b |
 | 28 Sep 2026 | Material Group Audit Log chronological order matching NPD | T-0922 |
+| 28 Sep 2026 | Import Excel headers must match module FieldLabels; early reject on browse/drop via shared `validateRequiredImportHeaders` + `ImportDialog.expectedHeaders` | T-0498a, T-0517 |
+| 28 Sep 2026 | Short Import missing-columns message; plain template download without Excel validations | T-0498b |
+| 28 Sep 2026 | Lookup/Lookup Type no special characters; DataTable paginator only when needed | T-0411b, T-0411c |
+| 28 Sep 2026 | Space-insensitive lowercase list search across all modules | T-0411d |
+| 28 Sep 2026 | Multi-tab duplicate guards — fresh SharePoint assert before Workflow / BME / Lookup Type import / Lookup import persist | T-0466 |
+| 28 Sep 2026 | Submit / Approve validates every Item Details grid row (blank lines not skipped) | T-0523a |
+| 28 Sep 2026 | Item Details single-select MultiSelect: no checkboxes, searchable dropdown look | T-0514a |
+| 28 Sep 2026 | NPD/MG Initiator visibility is the stored Initiator person (NPD also brand-scoped); VH brand-only; MIS/Admin all | T-0501b |
+| 29 Sep 2026 | Item Details unique fields + import Already exists; Drafts Initiator-only; S.No pagination fix | T-0523b, T-0523c, T-0501c |
+| 29 Sep 2026 | Item Details header bulk Delete next to Add/Import | T-0515a |
+| 29 Sep 2026 | MIS Item Details validation on Post/Approve; Status not sortable; Current Approver search; centered EmptyDash | T-0523d, T-0705a, T-0411e, T-0411f, T-0501d |
+| 29 Sep 2026 | MIS Rework/Reject/Post require Item Details + Profit Center; MG Description unique vs Lookup Title | T-0523e, T-0705b, T-0811a |
 
 ---
 

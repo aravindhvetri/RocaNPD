@@ -1,6 +1,9 @@
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { MultiSelect as PrimeMultiSelect } from "primereact/multiselect";
+import {
+  MultiSelect as PrimeMultiSelect,
+  type MultiSelect as PrimeMultiSelectType,
+} from "primereact/multiselect";
 import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IDropdownOption } from "../Dropdown/IDropdownProps";
@@ -41,6 +44,8 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
   "data-testid": testId,
 }) => {
   const hostRef = React.useRef<HTMLDivElement>(null);
+  const multiSelectRef = React.useRef<PrimeMultiSelectType>(null);
+  const isSingleSelect = selectionLimit === 1;
   const panelToken = React.useMemo(
     () => `roca-ms-panel-${sanitizePanelToken(id || "default")}`,
     [id],
@@ -99,6 +104,15 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
     );
   }, []);
 
+  const panelClasses = [
+    styles.panel,
+    panelToken,
+    isSingleSelect ? styles.singleSelectPanel : "",
+    panelClassName ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <ControlField
       id={id}
@@ -115,6 +129,7 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
         onFocus={lockPanelToTriggerWidth}
       >
         <PrimeMultiSelect
+          ref={multiSelectRef}
           inputId={id}
           value={value}
           options={options}
@@ -123,11 +138,13 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
           placeholder={placeholder}
           filter={filter}
           display={display}
-          showSelectAll={selectAll && selectionLimit !== 1}
-          selectionLimit={selectionLimit}
+          showSelectAll={selectAll && !isSingleSelect}
+          // Never pass selectionLimit=1 to Prime — it greys out other options.
+          // Enforce one value in onChange instead (dropdown replace behavior).
+          selectionLimit={isSingleSelect ? undefined : selectionLimit}
           disabled={disabled || readOnly}
           appendTo={getAppRootElement()}
-          panelClassName={`${styles.panel} ${panelToken} ${panelClassName ?? ""}`}
+          panelClassName={panelClasses}
           panelStyle={panelStyle}
           className={`w-full ${error ? "p-invalid" : ""}`}
           emptyMessage={emptyMessage}
@@ -147,15 +164,23 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
           data-testid={testId}
           onChange={(event) => {
             const next = event.value ?? [];
-            if (
+            let resolved = next;
+
+            if (isSingleSelect) {
+              // Keep only the latest pick so any option stays clickable.
+              resolved = next.length > 0 ? next.slice(-1) : [];
+            } else if (
               typeof selectionLimit === "number" &&
               selectionLimit > 0 &&
               next.length > selectionLimit
             ) {
-              onChange(next.slice(-selectionLimit));
-              return;
+              resolved = next.slice(-selectionLimit);
             }
-            onChange(next);
+
+            onChange(resolved);
+            if (isSingleSelect && resolved.length > 0) {
+              multiSelectRef.current?.hide();
+            }
           }}
         />
       </div>

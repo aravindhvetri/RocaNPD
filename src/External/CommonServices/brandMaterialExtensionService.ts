@@ -46,10 +46,32 @@ export async function fetchActiveBrandMaterialExtensions(): Promise<
   return rows.map(mapBrandMaterialExtension).filter(isActiveRecord);
 }
 
+/**
+ * Re-reads SharePoint before create/edit so multi-tab stale Redux cannot
+ * insert a second Brand Material Extension for the same Brand.
+ */
+async function assertBrandMaterialExtensionNotDuplicate(
+  brand: string,
+  editingId?: number,
+): Promise<void> {
+  const existing = await fetchActiveBrandMaterialExtensions();
+  const brandKey = brand.trim().toLowerCase();
+  const isDuplicate = existing.some(
+    (item) =>
+      item.Id !== editingId &&
+      item.Brand.trim().toLowerCase() === brandKey,
+  );
+
+  if (isDuplicate) {
+    throw new Error(`"${brand.trim()}" already exists.`);
+  }
+}
+
 export async function createBrandMaterialExtension(
   brand: string,
   plants: string[],
 ): Promise<void> {
+  await assertBrandMaterialExtensionNotDuplicate(brand);
   await SPServices.SPAddItem({
     Listname: LIST_NAME(),
     RequestJSON: {
@@ -65,6 +87,7 @@ export async function updateBrandMaterialExtension(
   brand: string,
   plants: string[],
 ): Promise<void> {
+  await assertBrandMaterialExtensionNotDuplicate(brand, id);
   await SPServices.SPUpdateItem({
     Listname: LIST_NAME(),
     ID: id,

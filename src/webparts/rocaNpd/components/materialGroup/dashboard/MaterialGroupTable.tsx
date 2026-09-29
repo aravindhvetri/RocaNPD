@@ -233,7 +233,7 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
       {
         field: "status",
         header: FieldLabels?.Status,
-        sortable: true,
+        sortable: false,
         style: { width: "7rem", minWidth: "7rem" },
         body: (row) => (
           <Tag

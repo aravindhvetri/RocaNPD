@@ -62,7 +62,7 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
   background-color: $roca-color-bg-page;
   @include roca-surface-scrollbar;

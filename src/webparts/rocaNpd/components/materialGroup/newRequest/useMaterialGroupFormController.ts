@@ -2,6 +2,7 @@ import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
+import { findDuplicateMaterialGroupDescription } from "../../../../../External/CommonServices/materialGroupValidation";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
@@ -274,6 +275,15 @@ export function useMaterialGroupFormController(
             return false;
           }
         }
+      }
+
+      const duplicateDescription = findDuplicateMaterialGroupDescription(
+        mgState.selectedConfigIds,
+        mgState.entriesByConfigId,
+      );
+      if (duplicateDescription) {
+        showWarningToast(toastRef, duplicateDescription, "Validation");
+        return false;
       }
 
       return true;

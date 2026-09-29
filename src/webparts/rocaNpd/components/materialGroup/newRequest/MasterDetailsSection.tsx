@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Button, InputText } from "../../common/controls";
+import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
 import type { IMasterDetailsSectionProps } from "./materialGroupTypes";
 import styles from "./MasterDetailsSection.module.scss";
 
@@ -106,9 +107,14 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                           }
                           disabled={readOnly}
                           required={isConsultantMode}
-                          onChange={(val) =>
-                            onUpdateRow(configId, row.tempId, "code", val)
-                          }
+          onChange={(val) =>
+            onUpdateRow(
+              configId,
+              row.tempId,
+              "code",
+              sanitizeAlphanumericTextInput(val),
+            )
+          }
                         />
                       </div>
                       <div className={styles.inputField}>
@@ -118,7 +124,12 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                           required
                           disabled={readOnly}
                           onChange={(val) =>
-                            onUpdateRow(configId, row.tempId, "description", val)
+                            onUpdateRow(
+                              configId,
+                              row.tempId,
+                              "description",
+                              sanitizeAlphanumericTextInput(val),
+                            )
                           }
                         />
                       </div>

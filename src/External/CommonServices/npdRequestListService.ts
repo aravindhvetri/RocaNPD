@@ -7,6 +7,7 @@ import type {
 import { isNpdRequestIdTitle } from "./npdRequestIdService";
 import {
   fetchActiveNpdRequests,
+  getNpdRequestOwnerEmail,
   isDraftOrReworkStatus,
 } from "./npdRequestGeneralInfoService";
 import {
@@ -110,18 +111,28 @@ export async function fetchNpdDashboardItems(
   ]);
 
   return requests
-    .filter((item) =>
-      canViewRequest(
+    .filter((item) => {
+      const role = scopedRole;
+      // Drafts belong only on Initiator lists (All / Draft-Rework), never Admin / VH / MIS.
+      if (
+        role &&
+        role !== Config.Roles.Initiator &&
+        item.Status.trim().toLowerCase() === RequestStatus.Draft.toLowerCase()
+      ) {
+        return false;
+      }
+
+      return canViewRequest(
         access,
         {
           module: "npd",
           brand: item.Brand,
-          createdByEmail: item.AuthorEmail,
+          createdByEmail: getNpdRequestOwnerEmail(item),
         },
         currentUserEmail,
         scopedRole,
-      ),
-    )
+      );
+    })
     .map((item) => toListItem(item, summaries));
 }
 
@@ -154,7 +165,7 @@ export async function fetchNpdPendingItems(
           {
             module: "npd",
             brand: item.Brand,
-            createdByEmail: item.AuthorEmail,
+            createdByEmail: getNpdRequestOwnerEmail(item),
           },
           currentUserEmail,
           role,
@@ -177,7 +188,7 @@ export async function fetchNpdPendingItems(
         ) && canActOnPendingNpdStep(access, item.Brand, pendingRole);
 
       if (role === Config.Roles.Initiator) {
-        return normalizeEmail(item.AuthorEmail) === loginEmail;
+        return true;
       }
 
       if (role === Config.Roles.VerticalHead) {
@@ -206,7 +217,7 @@ export async function fetchNpdPendingItems(
           Config.Roles.Initiator,
           ApproverSystems.NewProductDevelopment,
         ) &&
-        normalizeEmail(item.AuthorEmail) === loginEmail
+        normalizeEmail(getNpdRequestOwnerEmail(item)) === loginEmail
       );
     })
     .map((item) => toListItem(item, summaries));
@@ -214,12 +225,15 @@ export async function fetchNpdPendingItems(
 
 export async function fetchNpdDraftReworkItems(
   currentUserEmail: string,
+  access: IResolvedUserAccess,
+  viewRole?: string | NavViewRole | null,
 ): Promise<INpdRequestListItem[]> {
   const loginEmail = normalizeEmail(currentUserEmail);
   if (!loginEmail) {
     return [];
   }
 
+  const role = parseViewAsRole(viewRole ?? undefined) ?? Config.Roles.Initiator;
   const [requests, summaries] = await Promise.all([
     fetchActiveNpdRequests(),
     fetchItemSummaries(),
@@ -227,6 +241,17 @@ export async function fetchNpdDraftReworkItems(
 
   return requests
     .filter((item) => isDraftOrReworkStatus(item.Status))
-    .filter((item) => normalizeEmail(item.AuthorEmail) === loginEmail)
+    .filter((item) =>
+      canViewRequest(
+        access,
+        {
+          module: "npd",
+          brand: item.Brand,
+          createdByEmail: getNpdRequestOwnerEmail(item),
+        },
+        currentUserEmail,
+        role,
+      ),
+    )
     .map((item) => toListItem(item, summaries));
 }

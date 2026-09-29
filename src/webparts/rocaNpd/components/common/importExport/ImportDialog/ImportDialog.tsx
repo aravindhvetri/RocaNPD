@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Config } from "../../../../../../External/CommonServices/Config";
+import { validateRequiredImportHeaders } from "../../../../../../External/CommonServices/importService";
 import { Button, Dialog } from "../../controls";
 import type { IImportDialogProps } from "./IImportDialogProps";
 import styles from "./ImportDialog.module.scss";
@@ -17,24 +18,29 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
   maxFileSizeBytes,
   accept,
   importing = false,
+  expectedHeaders,
   onHide,
   onDownloadTemplate,
   onFileRejected,
   onImport,
 }) => {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const validateGenerationRef = React.useRef(0);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [isDragActive, setIsDragActive] = React.useState(false);
+  const [isValidatingHeaders, setIsValidatingHeaders] = React.useState(false);
 
   React.useEffect(() => {
     if (!visible) {
+      validateGenerationRef.current += 1;
       setSelectedFile(null);
       setIsDragActive(false);
+      setIsValidatingHeaders(false);
     }
   }, [visible]);
 
   const assignFile = (file: File | undefined): void => {
-    if (!file || importing) {
+    if (!file || importing || isValidatingHeaders) {
       return;
     }
 
@@ -55,11 +61,42 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
       return;
     }
 
-    setSelectedFile(file);
+    const headers = expectedHeaders?.length ? [...expectedHeaders] : [];
+    if (!headers.length) {
+      setSelectedFile(file);
+      return;
+    }
+
+    const generation = ++validateGenerationRef.current;
+    setIsValidatingHeaders(true);
+
+    void validateRequiredImportHeaders(file, headers)
+      .then(() => {
+        if (generation !== validateGenerationRef.current) {
+          return;
+        }
+        setSelectedFile(file);
+      })
+      .catch((error: unknown) => {
+        if (generation !== validateGenerationRef.current) {
+          return;
+        }
+        setSelectedFile(null);
+        onFileRejected?.(
+          error instanceof Error
+            ? error.message
+            : Config.ImportExport.MissingRequiredColumnsMessage,
+        );
+      })
+      .finally(() => {
+        if (generation === validateGenerationRef.current) {
+          setIsValidatingHeaders(false);
+        }
+      });
   };
 
   const openFilePicker = (): void => {
-    if (importing) {
+    if (importing || isValidatingHeaders) {
       return;
     }
     inputRef.current?.click();
@@ -74,7 +111,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
     event.preventDefault();
-    if (!importing) {
+    if (!importing && !isValidatingHeaders) {
       setIsDragActive(true);
     }
   };
@@ -91,7 +128,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
   };
 
   const handleImport = (): void => {
-    if (importing || !selectedFile) {
+    if (importing || isValidatingHeaders || !selectedFile) {
       return;
     }
 
@@ -100,6 +137,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
 
   const canDownloadTemplate =
     Boolean(templateFileName) && Boolean(onDownloadTemplate) && !templateLoading;
+  const interactionLocked = importing || isValidatingHeaders;
 
   return (
     <Dialog
@@ -114,14 +152,14 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
             label="Cancel"
             variant="secondary"
             size="sm"
-            disabled={importing}
+            disabled={interactionLocked}
             onClick={onHide}
           />
           <Button
             label="Import"
             size="sm"
             loading={importing}
-            disabled={!selectedFile || importing}
+            disabled={!selectedFile || interactionLocked}
             onClick={handleImport}
           />
         </div>
@@ -150,7 +188,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
               type="file"
               accept={accept}
               className={styles.hiddenInput}
-              disabled={importing}
+              disabled={interactionLocked}
               onChange={handleInputChange}
             />
             <i
@@ -165,7 +203,10 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
               <br />
               {maxSizeLabel}
             </p>
-            {selectedFile && (
+            {isValidatingHeaders && (
+              <p className={styles.selectedFileName}>Validating columns...</p>
+            )}
+            {!isValidatingHeaders && selectedFile && (
               <p className={styles.selectedFileName}>{selectedFile.name}</p>
             )}
           </div>
@@ -183,7 +224,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
                 icon="pi pi-download"
                 iconOnly
                 className={styles.downloadButton}
-                disabled={importing}
+                disabled={interactionLocked}
                 onClick={onDownloadTemplate}
               />
             </div>

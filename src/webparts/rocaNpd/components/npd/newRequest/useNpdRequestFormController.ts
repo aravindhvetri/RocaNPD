@@ -53,12 +53,14 @@ import {
 import {
   createEmptyNpdItemDetailRow,
   isEmptyItemDetailRow,
+  toNpdItemDetailRecord,
   toNpdItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type { INpdItemDetailRow } from "./npdItemDetails.types";
 import {
-  validateNpdDraftGeneralInfo,
-  validateNpdGeneralInfo,
+  validateMisCoordinatorAction,
+  validateNpdDraftForm,
+  validateNpdItemDetailsRows,
   validateNpdRequestForm,
 } from "./npdItemDetailsValidation";
 import {
@@ -414,7 +416,7 @@ export function useNpdRequestFormController(
       return;
     }
     const firstMessage = firstValidationMessage(
-      validateNpdDraftGeneralInfo(npdForm.generalInfo),
+      validateNpdDraftForm(npdForm.generalInfo, itemRows),
     );
     if (firstMessage) {
       showErrorToast(toastRef, firstMessage, "Validation");
@@ -466,17 +468,15 @@ export function useNpdRequestFormController(
       return;
     }
 
-    const persistableCount = itemRows.reduce(
-      (count, row) => (isEmptyItemDetailRow(row) ? count : count + 1),
-      0,
-    );
-    const items = toPersistableItemRecords(itemRows);
+    // Validation already required every grid row; persist all of them (do not
+    // drop blank lines — those must fail validation above).
+    const items = itemRows.map(toNpdItemDetailRecord);
     const comments = approverRemarks;
 
     flushSync(() => {
       leaveFormForProcessing(
         Config.Routes.NpdPending,
-        Math.max(persistableCount, 1),
+        Math.max(items.length, 1),
         { showItemProgress: true },
       );
     });
@@ -504,9 +504,24 @@ export function useNpdRequestFormController(
     if (isTabLocked || tabLock.consumeIfRestricted()) {
       return;
     }
-    if (!itemDetailsReadOnly && action === "Approve") {
+
+    // MIS: Post to SAP / Rework / Reject — every Item Details row + Profit Center.
+    if (lockedFooterMode === "mis-pending") {
       const firstMessage = firstValidationMessage(
-        validateNpdRequestForm(npdForm.generalInfo, itemRows),
+        validateMisCoordinatorAction(
+          npdForm.generalInfo.brand,
+          itemRows,
+          npdForm.otherDetails.profitCenter,
+        ),
+      );
+      if (firstMessage) {
+        showErrorToast(toastRef, firstMessage, "Validation");
+        return;
+      }
+    } else if (action === "Approve" && !itemDetailsReadOnly) {
+      // Non-MIS editable Item Details (parity with Initiator Submit).
+      const firstMessage = firstValidationMessage(
+        validateNpdItemDetailsRows(npdForm.generalInfo.brand, itemRows),
       );
       if (firstMessage) {
         showErrorToast(toastRef, firstMessage, "Validation");

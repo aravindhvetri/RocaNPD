@@ -6,7 +6,9 @@ import type {
   ILookupTypeRow,
 } from "./Interface";
 import {
+  assertRequiredImportHeaders,
   extractColumnValues,
+  findBestHeaderRowIndex,
   findColumnIndex,
   partitionImportValues,
   readSpreadsheetRows,
@@ -23,6 +25,11 @@ import {
 import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.LookupType;
+
+/** Excel headers required for Lookup Type Import (must match FieldLabels). */
+export const LOOKUP_TYPE_IMPORT_HEADERS = [
+  FieldLabels.LookupTypeName,
+] as const;
 
 const SELECT_FIELDS = "Id,Title,IsDeleted,Modified";
 
@@ -104,6 +111,24 @@ export async function bulkCreateLookupTypes(titles: string[]): Promise<void> {
     return;
   }
 
+  // Final SharePoint guard — do not trust Redux/list state from page load (multi-tab).
+  const existing = await fetchActiveLookupTypes();
+  const existingKeys = new Set(
+    existing.map((item) => item.Title.trim().toLowerCase()),
+  );
+  const batchKeys = new Set<string>();
+
+  for (const title of titles) {
+    const titleKey = title.trim().toLowerCase();
+    if (!titleKey) {
+      continue;
+    }
+    if (existingKeys.has(titleKey) || batchKeys.has(titleKey)) {
+      throw new Error(`Lookup Type Name already exists.`);
+    }
+    batchKeys.add(titleKey);
+  }
+
   await SPServices.batchInsert({
     ListName: LIST_NAME(),
     responseData: titles.map((title) => ({
@@ -123,22 +148,17 @@ export async function parseLookupTypeImportFile(
     throw new Error("The uploaded file is empty.");
   }
 
-  const headerRowIndex = rows.findIndex((row) =>
-    row.some((cell) => cell.trim().length > 0),
-  );
+  const headerRowIndex = findBestHeaderRowIndex(rows, [
+    ...LOOKUP_TYPE_IMPORT_HEADERS,
+  ]);
 
   if (headerRowIndex < 0) {
     throw new Error("The uploaded file does not contain a header row.");
   }
 
   const headerRow = rows[headerRowIndex];
+  assertRequiredImportHeaders(headerRow, [...LOOKUP_TYPE_IMPORT_HEADERS]);
   const columnIndex = findColumnIndex(headerRow, FieldLabels.LookupTypeName);
-
-  if (columnIndex < 0) {
-    throw new Error(
-      `The uploaded file must include a "${FieldLabels.LookupTypeName}" column.`,
-    );
-  }
 
   const values = extractColumnValues(rows, columnIndex, headerRowIndex);
 

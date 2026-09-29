@@ -19,6 +19,7 @@ import {
   parseViewAsRole,
 } from "../../../../../External/CommonServices/permissionService";
 import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
+import { getNpdRequestOwnerEmail } from "../../../../../External/CommonServices/npdRequestGeneralInfoService";
 import {
   getFirstPendingApproverRole,
   isMisCoordinatorWorkflowRole,
@@ -114,6 +115,7 @@ export function isDraftOrReworkStatus(status: string | null): boolean {
   );
 }
 
+/** Draft-only: blank placeholder lines may be omitted. Submit must not use this. */
 export function toPersistableItemRecords(
   rows: INpdItemDetailRow[],
 ): INpdItemDetailRecord[] {
@@ -124,7 +126,7 @@ export function canEditNpdListRow(
   row: Pick<
     INpdRequestListItemRow,
     "Status" | "Brand" | "AuthorEmail" | "WorkflowSteps"
-  >,
+  > & { InitiatorEmail?: string },
   access: IResolvedUserAccess,
   currentUserEmail: string,
   viewAs?: string | null,
@@ -145,7 +147,8 @@ export function canEditNpdListRow(
         Config.Roles.Initiator,
         ApproverSystems.NewProductDevelopment,
       ) &&
-      normalizeEmail(row.AuthorEmail) === normalizeEmail(currentUserEmail)
+      normalizeEmail(getNpdRequestOwnerEmail(row)) ===
+        normalizeEmail(currentUserEmail)
     );
   }
 

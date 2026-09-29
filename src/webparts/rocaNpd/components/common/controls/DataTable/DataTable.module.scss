@@ -205,3 +205,13 @@
   text-align: center !important;
 }
 
+/* Fill the cell so the dash centers under the column header, not in a shrink-wrapped box. */
+.emptyDash {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  color: $roca-color-text-muted;
+}

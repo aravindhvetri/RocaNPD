@@ -227,6 +227,9 @@ export const FieldNames = {
     ValuationClass: "ValuationClass",
     ClassType: "ClassType",
     MaterialExtension: "MaterialExtension",
+    /** Person field. REST write uses `InitiatorId`. */
+    Initiator: "Initiator",
+    InitiatorId: "InitiatorId",
   },
   NpdItemDetails: {
     Title: "Title",
@@ -398,6 +401,17 @@ export const ImportExport = {
     ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel",
   AcceptedFormatsLabel: "Accepted formats: xlsx, xls",
   MaxSizeLabel: "Max size: 10 MB",
+  MissingRequiredColumnsMessage:
+    "The required columns are missing in this template, so the file cannot be imported. Please download the template and use it.",
+} as const;
+
+/** Shared text-entry rules (Lookup, Item Details, MG Code/Description, etc.). */
+export const TextInputRules = {
+  /** Test without /g — safe for repeated .test() calls. */
+  DisallowedCharacters: /[^a-zA-Z0-9\s]/,
+  /** Strip helper — /g required for String.replace. */
+  DisallowedCharactersGlobal: /[^a-zA-Z0-9\s]/g,
+  SpecialCharactersNotAllowedSuffix: "cannot contain special characters.",
 } as const;
 
 export const Config = {
@@ -421,6 +435,7 @@ export const Config = {
   FieldLabels,
   DeleteDependencies,
   ImportExport,
+  TextInputRules,
   WorkflowRequestTypes,
   WorkflowSystems,
   WorkflowDefaults,

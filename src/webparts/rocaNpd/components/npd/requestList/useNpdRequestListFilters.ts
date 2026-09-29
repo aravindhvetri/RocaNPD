@@ -4,6 +4,7 @@ import type { INpdRequestListItemRow } from "../../../../../External/CommonServi
 import {
   ALL_BRAND_VALUE,
   ALL_STATUS_VALUE,
+  buildNpdListSearchHaystack,
   buildStatusFilterOptionsFromData,
   matchesNpdBrandFilter,
   matchesNpdListSearch,
@@ -59,17 +60,7 @@ export function useNpdRequestListFilters(
     (item) =>
       matchesNpdStatusFilter(item.Status, statusFilter) &&
       matchesNpdBrandFilter(item.Brand, brandFilter) &&
-      matchesNpdListSearch(
-        [
-          item.Title,
-          item.ProjectName,
-          item.Brand,
-          item.MaterialType,
-          item.Plant,
-          item.Status,
-        ],
-        searchValue,
-      ),
+      matchesNpdListSearch(buildNpdListSearchHaystack(item), searchValue),
   );
 
   return {

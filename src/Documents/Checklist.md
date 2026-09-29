@@ -11,7 +11,7 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 50 | 39 | 11 |
+| B — Technical Foundation | 51 | 40 | 11 |
 | C — SharePoint Data | 24 | 5 | 19 |
 | D — Security & Roles | 24 | 15 | 9 |
 | E — UI / UX / Theme | 29 | 10 | 19 |
@@ -26,9 +26,9 @@
 | N — Testing | 24 | 0 | 24 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **357** | **143** | **214** |
+| **TOTAL** | **358** | **144** | **214** |
 
-**Last Updated:** 26 September 2026
+**Last Updated:** 28 September 2026
 
 ---
 
@@ -91,6 +91,7 @@
 - [x] **CHK-B23** Navigation items show/hide correctly per role (`filterNavigationByRoles`, union of assigned roles)
 - [x] **CHK-B23a** Multi-role users see separate role-grouped nav sections (Initiator / VH / MIS / Consultant / Admin) with `?as=` context
 - [x] **CHK-B23b** After Approve/Submit/Save Draft success toast clear, `?as=` is preserved so the same role section stays selected (e.g. VH Pending, not Initiator Pending)
+- [x] **CHK-B23c** Side-nav between list modules does not flash stale DataTable then reload — `useListPageFetch` gates LoaderOverlay until mount fetch settles
 - [x] **CHK-B24** Active Login Role indicator removed from side navigation per design requirement
 - [x] **CHK-B25** Unauthorized URL redirects to access-denied page (`/unauthorized`)
 
@@ -103,6 +104,8 @@
 - [ ] **CHK-B30** LoaderOverlay shows during data fetch and save operations
 - [x] **CHK-B31** Export generates valid Excel file via `exportService.ts` (Lookup Type Master verified)
 - [x] **CHK-B31a** Reusable Import/Export services and `ImportDialog` documented in ProjectStandards Section 5.8
+- [x] **CHK-B31b** Shared import header gate: `validateRequiredImportHeaders` / `ImportDialog.expectedHeaders` rejects mismatched columns on select/drop for all Import modules
+- [x] **CHK-B31c** Missing-column Import Toast uses short shared message (download template); template download has no Excel data validations
 
 ### B.6 Common Controls — PrimeReact Wrappers
 
@@ -116,7 +119,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-B37** Button wrapper supports primary / secondary / danger / text variants
 - [x] **CHK-B38** Dialog and ConfirmDialog wrappers handle open/close and footer actions
 - [x] **CHK-B39** DataTable wrapper supports pagination, sorting, loading, and empty state
+- [x] **CHK-B39m** DataTable paginator hidden when row count ≤ page size (all modules via shared wrapper)
+- [x] **CHK-B39n** List search space-insensitive + lowercase (`searchTextUtils` / DataTable `contains` override) across all modules
 - [x] **CHK-B39a** DataTable — no grid lines; subtle sort icons; pagination report text without box
+- [x] **CHK-B39o** DataTable Status column is not sortable (no sort icon) on NPD and Material Group request lists; other columns keep sorting
+- [x] **CHK-B39p** DataTable empty values shown as centered em dash (`EmptyDash` / `wrapDataTableCellContent`) across all tables
 - [x] **CHK-B39b** `MasterTablePanel` reset-filters icon on all master screens
 - [x] **CHK-B39c** Poppins font family applied app-wide
 - [x] **CHK-B39c2** Poppins applied to Toast, Dropdown, MultiSelect, ComboBox, Dialog overlays (post-CDN inject)
@@ -195,7 +202,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### D.2 Access Control — Initiator
 
-- [x] **CHK-D07** Initiator sees only own / brand-scoped NPD requests (Initiator nav section + `getNpdViewScope`)
+- [x] **CHK-D07** Initiator NPD lists (All, Pending, Approved, Draft/Rework) show only that user's requests (`NPD_Request.Initiator`, else Author) for their configured brands — other brands and other Initiators on the same brand are hidden
+- [x] **CHK-D07a** Save Draft and Submit write the logged-in user to `NPD_Request.Initiator`; MG Draft/Submit already writes `NPD_MaterialGroupRequests.Initiator`, and Initiator MG lists match that person only
 - [x] **CHK-D08** Initiator sees only own Material Group requests (Initiator MG section)
 - [x] **CHK-D09** Initiator cannot Approve, Rework, or Reject (`hasPermission` / action matrix)
 - [x] **CHK-D10** Initiator cannot edit Pending or Approved requests (View is read-only; Edit only for own Draft/Rework)
@@ -203,7 +211,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### D.2 Access Control — Vertical Head
 
-- [ ] **CHK-D12** Vertical Head sees only brand-scoped NPD requests
+- [x] **CHK-D12** Vertical Head sees every NPD request for mapped brand(s) only (not limited to the creator); other brands are hidden on All, Pending, and Approved
 - [x] **CHK-D13** Vertical Head can Approve, Rework, Reject on pending requests (Edit on current VH step; View is read-only)
 - [x] **CHK-D14** Vertical Head cannot access Material Group, New NPD Request, Draft/ReWork, or Reports — side nav is All / Pending / Approved only
 - [x] **CHK-D15** Vertical Head cannot perform MIS Coordinator actions
@@ -226,6 +234,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-D23** Admin sees all NPD and Material Group requests (Admin nav sections, no brand restriction)
 - [x] **CHK-D23a** Multi-role Admin+Initiator keeps separate Initiator (brand-scoped) and Admin (unscoped) NPD / MG sections
 - [x] **CHK-D23b** Admin All Requests (NPD + MG) excludes Draft records; summary card label is "In Rework" (not "In Rework / Drafts")
+- [x] **CHK-D23c** NPD Drafts appear only on Initiator All Requests / Draft-Rework — hidden from Admin, Vertical Head, and MIS Coordinator All Requests; MG Drafts appear only for Initiator (hidden from Admin and Consultant All / Pending / Completed)
 - [x] **CHK-D24** Admin has full Administration module access
 - [x] **CHK-D25** Admin cannot perform workflow actions (approve/post) unless by design
 
@@ -304,6 +313,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F04k** Case-insensitive duplicate Lookup Type Title (UI + service; e.g. Resin / RESIN)
 - [x] **CHK-F04l** Add/Edit Lookup Type dialog closes immediately on save; page loader until complete
 - [x] **CHK-F04m** Export shows page loader while Excel download runs
+- [x] **CHK-F04n** Import rejects file on browse/drop when required Excel headers do not match FieldLabels (Lookup Type Name); Toast; file not accepted
 
 ### F.2 Lookup Master
 
@@ -322,6 +332,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F09g** Add/Edit Lookup dialog closes immediately on save; page loader until complete
 - [x] **CHK-F09h** Lookup Export shows page loader while Excel download runs
 - [x] **CHK-F09i** Add New button keeps the same background on click/focus (no color flash)
+- [x] **CHK-F09j** Import rejects file on browse/drop when required Excel headers do not match FieldLabels (Lookup Type, Lookup Code, Lookup Name); Toast; file not accepted
+- [x] **CHK-F09k** Lookup / Lookup Type Add/Edit: special characters blocked while typing (letters, numbers, spaces only)
 
 ### F.3 Plant / Role / Approver — ROCA site (no local admin screens)
 
@@ -338,6 +350,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F26a** Plant stored as comma-separated values; MultiSelect repopulates on edit
 - [x] **CHK-F26b** ROCA site URL resolved via `resolveRocaMasterSiteUrl()` (not hardcoded in UI)
 - [x] **CHK-F26c** Duplicate Brand blocked with warning Toast
+- [x] **CHK-F26c1** Multi-tab: Brand Material Extension create/update re-fetches SharePoint before persist (`assertBrandMaterialExtensionNotDuplicate`)
 - [x] **CHK-F26d** Export only (Excel) on Brand Material Extension toolbar; disabled when no rows
 ### F.7 Workflow Configuration
 
@@ -347,10 +360,12 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F26e** Brand Material Extension Plant column shows first 8 values then `...` with full list in `title` hover (`MultiValueCell`)
 - [x] **CHK-E31** Multi-value DataTable cells use shared `MultiValueCell` (limit 8 + ellipsis + title tooltip)- [x] **CHK-F28b** Edit replaces existing steps; Delete soft-deletes all steps for request type
 - [x] **CHK-F28c** Duplicate request type blocked; validation via Toast only
+- [x] **CHK-F28c1** Multi-tab: Workflow save re-fetches SharePoint before persist; Add dialog re-fetches before offering Request Types
 - [x] **CHK-F28d** Add Step hidden when no valid Next Role options remain for a new step
 - [x] **CHK-F28e** All applicable steps have editable Next Role; changing Next Role cascades Current Role to following step
 - [x] **CHK-F28f** Form dialog font size and button/icon sizing consistent with master popup standards
 - [x] **CHK-F28g** Save blocked until all available Next Role options are selected (incomplete NPD chain → Toast warning)
+- [x] **CHK-F04o** Multi-tab: Lookup Type create/update/import and Lookup create/update/import re-fetch SharePoint before persist (not Redux-only)
 ### F.8 Material Master
 
 - [ ] **CHK-F29** Material Master list with search and filters works
@@ -374,7 +389,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G04** Approved Requests shows fully approved requests in the user's scope (view-only)
 - [x] **CHK-G04a** Vertical Head Approved Requests also lists Pending requests where VH WorkFlowJSON step is Approved (status shows Pending with MIS Coordinator until Post to SAP)
 - [x] **CHK-G05** Draft / ReWork shows editable own requests
-- [x] **CHK-G06** Search by Request ID, Plant, Brand, Code, Material works ('Search here' on Pending/Draft; 'Search by Request ID, Plant, Brand, Code, or Material...' on All/Approved)
+- [x] **CHK-G06** Search by Request ID, Plant, Brand, Material Type, Status, Current Approver, and related fields works ('Search here' on Pending/Draft; 'Search by Request ID, Plant, Brand, Code, or Material...' on All/Approved)
+- [x] **CHK-G06b** NPD list global search includes Current Approver (`buildNpdListSearchHaystack`) on All / Approved / Draft / Pending
 - [x] **CHK-G06a** DataTable layout consistently aligned across all NPD components (Request ID, Brand, Material Type, Plant, Products, Status, Current Approver, Created Date, Workflow, Actions) with unified column widths and alignment
 - [x] **CHK-G07** Status and Brand filters work
 - [x] **CHK-G08** Export downloads Excel (.xlsx) for currently displayed All / Approved request rows
@@ -393,9 +409,13 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G13** Roca Global Code column shown for Roca, Laufen, Armani brands (UI)
 - [x] **CHK-G14** Roca Global Code column hidden for other brands
 - [x] **CHK-G15** Item Details grid displays all required BRD columns; MultiSelect options from Lookup list by Lookup Type (`trim` + lowercase, compact / parenthetical-stripped title match); DataTable paginates at 7 rows when there are more than 7 items; lookup options prefetched on app init so available on first NPD Form open
-- [x] **CHK-G15a** Item Details selection fields allow only one option (`selectionLimit={1}`)- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
+- [x] **CHK-G15a** Item Details selection fields allow only one option (`selectionLimit={1}`); panel is searchable dropdown-style (no checkboxes, search kept, closes after pick); **other options stay enabled** so the user can change the selection
+- [x] **CHK-G15b** Item Details Tab focus keeps horizontal scroll inside the table wrapper only (does not shift form page layout)- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
+- [x] **CHK-G16a** Item Details: Delete icon hidden when only one row remains; shown on **all** rows once a second row exists (Actions column remounts on mode change); lone Add button is centered
+- [x] **CHK-G16c** Item Details header Delete (red trash, same chrome as Add/Import) appears once rows exist; clears all lines and leaves one empty row
+- [x] **CHK-G16b** NPD Item Details text fields block special characters via shared `textInputSanitize` / `Config.TextInputRules`
 - [x] **CHK-G17** + Add Another Item Line works with small inline plus icon next to label
-- [x] **CHK-G18** Import items from Excel works — Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
+- [x] **CHK-G18** Import items from Excel works — required FieldLabels validated on select/drop (`expectedHeaders`); Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
 - [x] **CHK-G19** Save Draft saves header + items without submitting
 - [x] **CHK-G20** Submit Request validates and routes to Vertical Head
 - [x] **CHK-G20a** Initiator footer shows SUBMIT REQUEST for new/draft; RESUBMIT when request status is Rework
@@ -409,6 +429,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G24** Material Code max 18 characters enforced — validation Toast on Submit
 - [x] **CHK-G25** Material Description max 40 characters enforced — validation Toast on Submit
 - [x] **CHK-G26** All mandatory item fields validated on submit — validation Toast (no inline errors)
+- [x] **CHK-G26c** Submit validates **every** Item Details grid row (blank added lines are not skipped); each required field on each line must be filled before Submit / Approve
+- [x] **CHK-G26f** MIS Coordinator Post to SAP / Approve uses the same Item Details row validation (`validateNpdItemDetailsRows`) — every added line’s required fields must be filled
+- [x] **CHK-G26g** MIS Coordinator Rework / Reject / Post to SAP all run `validateMisCoordinatorAction` first (Item Details every row + mandatory Profit Center) — empty newly added rows block all three actions
+- [x] **CHK-G26d** Item Details Roca Global Code, Material Code, and Material Description are unique within the request — Save Draft / Submit blocked with “already exists”; Excel import shows duplicates in the validation popup and does not proceed
+- [x] **CHK-G26e** Item Details S.No continues sequentially across pagination (Prime absolute `rowIndex` + 1; do not add `first`)
 - [x] **CHK-G27** Roca Global Code validated when applicable — validation Toast on Submit
 - [x] **CHK-G28** At least one item row required on submit — validation Toast on Submit
 
@@ -432,6 +457,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 - [x] **CHK-G36** Pending Approval shows VH-approved requests for any user in the MIS Coordinator role
 - [x] **CHK-G37** Item Details editable (edit rows, add line items)
+- [x] **CHK-G37c** MIS Post to SAP / Approve blocked until every Item Details row has required fields filled (same rule as Initiator Submit)
+- [x] **CHK-G37d** MIS Profit Center is mandatory — empty value blocks Rework, Reject, and Post to SAP (error toast; also enforced in workflow thunk)
 - [x] **CHK-G37a** Newly added Item Details rows by MIS Coordinator highlighted in yellow (`#fefce8`) with amber border (`#eab308`); persists across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
 - [x] **CHK-G37b** NPD Item Details keep original add order (SharePoint Id ascending); MIS-added rows stay at the end — not latest-first (MG lists keep latest-first)
 - [x] **CHK-G38** Other Details section displays all SAP fields
@@ -471,6 +498,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-H09** Draft / Rework editable and resubmittable
 - [x] **CHK-H10** At least one master required validation on submit
 - [x] **CHK-H11** Description mandatory validation per row
+- [x] **CHK-H11a** Material Group Description must be unique within the request and against `NPD_Lookup` Title (LookupName) — same uniqueness family as Lookup Code; Submit / Complete blocked with “already exists”
 - [x] **CHK-H25** Select Masters cards show no hover/cursor effect in View or Consultant-read-only mode
 
 ### H.2 Consultant
@@ -764,6 +792,19 @@ Use this table to sign off each phase only when all related checklist items are 
 | 27 Sep 2026 | Other Details gated by MIS module `?as=` until Approved; NPD Item Details chronological Id order | CHK-G38a, CHK-G37b |
 | 27 Sep 2026 | Item Details MultiSelect overlay aligned to each input; option labels ellipsize | CHK-G26b |
 | 28 Sep 2026 | Material Group Audit Log chronological order (same as NPD: Initiated → Rework → Resubmit) | CHK-H33 |
+| 28 Sep 2026 | Side-nav list flicker fixed — `useListPageFetch` gates loader until mount fetch settles (admin / NPD / MG lists) | CHK-B23c |
+| 28 Sep 2026 | Import Excel headers must match module FieldLabels; shared early reject on browse/drop via `ImportDialog.expectedHeaders` | CHK-B31b, CHK-F04n, CHK-F09j, CHK-G18 |
+| 28 Sep 2026 | Short Import missing-columns Toast; template download strips Excel data validations | CHK-B31c |
+| 28 Sep 2026 | Lookup/Lookup Type block special characters; DataTable paginator only when rows exceed page size | CHK-F09k, CHK-B39m |
+| 28 Sep 2026 | List search ignores spaces + case (`aariaravind` matches `Aari Aravind`) | CHK-B39n |
+| 28 Sep 2026 | Multi-tab duplicate guards: Workflow / BME / Lookup Type / Lookup re-fetch SharePoint before create/update/import | CHK-F04o, CHK-F26c1, CHK-F28c1 |
+| 28 Sep 2026 | Submit / Approve validates every Item Details row — blank added lines no longer skipped | CHK-G26c |
+| 28 Sep 2026 | Item Details single-select MultiSelect: no checkboxes, search kept, dropdown-like close-on-pick | CHK-G15a |
+| 28 Sep 2026 | Initiator lists: own `Initiator` person and configured brands only; VH brand-only; MIS/Admin all (NPD + MG) | CHK-D07, CHK-D07a, CHK-D12 |
+| 29 Sep 2026 | Item Details unique Code/Description; Drafts Initiator-only; S.No sequential across pages | CHK-G26d, CHK-G26e, CHK-D23c |
+| 29 Sep 2026 | Item Details header bulk Delete (red) clears all lines when rows exist | CHK-G16c |
+| 29 Sep 2026 | MIS Item Details validation on Post/Approve; Status column not sortable; Current Approver in list search; centered empty dashes | CHK-G26f, CHK-G37c, CHK-B39o, CHK-B39p, CHK-G06b |
+| 29 Sep 2026 | MIS Rework/Reject/Post require Item Details + Profit Center; MG Description unique vs NPD_Lookup Title | CHK-G26g, CHK-G37d, CHK-H11a |
 
 ---
 
