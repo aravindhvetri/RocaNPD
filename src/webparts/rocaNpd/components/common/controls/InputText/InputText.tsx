@@ -1,5 +1,6 @@
 import * as React from "react";
 import { InputText as PrimeInputText } from "primereact/inputtext";
+import { stripLeadingSpaces } from "../../../../../../External/CommonServices/textInputSanitize";
 import ControlField from "../ControlField/ControlField";
 import type { IInputTextProps } from "./IInputTextProps";
 
@@ -17,7 +18,7 @@ const InputText: React.FC<IInputTextProps> = ({
   placeholder,
   maxLength,
   type = "text",
-  'data-testid': testId,
+  "data-testid": testId,
 }) => (
   <ControlField
     id={id}
@@ -41,7 +42,7 @@ const InputText: React.FC<IInputTextProps> = ({
       spellCheck={false}
       className={error ? "p-invalid" : undefined}
       data-testid={testId}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => onChange(stripLeadingSpaces(e.target.value))}
     />
   </ControlField>
 );

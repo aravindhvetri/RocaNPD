@@ -1,9 +1,12 @@
 import * as React from "react";
 import { Dropdown as PrimeDropdown } from "primereact/dropdown";
+import { leadingSpaceInputGuards } from "../../../../../../External/CommonServices/textInputSanitize";
 import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IDropdownProps } from "./IDropdownProps";
 import styles from "./Dropdown.module.scss";
+
+const filterInputGuards = leadingSpaceInputGuards();
 
 const Dropdown: React.FC<IDropdownProps> = ({
   id,
@@ -20,7 +23,7 @@ const Dropdown: React.FC<IDropdownProps> = ({
   placeholder = "Select",
   filter,
   showClear,
-  'data-testid': testId,
+  "data-testid": testId,
 }) => (
   <ControlField
     id={id}
@@ -53,6 +56,8 @@ const Dropdown: React.FC<IDropdownProps> = ({
           autoComplete: "off",
           autoCorrect: "off",
           spellCheck: false,
+          onKeyDown: filterInputGuards.onKeyDown,
+          onPaste: filterInputGuards.onPaste,
         },
       }}
       data-testid={testId}

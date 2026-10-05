@@ -16,19 +16,19 @@
 | D — Security & Roles | 24 | 15 | 9 |
 | E — UI / UX / Theme | 29 | 10 | 19 |
 | F — Admin Module | 39 | 24 | 15 |
-| G — NPD Module | 48 | 43 | 5 |
+| G — NPD Module | 50 | 45 | 5 |
 | H — Material Group Module | 27 | 15 | 12 |
 | I — Workflow & Automation | 20 | 0 | 20 |
-| J — SAP Integration | 16 | 0 | 16 |
-| K — Material Master | 10 | 0 | 10 |
+| J — SAP Integration | 18 | 9 | 9 |
+| K — Material Master | 11 | 4 | 7 |
 | L — Reports | 10 | 0 | 10 |
 | M — Email Notifications | 8 | 3 | 5 |
 | N — Testing | 24 | 0 | 24 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **358** | **144** | **214** |
+| **TOTAL** | **363** | **159** | **204** |
 
-**Last Updated:** 28 September 2026
+**Last Updated:** 01 October 2026
 
 ---
 
@@ -237,6 +237,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-D23c** NPD Drafts appear only on Initiator All Requests / Draft-Rework — hidden from Admin, Vertical Head, and MIS Coordinator All Requests; MG Drafts appear only for Initiator (hidden from Admin and Consultant All / Pending / Completed)
 - [x] **CHK-D24** Admin has full Administration module access
 - [x] **CHK-D25** Admin cannot perform workflow actions (approve/post) unless by design
+- [x] **CHK-D26** On every login, Pending and Rework NPD requests refresh Vertical Head (matched by Brand), MIS Coordinator, and Consultant in `WorkFlowJSON` from ApproversMaster (`System = New Product Development`). Unchanged users are not written. Draft, Approved, Rejected, and Completed requests are not updated. Action buttons follow the current approver (a replaced Vertical Head no longer sees Approve / Rework / Reject; Resubmit notifies the current Vertical Head)
+- [x] **CHK-D27** New NPD Request / New Material Group always opens a blank create form — prior View/Edit Redux state is cleared when the New button is used (including without Cancel)
 
 ---
 
@@ -368,14 +370,22 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F04o** Multi-tab: Lookup Type create/update/import and Lookup create/update/import re-fetch SharePoint before persist (not Redux-only)
 ### F.8 Material Master
 
-- [ ] **CHK-F29** Material Master list with search and filters works
-- [ ] **CHK-F30** Download Template produces valid file
-- [ ] **CHK-F31** Import bulk records works with validation
-- [ ] **CHK-F32** Export catalog produces valid file
-- [ ] **CHK-F33** Add Record manually works
-- [ ] **CHK-F34** Creation Date From/To filters work
-- [ ] **CHK-F35** Initiator filter works
-- [ ] **CHK-F36** Auto-populated records from completed NPD appear correctly
+> **Phase A (current):** Admin read-only Material Master list. Source: `NPD_MaterialGroupRequests`. Tabs Existing (`ItemType=Old`, hide empty columns) / New (`ItemType=New`, all columns). Search, date From/To, Initiator filter, Export, Created Date / Created By / Initiator. Fetch all via `getPaged()` (50/batch); UI 50/page. **Not in Phase A:** template, import, add/edit, auto-populate from NPD Completed.
+
+- [x] **CHK-F29a** Material Master requirements reviewed (MD docs + list/Figma screenshots); Phase A scope confirmed before implementation
+- [x] **CHK-F29** Material Master list with Existing / New tabs, search, date filters, Initiator filter, and Export works
+- [x] **CHK-F29b** Paged fetch retrieves full list (>25k capable); UI shows 50 rows per page with pagination
+- [x] **CHK-F29c** Existing tab hides columns with no values across Old rows; New tab shows all catalog columns
+- [x] **CHK-F29d** Initiator resolved from `NPDRequest` → `NPD_Request`; filter options unique and data-driven
+- [x] **CHK-F29e** Created Date and Created By columns display correctly
+- [ ] **CHK-F30** Download Template produces valid file *(deferred — not Phase A)*
+- [ ] **CHK-F31** Import bulk records works with validation *(deferred — not Phase A)*
+- [x] **CHK-F32** Export catalog / filtered rows produces valid Excel
+- [ ] **CHK-F33** Add Record manually works *(deferred — not Phase A)*
+- [x] **CHK-F34** Creation Date From/To filters work
+- [x] **CHK-F35** Initiator filter works
+- [ ] **CHK-F36** Auto-populated records from completed NPD appear correctly *(Phase 12 / later)*
+- [x] **CHK-F36a** Material Master fetch filters by `ItemType` Old/New so future Item Details submit rows can appear under New without schema redesign
 
 ---
 
@@ -414,6 +424,11 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G16a** Item Details: Delete icon hidden when only one row remains; shown on **all** rows once a second row exists (Actions column remounts on mode change); lone Add button is centered
 - [x] **CHK-G16c** Item Details header Delete (red trash, same chrome as Add/Import) appears once rows exist; clears all lines and leaves one empty row
 - [x] **CHK-G16b** NPD Item Details text fields block special characters via shared `textInputSanitize` / `Config.TextInputRules`
+- [x] **CHK-G16d** Min. Qty/Box Qty stays InputText (SP Single Line of Text) but accepts digits only (`textFilter: "digits"` / `sanitizeDigitsOnlyTextInput`)
+- [x] **CHK-G16e** InputText / InputTextarea / search / MultiSelect filter / ComboBox strip leading spaces (`stripLeadingSpaces`) — first character cannot be a space
+- [x] **CHK-G16f** After VH/MIS Rework, Initiator Save Draft sets Status=`Draft` (keeps Request ID); Resubmit only moves to Pending / next approver
+- [x] **CHK-G37e** MIS Profit Center shows required asterisk (`*`) next to the label
+- [x] **CHK-G37f** After MIS Rework / Reject / Post, Other Details always show `NPD_Request` values (cleared Material Extension stays empty — not re-filled from Brand Material Extension)
 - [x] **CHK-G17** + Add Another Item Line works with small inline plus icon next to label
 - [x] **CHK-G18** Import items from Excel works — required FieldLabels validated on select/drop (`expectedHeaders`); Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
 - [x] **CHK-G19** Save Draft saves header + items without submitting
@@ -434,6 +449,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G26g** MIS Coordinator Rework / Reject / Post to SAP all run `validateMisCoordinatorAction` first (Item Details every row + mandatory Profit Center) — empty newly added rows block all three actions
 - [x] **CHK-G26d** Item Details Roca Global Code, Material Code, and Material Description are unique within the request — Save Draft / Submit blocked with “already exists”; Excel import shows duplicates in the validation popup and does not proceed
 - [x] **CHK-G26e** Item Details S.No continues sequentially across pagination (Prime absolute `rowIndex` + 1; do not add `first`)
+- [x] **CHK-G26h** Initiator Submit blocked when Material Code / Description already exists in Material Master (toast); MIS Post to SAP uses the same rule
+- [x] **CHK-G26i** Processing loader shown while Material Master duplicate validation runs; after pass, Submit line-item progress bar (`n / total`) appears as usual (Pending page does not cover it with a second overlay)
 - [x] **CHK-G27** Roca Global Code validated when applicable — validation Toast on Submit
 - [x] **CHK-G28** At least one item row required on submit — validation Toast on Submit
 
@@ -499,6 +516,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-H10** At least one master required validation on submit
 - [x] **CHK-H11** Description mandatory validation per row
 - [x] **CHK-H11a** Material Group Description must be unique within the request and against `NPD_Lookup` Title (LookupName) — same uniqueness family as Lookup Code; Submit / Complete blocked with “already exists”
+- [x] **CHK-H11b** Material Group Code optional for Initiator but must be unique across the request (and vs `NPD_Lookup` LookupCode) on Submit — empty Code allowed; duplicate non-empty Codes blocked
+- [x] **CHK-H12** Success toasts after MG/NPD Submit (and Draft / Consultant actions) show via app-level flash so navigation does not unmount them
+- [x] **CHK-H12** Consultant Outlook email Login links use SafeLinks-safe `npdRoute` on `SitePages/RocaNPD.aspx` (same pattern as VH/MIS) — hash `id`/`mode` no longer breaks SitePages
 - [x] **CHK-H25** Select Masters cards show no hover/cursor effect in View or Consultant-read-only mode
 
 ### H.2 Consultant
@@ -563,29 +583,32 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 ## J — SAP Integration
 
 - [ ] **CHK-J01** SAP interface/API connectivity verified in dev environment
-- [ ] **CHK-J02** SAP payload includes all required NPD header fields
-- [ ] **CHK-J03** SAP payload includes all required NPD item fields
-- [ ] **CHK-J04** SAP payload includes all Other Details fields
+- [x] **CHK-J02** SAP payload includes General Information Material Type, Plant, and Brand (MG1)
+- [x] **CHK-J03** SAP payload includes Item Details fields from the technical document (code, description, groups, weight, HSN, class, UOM, tax)
+- [x] **CHK-J04** SAP payload includes Other Details Storage Location, Class Type, Material Extension, Profit Center, MRP Group, MRP Controller, and Valuation Class
 - [ ] **CHK-J05** Plant Code validated before post
 - [ ] **CHK-J06** Storage Location validated before post
 - [ ] **CHK-J07** Valuation Class validated before post
 - [ ] **CHK-J08** Material Extension validated before post
 - [ ] **CHK-J09** SAP success response stored on request record
-- [ ] **CHK-J10** SAP failure response stored and displayed to MIS Coordinator
-- [ ] **CHK-J11** Status not updated to Completed on SAP failure
+- [x] **CHK-J10** SAP failure message is shown to the MIS Coordinator and that line is not written to Material Master
+- [x] **CHK-J11** Status not updated to Approved / Completed when any SAP call fails
 - [ ] **CHK-J12** SAP posting tested end-to-end in UAT
 - [ ] **CHK-J13** SAP connectivity verified in production
 - [ ] **CHK-J14** SAP posting audit trail available (who posted, when, response)
-- [ ] **CHK-J15** Retry behavior defined and tested for transient SAP failures
-- [ ] **CHK-J16** SAP configuration documented for operations team
+- [x] **CHK-J15** Retry sends only Item Details with `SAP=false`; `SAP=true` lines are not posted again
+- [x] **CHK-J16** Development SAP API URL is in `Config.SapMaterialMasterApi`; Production URL is blank until the client provides it
+- [x] **CHK-J17** Each Item Details line is a separate API call; body is a one-element TY_DATA array
+- [x] **CHK-J18** `NPD_ItemDetails.SAP` is set true only after `status=True`; duplicates and other `status=False` responses leave it false
 
 ---
 
 ## K — Material Master Integration
 
-- [ ] **CHK-K01** Completed NPD triggers Material Master record creation
-- [ ] **CHK-K02** All required fields mapped from NPD Item to Material Master
-- [ ] **CHK-K03** Duplicate material codes handled (no silent overwrite)
+- [x] **CHK-K01** Final MIS Post to SAP inserts Item Details into `NPD_MaterialMaster` as ItemType=New with NPDRequest lookup
+- [x] **CHK-K02** Required Material Master fields mapped from NPD Item Details + Brand / Material Type
+- [x] **CHK-K02a** Material Master *Code columns store `NPD_Lookup.LookupCode` for every lookup-based value (display value stays in the name column)
+- [x] **CHK-K03** Duplicate Material Code / Description blocked on Initiator Submit and MIS Post to SAP (no silent overwrite)
 - [ ] **CHK-K04** Material Master creation failure logged and does not break NPD status
 - [ ] **CHK-K05** Admin Material Master list shows auto-populated records
 - [ ] **CHK-K06** Auto-populated record data matches submitted NPD item data
@@ -733,12 +756,12 @@ Use this table to sign off each phase only when all related checklist items are 
 | Phase 4 — Admin | CHK-F01–F36 | [ ] | |
 | Phase 5 — NPD Initiator | CHK-G01–G28, CHK-E09–E16 | [ ] | |
 | Phase 6 — Vertical Head | CHK-G29–G35 | [ ] | |
-| Phase 7 — MIS Coordinator | CHK-G36–G51, CHK-J01–J16 | [ ] | |
+| Phase 7 — MIS Coordinator | CHK-G36–G51, CHK-J01–J18 | [ ] | |
 | Phase 8 — MG Initiator | CHK-H01–H11 | [ ] | |
 | Phase 9 — MG Consultant | CHK-H12–H24 | [ ] | |
 | Phase 10 — Workflow | CHK-I01–I20 | [ ] | |
-| Phase 11 — SAP | CHK-J01–J16 | [ ] | |
-| Phase 12 — Material Master | CHK-K01–K10 | [ ] | |
+| Phase 11 — SAP | CHK-J01–J18 | [ ] | |
+| Phase 12 — Material Master | CHK-K01–K10, CHK-K02a | [ ] | |
 | Phase 13 — Reports | CHK-L01–L10 | [ ] | |
 | Phase 14 — Email | CHK-M01–M08 | [ ] | |
 | Phase 15 — Testing | CHK-N01–N26 | [ ] | |
@@ -805,6 +828,22 @@ Use this table to sign off each phase only when all related checklist items are 
 | 29 Sep 2026 | Item Details header bulk Delete (red) clears all lines when rows exist | CHK-G16c |
 | 29 Sep 2026 | MIS Item Details validation on Post/Approve; Status column not sortable; Current Approver in list search; centered empty dashes | CHK-G26f, CHK-G37c, CHK-B39o, CHK-B39p, CHK-G06b |
 | 29 Sep 2026 | MIS Rework/Reject/Post require Item Details + Profit Center; MG Description unique vs NPD_Lookup Title | CHK-G26g, CHK-G37d, CHK-H11a |
+| 01 Oct 2026 | Min. Qty/Box Qty digits-only InputText (SP Single Line of Text unchanged) | CHK-G16d |
+| 01 Oct 2026 | No leading spaces on text inputs; Rework→Draft save→Resubmit; Profit Center required * | CHK-G16e, CHK-G16f, CHK-G37e |
+| 01 Oct 2026 | Other Details after MIS action respect NPD_Request (no Brand Extension overwrite of cleared fields) | CHK-G37f |
+| 01 Oct 2026 | Consultant MG Outlook email links SafeLinks-safe via npdRoute (fix SitePages id error) | CHK-H12 |
+| 01 Oct 2026 | MG Initiator Submit: Code/Description uniqueness across request (empty Code OK) | CHK-H11b |
+| 01 Oct 2026 | Consultant MG actions require Code + block duplicates (not Complete-only) | CHK-H11c |
+| 01 Oct 2026 | Success toasts survive navigate via ui.flashMessage (MainComponent Toast) | CHK-H12 |
+| 01 Oct 2026 | Login syncs ApproversMaster into Pending/Rework NPD WorkFlowJSON (VH by brand; MIS and Consultant without brand) | CHK-D26 |
+| 01 Oct 2026 | New NPD / New MG always resets form when opened after View (no Cancel required) | CHK-D27 |
+| 01 Oct 2026 | Material Master Phase A requirements reviewed; checklist scoped to read-only list (no code yet) | CHK-F29a |
+| 01 Oct 2026 | Material Master Phase A live: Existing/New tabs, paged catalog fetch, filters, export | CHK-F29–F29e, CHK-F32, CHK-F34, CHK-F35, CHK-F36a |
+| 02 Oct 2026 | Material Master duplicate check on Submit / Post to SAP; New rows inserted on final Post to SAP | CHK-G26h, CHK-K01–K03 |
+| 02 Oct 2026 | Processing loader during MM validation; Submit item progress bar restored (Pending overlay fix) | CHK-G26i |
+| 03 Oct 2026 | Post to SAP sends each Item Details line to createZMatMast; Material Master and approval wait for SAP success; retries skip SAP=true | CHK-J02–J04, CHK-J10, CHK-J11, CHK-J15–J18 |
+| 05 Oct 2026 | Material Master New rows store LookupCode in *Code columns for all lookup-based fields | CHK-K02a |
+| 05 Oct 2026 | Audit Log Pending for MIS after VH action: match completed comments by Role only (same person can be VH then MIS) | CHK-G49a |
 
 ---
 

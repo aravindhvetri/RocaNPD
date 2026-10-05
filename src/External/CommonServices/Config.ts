@@ -11,6 +11,7 @@ export const ListNames = {
   MaterialGroupConfig: "NPD_MaterialGroupConfig",
   MaterialGroupRequests: "NPD_MaterialGroupRequests",
   MaterialGroupAuditLogs: "NPD_MaterialGroupAuditLogs",
+  MaterialMaster: "NPD_MaterialMaster",
 } as const;
 
 export const RocaMasterListNames = {
@@ -68,6 +69,16 @@ export const NpdValuationClasses = {
 
 /** MIS Other Details — Class Type is always this value. */
 export const NpdMisClassTypeDefault = "001";
+
+/**
+ * Material Master creation API (`createZMatMast`).
+ * Development URL is the client QAS endpoint. Production stays empty until the client provides it.
+ */
+export const SapMaterialMasterApi = {
+  DevelopmentUrl:
+    "https://qasqr.parrywarevendorportal.com/vendorcreation/zMatMast/createZMatMast",
+  ProductionUrl: "",
+} as const;
 
 /** Lookup Type Title used for Profit Center dropdown options. */
 export const NpdMisLookupTypes = {
@@ -144,8 +155,17 @@ export const MgRequestIdFormat = {
 } as const;
 
 export const NpdItemImport = {
-  MaxRows: 200,
   MultiValueSeparator: "; ",
+} as const;
+
+export const MaterialMasterItemTypes = {
+  Existing: "Old",
+  New: "New",
+} as const;
+
+export const MaterialMasterUi = {
+  PageSize: 50,
+  FetchPageSize: 50,
 } as const;
 
 export const ThemeColors = {
@@ -252,6 +272,8 @@ export const FieldNames = {
     Weight: "Weight",
     UOM: "UOM",
     MinQty: "MinQty",
+    /** Yes/No. True after this line has been accepted by the SAP Material Master API. */
+    SAP: "SAP",
     RequestGeneralInfo: "RequestGeneralInfo",
     RequestGeneralInfoId: "RequestGeneralInfoId",
   },
@@ -282,6 +304,44 @@ export const FieldNames = {
     Status: "Status",
     Initiator: "Initiator",
     InitiatorId: "InitiatorId",
+    /** Material Master catalog columns on the same list. */
+    MaterialCode: "MaterialCode",
+    MaterialType: "MaterialType",
+    MaterialDescription: "MaterialDescription",
+    BrandCode: "BrandCode",
+    Brand: "Brand",
+    ProductGroupMG2Code: "ProductGroupMG2Code",
+    ProductGroupMG2: "ProductGroupMG2",
+    ProductCategoryMG3Code: "ProductCategoryMG3Code",
+    ProductCategoryMG3: "ProductCategoryMG3",
+    ProductTypeMG4Code: "ProductTypeMG4Code",
+    ProductTypeMG4: "ProductTypeMG4",
+    ProductSourceMG5Code: "ProductSourceMG5Code",
+    ProductSourceMG5: "ProductSourceMG5",
+    ColorMG1ACode: "ColorMG1ACode",
+    ColorMG1A: "ColorMG1A",
+    ProductRangeMGP2ACode: "ProductRangeMGP2ACode",
+    ProductRangeMGP2A: "ProductRangeMGP2A",
+    ProductSubCategoryMGP3ACode: "ProductSubCategoryMGP3ACode",
+    ProductSubCategoryMGP3A: "ProductSubCategoryMGP3A",
+    MaterialGroupCode: "MaterialGroupCode",
+    MaterialGroup: "MaterialGroup",
+    ExtMaterialGroupCode: "ExtMaterialGroupCode",
+    ExtMaterialGroup: "ExtMaterialGroup",
+    ProductSegmentCode: "ProductSegmentCode",
+    ProductSegment: "ProductSegment",
+    TaxClassificationCode: "TaxClassificationCode",
+    TaxClassification: "TaxClassification",
+    ClassPCSCode: "ClassPCSCode",
+    ClassPCS: "ClassPCS",
+    HSNCode: "HSNCode",
+    Weight: "Weight",
+    UOMCode: "UOMCode",
+    UOM: "UOM",
+    MinQty: "MinQty",
+    ItemType: "ItemType",
+    NPDRequest: "NPDRequest",
+    NPDRequestId: "NPDRequestId",
   },
   MaterialGroupAuditLogs: {
     Title: "Title",
@@ -411,6 +471,8 @@ export const TextInputRules = {
   DisallowedCharacters: /[^a-zA-Z0-9\s]/,
   /** Strip helper — /g required for String.replace. */
   DisallowedCharactersGlobal: /[^a-zA-Z0-9\s]/g,
+  /** Digits only (e.g. Min. Qty/Box Qty stored as Single Line of Text). */
+  NonDigitsGlobal: /[^0-9]/g,
   SpecialCharactersNotAllowedSuffix: "cannot contain special characters.",
 } as const;
 
@@ -425,6 +487,8 @@ export const Config = {
   NpdRequestIdFormat,
   MgRequestIdFormat,
   NpdItemImport,
+  MaterialMasterItemTypes,
+  MaterialMasterUi,
   ThemeColors,
   NpdEmail,
   NpdApproverMail,
@@ -452,6 +516,7 @@ export const Config = {
   NpdMisPlantCodes,
   NpdValuationClasses,
   NpdMisClassTypeDefault,
+  SapMaterialMasterApi,
   NpdMisLookupTypes,
   NpdRocaGlobalCodeBrands,
 

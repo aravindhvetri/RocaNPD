@@ -147,7 +147,15 @@ export const fetchNpdLookupOptions = createAsyncThunk<
   {
     condition: (_, { getState }) => {
       const form = getState().npdForm;
+      // One in-flight request only.
       if (form.lookupOptionsStatus === "loading") {
+        return false;
+      }
+      // Keep a successful cache; allow retry when empty or after an error.
+      if (
+        form.lookupOptionsStatus === "idle" &&
+        Object.keys(form.lookupOptionsByType).length > 0
+      ) {
         return false;
       }
       return true;
@@ -156,7 +164,10 @@ export const fetchNpdLookupOptions = createAsyncThunk<
 );
 
 /**
- * Auto-populates MIS Other Details from PlantMaster / Brand Extension / valuation rules.
+ * Loads Other Details for the open request.
+ * Once values exist on NPD_Request (after MIS Rework / Reject / Post),
+ * list fields are the source of truth — including intentionally blank
+ * Material Extension. Brand / PlantMaster auto-fill only runs the first time.
  */
 export const populateNpdOtherDetails = createAsyncThunk<
   { otherDetails: INpdOtherDetails; profitCenterOptions: ISelectOption[] },
@@ -168,6 +179,19 @@ export const populateNpdOtherDetails = createAsyncThunk<
     const { brand, materialType, plantSource } = state.npdForm.generalInfo;
     const existing = state.npdForm.otherDetails;
     const siteUrl = state.app.siteUrl || undefined;
+    const hasSavedOtherDetails =
+      npdOtherDetailsService.otherDetailsHaveSavedValues(existing);
+
+    // Already persisted on NPD_Request — do not overwrite with Brand / PlantMaster defaults.
+    if (hasSavedOtherDetails) {
+      const profitCenterOptions = await npdOtherDetailsService
+        .fetchProfitCenterOptions()
+        .catch(() => []);
+      return {
+        otherDetails: { ...existing },
+        profitCenterOptions,
+      };
+    }
 
     const plantCode = npdOtherDetailsService.resolveMisPlantCode(
       materialType,
@@ -195,13 +219,10 @@ export const populateNpdOtherDetails = createAsyncThunk<
       materialExtension,
       existing: {
         profitCenter: existing.profitCenter,
-        materialExtension: existing.materialExtension || undefined,
+        materialExtension: existing.materialExtension,
       },
+      preserveEditableFields: false,
     });
-
-    if (!otherDetails.materialExtension && existing.materialExtension) {
-      otherDetails.materialExtension = existing.materialExtension;
-    }
 
     return { otherDetails, profitCenterOptions };
   } catch (error) {

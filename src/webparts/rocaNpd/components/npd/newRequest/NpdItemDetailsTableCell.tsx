@@ -1,6 +1,9 @@
 import * as React from "react";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
-import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
+import {
+  sanitizeAlphanumericTextInput,
+  sanitizeDigitsOnlyTextInput,
+} from "../../../../../External/CommonServices/textInputSanitize";
 import { InputNumber, InputText, MultiSelect } from "../../common/controls";
 import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
 import type {
@@ -27,6 +30,16 @@ function toNumberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function sanitizeTextFieldValue(
+  value: string,
+  textFilter: INpdItemDetailsFieldDef["textFilter"],
+): string {
+  if (textFilter === "digits") {
+    return sanitizeDigitsOnlyTextInput(value);
+  }
+  return sanitizeAlphanumericTextInput(value);
+}
+
 const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
   id,
   fieldDef,
@@ -35,7 +48,7 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
   onFieldChange,
   readOnly = false,
 }) => {
-  const { field, controlType, placeholder, maxLength } = fieldDef;
+  const { field, controlType, placeholder, maxLength, textFilter } = fieldDef;
   const controlClassName = styles.tableCellControl;
   const handleChange = React.useCallback(
     (value: NpdItemDetailFieldValue) => {
@@ -55,7 +68,7 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
         disabled={readOnly}
         className={controlClassName}
         onChange={(value) =>
-          handleChange(sanitizeAlphanumericTextInput(value))
+          handleChange(sanitizeTextFieldValue(value, textFilter))
         }
       />
     );

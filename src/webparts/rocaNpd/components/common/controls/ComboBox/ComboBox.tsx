@@ -1,6 +1,7 @@
 import * as React from "react";
 import { AutoComplete } from "primereact/autocomplete";
 import { getAppRootElement } from "../../appRootTarget";
+import { stripLeadingSpaces } from "../../../../../../External/CommonServices/textInputSanitize";
 import ControlField from "../ControlField/ControlField";
 import type { IComboBoxProps } from "./IComboBoxProps";
 import styles from "./ComboBox.module.scss";
@@ -57,8 +58,10 @@ const ComboBox: React.FC<IComboBoxProps> = ({
         },
       }}
       data-testid={testId}
-      completeMethod={(event) => onSearch(event.query)}
-      onChange={(event) => onChange(String(event.value ?? ""))}
+      completeMethod={(event) => onSearch(stripLeadingSpaces(event.query))}
+      onChange={(event) =>
+        onChange(stripLeadingSpaces(String(event.value ?? "")))
+      }
       onSelect={(event) =>
         onChange(String(event.value?.value ?? event.value?.label ?? ""))
       }

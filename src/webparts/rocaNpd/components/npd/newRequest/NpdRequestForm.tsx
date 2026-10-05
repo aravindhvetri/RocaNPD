@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
+import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
 import { useAppDispatch } from "../../../../../store/hooks";
 import {
   setNpdBrand,
@@ -129,8 +130,11 @@ const NpdRequestForm: React.FC = () => {
       <NpdRequestFormFooter
         mode={footerMode}
         isResubmit={
+          // Rework, or Draft saved after Rework (already has NPD Request ID).
           (npdForm.requestStatus || "").trim().toLowerCase() === "rework" ||
-          (npdForm.requestStatus || "").trim().toLowerCase() === "in rework"
+          (npdForm.requestStatus || "").trim().toLowerCase() === "in rework" ||
+          ((npdForm.requestStatus || "").trim().toLowerCase() === "draft" &&
+            isNpdRequestIdTitle(npdForm.requestTitle || ""))
         }
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}

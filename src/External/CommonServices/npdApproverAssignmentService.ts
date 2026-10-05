@@ -80,6 +80,23 @@ function roleIgnoresBrand(role: string): boolean {
   );
 }
 
+function collectNpdRoleEmailsIgnoringBrand(
+  rows: Record<string, unknown>[],
+  userEmailById: ReadonlyMap<number, string>,
+  role: string,
+): string[] {
+  const activeRows = rows.filter(
+    (row) =>
+      !isDeletedApproverRow(row) &&
+      rowMatchesNpdSystem(row) &&
+      rowMatchesRole(row, role),
+  );
+
+  return uniqueEmails(
+    activeRows.flatMap((row) => collectRowEmails(row, userEmailById)),
+  );
+}
+
 export async function fetchNpdApproverAssignmentRows(
   contextSiteUrl?: string,
 ): Promise<{
@@ -143,4 +160,26 @@ export function getEmailsForNpdWorkflowRole(
   return uniqueEmails(
     unbrandedRows.flatMap((row) => collectRowEmails(row, userEmailById)),
   );
+}
+
+/**
+ * Current ApproversMaster users for login-time WorkFlowJSON sync.
+ * Vertical Head stays brand-scoped. MIS Coordinator and Consultant ignore Brand.
+ * System filter stays New Product Development via the existing row matchers.
+ */
+export function getEmailsForNpdApproverSync(
+  rows: Record<string, unknown>[],
+  userEmailById: ReadonlyMap<number, string>,
+  role: string,
+  brand: string,
+): string[] {
+  const normalized = role.trim().toLowerCase();
+  if (
+    normalized === Config.Roles.MisCoordinator.toLowerCase() ||
+    normalized === Config.Roles.Consultant.toLowerCase()
+  ) {
+    return collectNpdRoleEmailsIgnoringBrand(rows, userEmailById, role);
+  }
+
+  return getEmailsForNpdWorkflowRole(rows, userEmailById, role, brand);
 }

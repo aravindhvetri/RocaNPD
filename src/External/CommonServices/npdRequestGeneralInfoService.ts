@@ -8,7 +8,10 @@ import type {
   NpdWorkflowAction,
 } from "./Interface";
 import { addNpdApproverComment, resolveApproverUserIds } from "./npdApproverCommentsService";
-import { saveNpdItemDetailsBatch } from "./npdItemDetailsService";
+import {
+  fetchNpdItemDetailsByRequestId,
+  saveNpdItemDetailsBatch,
+} from "./npdItemDetailsService";
 import { generateNextNpdRequestId, isNpdRequestIdTitle } from "./npdRequestIdService";
 import {
   sendNpdApprovalNotification,
@@ -24,6 +27,7 @@ import {
   buildNpdDraftWorkflowJson,
   getFirstPendingApproverRole,
   getPendingApproverEmails,
+  isMisCoordinatorWorkflowRole,
   parseWorkflowJson,
   resolveActorWorkflowRole,
   resolveRequestStatusAfterAction,
@@ -31,6 +35,8 @@ import {
   userCanActOnPendingWorkflow,
 } from "./npdWorkflowJsonService";
 import { canActOnPendingNpdStep } from "./permissionService";
+import { validateItemsAgainstMaterialMaster } from "./materialMasterService";
+import { postNpdItemsToSap } from "./sapMaterialMasterService";
 import {
   getActiveRecordCreatePayload,
   getActiveRecordFilters,
@@ -197,11 +203,9 @@ export function isDraftOrReworkStatus(status: string): boolean {
   );
 }
 
-function resolveSavedStatus(existingStatus?: string | null): string {
-  if (existingStatus && isDraftOrReworkStatus(existingStatus)) {
-    return existingStatus.trim();
-  }
-
+function resolveDraftSaveStatus(): string {
+  // Save Draft always stores Draft — including after VH/MIS Rework — so the
+  // request stays with the Initiator until they click Resubmit / Submit.
   return RequestStatus.Draft;
 }
 
@@ -300,7 +304,7 @@ export async function saveNpdGeneralInfoDraft(
     { enforceApprovers: false },
   );
   const workflowJson = stringifyWorkflowJson(workflowSteps);
-  const status = resolveSavedStatus(payload.existingStatus);
+  const status = resolveDraftSaveStatus();
   const title =
     payload.existingTitle && isNpdRequestIdTitle(payload.existingTitle)
       ? payload.existingTitle.trim()
@@ -325,6 +329,11 @@ export async function submitNpdRequest(
   initiatorComments?: string,
   initiatorUserId?: number,
 ): Promise<INpdRequestGeneralInfo> {
+  const materialMasterDuplicates = await validateItemsAgainstMaterialMaster(items);
+  if (materialMasterDuplicates.length) {
+    throw new Error(materialMasterDuplicates[0]);
+  }
+
   const workflowSteps = applySubmitWorkflowStatuses(
     await buildNpdDraftWorkflowJson(
       payload.brand.trim(),
@@ -349,13 +358,12 @@ export async function submitNpdRequest(
     initiatorUserId,
   );
 
-  const isRework =
-    (payload.existingStatus || "").trim().toLowerCase() === "rework" ||
-    (payload.existingStatus || "").trim().toLowerCase() === "in rework";
-  const auditAction = isRework ? "Resubmit" : "Initiated";
+  // Resubmit when the request already has an NPD Request ID (Rework or Draft-after-Rework).
+  const isResubmit = isNpdRequestIdTitle(payload.existingTitle || "");
+  const auditAction = isResubmit ? "Resubmit" : "Initiated";
   const auditComments =
     (initiatorComments || "").trim() ||
-    (isRework ? "Request resubmitted" : "Request initiated");
+    (isResubmit ? "Request resubmitted" : "Request initiated");
 
   try {
     const userIds = await resolveApproverUserIds(
@@ -382,7 +390,7 @@ export async function submitNpdRequest(
   try {
     await sendNpdApprovalNotification({
       request: saved,
-      action: isRework ? "Resubmitted" : "Submitted",
+      action: isResubmit ? "Resubmitted" : "Submitted",
       to: pendingEmails,
       includeActionButtons: shouldIncludeNpdEmailActions(pendingRole),
       siteUrl: contextSiteUrl,
@@ -464,6 +472,9 @@ export async function applyNpdWorkflowAction(params: {
     throw new Error("You do not have a pending approval action on this request.");
   }
 
+  const isMisPostToSap =
+    params.action === "Approve" && isMisCoordinatorWorkflowRole(actorRole);
+
   const actionStatus =
     params.action === "Approve"
       ? RequestStatus.Approved
@@ -481,6 +492,55 @@ export async function applyNpdWorkflowAction(params: {
     params.action,
     updatedSteps,
   );
+  const willBeFinalApproval =
+    params.action === "Approve" && !getFirstPendingApproverRole(updatedSteps);
+
+  // Block Post to SAP before any status / Material Master write when duplicates exist.
+  if (isMisPostToSap) {
+    const itemsForCheck =
+      params.items && params.items.length ? params.items : [];
+    if (!itemsForCheck.length) {
+      throw new Error("Item Details are required before posting to SAP.");
+    }
+    const materialMasterDuplicates = await validateItemsAgainstMaterialMaster(
+      itemsForCheck,
+      { excludeRequestId: params.requestId },
+    );
+    if (materialMasterDuplicates.length) {
+      throw new Error(materialMasterDuplicates[0]);
+    }
+  }
+
+  // Final MIS Post to SAP: save items, send each unposted line to SAP,
+  // then add only the successful lines to Material Master. Approve only if every line succeeds.
+  let itemsAlreadySaved = false;
+  if (isMisPostToSap && willBeFinalApproval) {
+    if (!params.items?.length) {
+      throw new Error("Item Details are required before posting to SAP.");
+    }
+    await saveNpdItemDetailsBatch(params.requestId, params.items);
+    itemsAlreadySaved = true;
+    const storedItems = await fetchNpdItemDetailsByRequestId(params.requestId);
+    const otherDetails = params.otherDetails ?? {
+      plantCode: String(request.PlantCode ?? "").trim(),
+      storageLocation: String(request.StorageLocation ?? "").trim(),
+      profitCenter: String(request.ProfitCenter ?? "").trim(),
+      mrpGroup: String(request.MRPGroup ?? "").trim(),
+      mrpController: String(request.MRPController ?? "").trim(),
+      valuationClass: String(request.ValuationClass ?? "").trim(),
+      classType: String(request.ClassType ?? "").trim() || "001",
+      materialExtension: String(request.MaterialExtension ?? "").trim(),
+    };
+    await postNpdItemsToSap({
+      requestId: params.requestId,
+      brand: request.Brand,
+      materialType: request.MaterialType,
+      plant: request.Plant,
+      otherDetails,
+      items: storedItems,
+      siteUrl: params.siteUrl,
+    });
+  }
 
   const updatePayload: Record<string, unknown> = {
     [FIELDS.Status]: headerStatus,
@@ -517,7 +577,7 @@ export async function applyNpdWorkflowAction(params: {
     }
   }
 
-  if (params.items) {
+  if (params.items && !itemsAlreadySaved) {
     try {
       await saveNpdItemDetailsBatch(params.requestId, params.items);
     } catch (itemsError) {

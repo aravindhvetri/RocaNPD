@@ -2,7 +2,7 @@ import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
-import { findDuplicateMaterialGroupDescription } from "../../../../../External/CommonServices/materialGroupValidation";
+import { findDuplicateMaterialGroupField } from "../../../../../External/CommonServices/materialGroupValidation";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
@@ -15,6 +15,7 @@ import {
   toggleConfigId,
   updateRowField,
 } from "../../../../../store/slices/materialGroupSlice";
+import { setFlashMessage } from "../../../../../store/slices/uiSlice";
 import {
   consultantActionMaterialGroupThunk,
   fetchMaterialGroupConfigsThunk,
@@ -25,7 +26,6 @@ import {
 import {
   showActionValidationToast,
   showErrorToast,
-  showSuccessToast,
   showWarningToast,
 } from "../../common/controls";
 import type {
@@ -124,22 +124,30 @@ export function useMaterialGroupFormController(
 
   const [approverRemarks, setApproverRemarks] = React.useState("");
 
+  // Create = blank form. Opening New after View must not keep the prior request.
+  const formResetAt = (location.state as { formResetAt?: number } | null)
+    ?.formResetAt;
+
   React.useEffect(() => {
     setApproverRemarks("");
-  }, [urlId]);
+  }, [formResetAt, urlId]);
 
   // Load configs on mount or navigation
   React.useEffect(() => {
     void dispatch(fetchMaterialGroupConfigsThunk());
   }, [dispatch, location.key, location.pathname]);
 
-  // Hydrate form from RequestsJSON whenever ?id= changes
   React.useEffect(() => {
-    if (!urlId) {
-      return;
+    if (urlId) {
+      const load = dispatch(fetchMaterialGroupRequestByIdThunk(urlId));
+      return () => {
+        load.abort();
+      };
     }
-    void dispatch(fetchMaterialGroupRequestByIdThunk(urlId));
-  }, [dispatch, urlId]);
+
+    dispatch(resetMaterialGroupForm());
+    return undefined;
+  }, [dispatch, formResetAt, urlId]);
 
   // Handle global errors
   React.useEffect(() => {
@@ -266,7 +274,8 @@ export function useMaterialGroupFormController(
             return false;
           }
 
-          if (isSubmitting && mode === "consultant-edit" && !row.code.trim()) {
+          // Initiator: Code optional. Consultant: Code mandatory on every action.
+          if (mode === "consultant-edit" && !row.code.trim()) {
             showWarningToast(
               toastRef,
               `Code is required for ${masterTitle}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
@@ -277,12 +286,13 @@ export function useMaterialGroupFormController(
         }
       }
 
-      const duplicateDescription = findDuplicateMaterialGroupDescription(
+      // Duplicate non-empty Code / Description blocked for Initiator Submit and all Consultant actions.
+      const duplicateField = findDuplicateMaterialGroupField(
         mgState.selectedConfigIds,
         mgState.entriesByConfigId,
       );
-      if (duplicateDescription) {
-        showWarningToast(toastRef, duplicateDescription, "Validation");
+      if (duplicateField) {
+        showWarningToast(toastRef, duplicateField, "Validation");
         return false;
       }
 
@@ -305,11 +315,20 @@ export function useMaterialGroupFormController(
     void dispatch(saveMaterialGroupDraftThunk())
       .unwrap()
       .then(() => {
-        showSuccessToast(toastRef, "Draft saved successfully.");
+        // Flash via MainComponent Toast — form Toast unmounts on navigate.
+        dispatch(
+          setFlashMessage({
+            severity: "success",
+            detail: "Draft saved successfully.",
+          }),
+        );
         dispatch(resetMaterialGroupForm());
-        navigate(buildNavHref(Config.Routes.MgDraftRework, searchParams.get(Config.NpdFormQuery.ViewAs)), {
-          state: { draftSaved: true },
-        });
+        navigate(
+          buildNavHref(
+            Config.Routes.MgDraftRework,
+            searchParams.get(Config.NpdFormQuery.ViewAs),
+          ),
+        );
       })
       .catch(() => {
         // Error toast is shown once via the mgState.error effect.
@@ -326,14 +345,20 @@ export function useMaterialGroupFormController(
     )
       .unwrap()
       .then((result) => {
-        showSuccessToast(
-          toastRef,
-          `Request ${result.requestId} submitted to Consultant successfully.`,
+        // Flash via MainComponent Toast — form Toast unmounts on navigate.
+        dispatch(
+          setFlashMessage({
+            severity: "success",
+            detail: `Request ${result.requestId} submitted to Consultant successfully.`,
+          }),
         );
         dispatch(resetMaterialGroupForm());
-        navigate(buildNavHref(Config.Routes.MgAll, searchParams.get(Config.NpdFormQuery.ViewAs)), {
-          state: { submitted: true },
-        });
+        navigate(
+          buildNavHref(
+            Config.Routes.MgAll,
+            searchParams.get(Config.NpdFormQuery.ViewAs),
+          ),
+        );
       })
       .catch(() => {
         // Error toast is shown once via the mgState.error effect.
@@ -344,39 +369,19 @@ export function useMaterialGroupFormController(
     (action: MaterialGroupConsultantActionType) => {
       const remarks = approverRemarks.trim();
 
-      if (action === "Completed") {
-        if (!validateEntries(true)) {
-          return;
-        }
+      // Complete / Rework / Reject: Code mandatory + no duplicate Code/Description.
+      if (!validateEntries(true)) {
+        return;
+      }
 
-        for (const configId of mgState.selectedConfigIds) {
-          const configItem = mgState.configs.find((c) => c.id === configId);
-          const masterTitle = configItem
-            ? configItem.title
-            : `Master (${configId})`;
-          const rows = mgState.entriesByConfigId[configId] || [];
-
-          for (let i = 0; i < rows.length; i++) {
-            if (!rows[i].code.trim()) {
-              showWarningToast(
-                toastRef,
-                `NPD Code is mandatory for ${masterTitle}${rows.length > 1 ? ` (Row ${i + 1})` : ""} before completing.`,
-                "Validation",
-              );
-              return;
-            }
-          }
-        }
-
-        if (!remarks) {
-          showActionValidationToast(
-            toastRef,
-            "Completed",
-            `Please enter ${approverRemarksLabel.toLowerCase()} before completing.`,
-            "Validation",
-          );
-          return;
-        }
+      if (action === "Completed" && !remarks) {
+        showActionValidationToast(
+          toastRef,
+          "Completed",
+          `Please enter ${approverRemarksLabel.toLowerCase()} before completing.`,
+          "Validation",
+        );
+        return;
       }
 
       if ((action === "Rework" || action === "Rejected") && !remarks) {
@@ -414,12 +419,14 @@ export function useMaterialGroupFormController(
               : action === "Rejected"
                 ? "Rejected"
                 : "Completed";
-          showSuccessToast(
-            toastRef,
-            `Request ${mgState.currentRequestId || ""} ${successLabel} successfully.`,
+          // Flash via MainComponent Toast — form Toast unmounts on navigate.
+          dispatch(
+            setFlashMessage({
+              severity: "success",
+              detail: `Request ${mgState.currentRequestId || ""} ${successLabel} successfully.`,
+            }),
           );
           dispatch(resetMaterialGroupForm());
-          // Navigate immediately once loading finishes (no artificial delay)
           const viewAs = searchParams.get(Config.NpdFormQuery.ViewAs);
           if (action === "Completed") {
             navigate(buildNavHref(Config.Routes.MgCompleted, viewAs));

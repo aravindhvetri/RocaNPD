@@ -12,8 +12,8 @@ import {
   validateRequiredImportHeaders,
 } from "./importService";
 import { getLookupOptionsByFieldName, lookupValuesMatch } from "./lookupOptionUtils";
+import { sanitizeDigitsOnlyTextInput } from "./textInputSanitize";
 
-const MAX_ROWS = Config.NpdItemImport.MaxRows;
 const ITEM_FIELDS = FieldNames.NpdItemDetails;
 
 interface IImportColumn {
@@ -24,6 +24,8 @@ interface IImportColumn {
   required: boolean;
   maxLength?: number;
   conditional?: "rocaGlobalCode";
+  /** Digits-only text columns (still stored as Single Line of Text). */
+  textFilter?: "digits";
 }
 
 const IMPORT_COLUMNS: IImportColumn[] = [
@@ -143,6 +145,7 @@ const IMPORT_COLUMNS: IImportColumn[] = [
     field: "minQtyBoxQty",
     controlType: "text",
     required: false,
+    textFilter: "digits",
   },
 ];
 
@@ -453,20 +456,10 @@ export async function parseNpdItemDetailsImportFile(
       .filter(Boolean),
   );
 
-  let dataRowCount = 0;
-
   for (let rowIndex = headerRowIndex + 1; rowIndex < dataRows.length; rowIndex++) {
     const row = dataRows[rowIndex];
     if (!row || !row.some((cell) => cell.trim())) {
       continue;
-    }
-
-    dataRowCount += 1;
-    if (dataRowCount > MAX_ROWS) {
-      errors.push(
-        `Import is limited to ${MAX_ROWS} Item Details records at once.`,
-      );
-      break;
     }
 
     const record = createEmptyRecord();
@@ -484,17 +477,21 @@ export async function parseNpdItemDetailsImportFile(
         (column.conditional !== "rocaGlobalCode" || requireRocaGlobalCode);
 
       if (column.controlType === "text") {
-        if (required && !raw) {
+        const textValue =
+          column.textFilter === "digits"
+            ? sanitizeDigitsOnlyTextInput(raw)
+            : raw;
+        if (required && !textValue) {
           errors.push(`Row ${excelRowNumber}: ${column.header} is required.`);
           return;
         }
-        if (column.maxLength && raw.length > column.maxLength) {
+        if (column.maxLength && textValue.length > column.maxLength) {
           errors.push(
             `Row ${excelRowNumber}: ${column.header} must be ${column.maxLength} characters or fewer.`,
           );
           return;
         }
-        (record[column.field] as string) = raw;
+        (record[column.field] as string) = textValue;
         return;
       }
 
