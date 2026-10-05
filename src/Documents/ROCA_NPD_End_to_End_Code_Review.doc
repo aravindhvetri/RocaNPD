@@ -4,248 +4,496 @@
 <head>
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>ROCA NPD — End-to-End Code Review Guide</title>
+<title>ROCA NPD — End-to-End Code Review Guide (Complete)</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
-  body { font-family: Calibri, Arial, sans-serif; color: #162C34; font-size: 11pt; line-height: 1.35; }
-  h1 { color: #1d4e56; font-size: 20pt; border-bottom: 2px solid #40919d; padding-bottom: 6px; }
-  h2 { color: #1d4e56; font-size: 14pt; margin-top: 18pt; }
-  h3 { color: #40919d; font-size: 12pt; }
-  .cover { text-align: center; margin: 24pt 0 28pt; }
-  .cover h1 { border: none; font-size: 28pt; margin-bottom: 4pt; }
-  .sub { color: #40919d; font-size: 16pt; font-weight: bold; }
-  .meta { color: #4B5563; font-size: 11pt; }
-  table { border-collapse: collapse; width: 100%; margin: 8pt 0 14pt; font-size: 10pt; }
-  th { background: #1d4e56; color: #fff; text-align: left; padding: 6pt 8pt; }
-  td { border: 1px solid #c5d5d8; padding: 6pt 8pt; vertical-align: top; }
+  body { font-family: Calibri, Arial, sans-serif; color: #162C34; font-size: 10.5pt; line-height: 1.35; }
+  h1 { color: #1d4e56; font-size: 18pt; border-bottom: 2px solid #40919d; padding-bottom: 6px; page-break-before: always; }
+  h1.first { page-break-before: avoid; }
+  h2 { color: #1d4e56; font-size: 13pt; margin-top: 16pt; }
+  h3 { color: #40919d; font-size: 11.5pt; margin-top: 12pt; }
+  .cover { text-align: center; margin: 20pt 0 24pt; }
+  .cover h1 { border: none; font-size: 26pt; page-break-before: avoid; }
+  .sub { color: #40919d; font-size: 14pt; font-weight: bold; }
+  .meta { color: #4B5563; font-size: 10.5pt; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 12pt; font-size: 9pt; }
+  th { background: #1d4e56; color: #fff; text-align: left; padding: 4pt 5pt; }
+  td { border: 1px solid #c5d5d8; padding: 4pt 5pt; vertical-align: top; }
   tr:nth-child(even) td { background: #E8F4F6; }
-  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
-  pre { background: #f4f7f8; border-left: 3px solid #40919d; padding: 10pt; white-space: pre-wrap; }
-  ul { margin-top: 4pt; }
-  li { margin-bottom: 3pt; }
-  .badge-done { background: #e6f4ea; color: #137333; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-  .badge-new { background: #e8f0fe; color: #1a73e8; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 8.5pt; }
+  pre { background: #f4f7f8; border-left: 3px solid #40919d; padding: 8pt; white-space: pre-wrap; }
+  ul, ol { margin-top: 4pt; }
+  li { margin-bottom: 2pt; }
+  .note { background: #E8F4F6; border-left: 3px solid #40919d; padding: 8pt 10pt; margin: 8pt 0; }
 </style>
 </head>
 <body>
 
 <div class="cover">
-  <h1>ROCA NPD</h1>
-  <div class="sub">End-to-End Code Review Guide</div>
-  <p class="meta">New Product Development Request Tracker &nbsp;|&nbsp; Updated 25 September 2026 (Sprint 2 Complete) &nbsp;|&nbsp; SPFx + React + Redux + SharePoint</p>
+  <h1 class="first">ROCA NPD</h1>
+  <div class="sub">End-to-End Code Review Guide — Complete Implementation</div>
+  <p class="meta">Project start → Sprint 1 → Sprint 2 → Material Master / SAP Post to SAP / Audit Log &nbsp;|&nbsp; 05 October 2026</p>
+  <p class="meta">Covers every implemented <code>.tsx</code> / <code>.ts</code> module under <code>src/webparts</code>, <code>src/store</code>, and <code>src/External</code></p>
 </div>
 
-<p>This document explains the complete ROCA NPD application for comprehensive code review: what each component is for, how it works, where data is fetched, which SharePoint lists own that data, how components connect through Redux and services, and the full request lifecycle from login to approval. It incorporates all Sprint 2 implementations, including the Vertical Head approval chain, MIS Coordinator actions, Other Details dynamic visibility, the dedicated <code>NPDApproverMail</code> webpart, the complete New Material Group module with Consultant SAP configuration flow, automatic lookup insertion, real-time lookup auto-refresh on navigation, dynamic <code>ActionVia</code> audit logging, empty Title column standards, and top SharePoint header layout accommodations.</p>
+<div class="note">
+  <b>Reading convention.</b> <code>.tsx</code> = React presentation and composition (what the user sees).
+  Companion <code>.ts</code> / hooks = orchestration, validation, Redux dispatch, service calls.
+  Feature screens must not import <code>primereact/*</code> for form controls — they use <code>components/common/controls</code>.
+  JSX never calls SharePoint or SAP directly — only thunks → CommonServices → <code>SPServices</code> / SAP helpers.
+</div>
 
-<h1>1. What this application is</h1>
-<p>ROCA NPD is an enterprise SharePoint Framework (SPFx) client-side application suite consisting of two web parts: the main workbench (<b>NPD REQUESTS — New Product Development</b>) and the dedicated mail action receiver (<b>NPD APPROVER MAIL — Approval &amp; Action Handler</b>). Users create New Product Development requests and Material Group requests, save drafts, submit them into sequential approval workflows, and review requests across role-scoped dashboard screens. Administration of Lookup Types, Lookups, Workflow Configurations, and Brand Material Extensions lives in the same application.</p>
+<h1 class="first">0. Table of contents</h1>
+<ol>
+  <li>Application overview</li>
+  <li>Architecture &amp; data flow</li>
+  <li>Web part bootstrap (RocaNpd + NpdApproverMail)</li>
+  <li>SharePoint lists, ROCA masters, SAP API, Config / Interface</li>
+  <li>Redux store — every slice and thunk</li>
+  <li>CommonServices — every service file</li>
+  <li>Common UI controls, master panels, hooks, import/export</li>
+  <li>Layout &amp; navigation — every component</li>
+  <li>Routing &amp; protection</li>
+  <li>NPD Request module — every .tsx / .ts</li>
+  <li>Material Group module — every .tsx / .ts</li>
+  <li>Administration — every master</li>
+  <li>NPDApproverMail components</li>
+  <li>End-to-end lifecycle flows</li>
+  <li>Code review checklist</li>
+</ol>
+
+<h1>1. Application overview</h1>
+<p>ROCA NPD is an enterprise SharePoint Framework (SPFx) client-side suite:</p>
 <ul>
-  <li><b>NPD Request Lifecycle:</b> Initiator Create / Save Draft / Submit → Vertical Head Approve / Rework / Reject → MIS Coordinator Other Details / Post to SAP / Approve.</li>
-  <li><b>Material Group Lifecycle:</b> Initiator Category Selection / Multi-row Entry / Draft / Submit → Vertical Head Approve / Rework / Reject → Consultant SAP Configuration Note / Complete Request → Automatic creation of active entries in SharePoint <code>NPD_Lookup</code> list.</li>
-  <li><b>Dedicated Mail Approval:</b> <code>NPDApproverMail</code> webpart processes actions directly from Outlook emails, featuring a centered dual concentric ring loader (inner rotating continuously, outer stationary), top-positioned status banners, token validation, duplicate action prevention, and <code>ActionVia = "Mail"</code> audit logging.</li>
-  <li><b>Audit Logging Standard:</b> Dynamic <code>ActionVia</code> tracking (<b>Mail</b> vs <b>System</b>) across both <code>NPD_ApproversComments</code> and <code>NPD_MaterialGroupAuditLogs</code>, displaying formatted date and time without hardcoding fallbacks.</li>
-  <li><b>Title Column Standard:</b> <code>Title</code> column is strictly left empty for all list additions and drafts across <code>NPD_Request</code>, <code>NPD_ApproversComments</code>, and <code>NPD_MaterialGroupAuditLogs</code>, preserving unique Request ID generation logic.</li>
-  <li><b>Lookup Auto-Refresh on Navigation:</b> Navigation to components automatically re-fetches fresh lookup and brand options without requiring browser hard reloads.</li>
-  <li><b>Layout &amp; Chrome Integration:</b> SharePoint default suite bar (profile, settings, app launcher) remains visible and accessible, with responsive height adjustments preserving clean UI positioning.</li>
+  <li><b>RocaNpd</b> — main workbench: NPD requests, Material Group requests, Admin masters, Material Master.</li>
+  <li><b>NpdApproverMail</b> — Outlook / SafeLinks action page for Approve / Rework / Reject with <code>ActionVia = Mail</code>.</li>
 </ul>
+<p><b>NPD:</b> Initiator create → Draft / Submit (Material Master duplicate validation + progress) → Vertical Head Approve / Rework / Reject →
+MIS Other Details → Post to SAP (<code>createZMatMast</code>, one call per Item Details line) → set <code>NPD_ItemDetails.SAP</code> → insert
+<code>NPD_MaterialMaster</code> (<code>ItemType=New</code>, display + LookupCode columns) → Approve only when all lines succeed.</p>
+<p><b>Material Group:</b> Category cards → grids → Draft / Submit → VH → Consultant Complete → auto-insert <code>NPD_Lookup</code> (<code>LookupCode = Code</code>).</p>
 
-<h1>2. Technology stack</h1>
+<h1>2. Architecture &amp; data flow</h1>
 <table>
-  <tr><th>Layer</th><th>Choice</th><th>Where it lives</th></tr>
-  <tr><td>Host</td><td>SharePoint Online + SPFx 1.23.2</td><td>src/webparts/rocaNpd/RocaNpdWebPart.ts &amp; src/webparts/npdApproverMail/NpdApproverMailWebPart.ts</td></tr>
-  <tr><td>UI</td><td>React 17 + PrimeReact 10, wrapped</td><td>components/common/controls/</td></tr>
-  <tr><td>State</td><td>Redux Toolkit</td><td>src/store/ (slices &amp; thunks)</td></tr>
-  <tr><td>SharePoint API</td><td>PnPjs v4 (spfi + SPFx)</td><td>External/CommonServices/SPServices.ts</td></tr>
-  <tr><td>Routing</td><td>react-router-dom HashRouter</td><td>#/npd/..., #/mg/..., #/admin/...</td></tr>
-  <tr><td>Styling</td><td>SCSS modules + theme.scss</td><td>External/CommonServices/theme.scss</td></tr>
-  <tr><td>Standards</td><td>Mandatory MD docs</td><td>src/Documents/</td></tr>
+  <tr><th>Layer</th><th>Choice</th><th>Location</th></tr>
+  <tr><td>Host</td><td>SPFx 1.23.2 / SharePoint Online</td><td><code>RocaNpdWebPart.ts</code>, <code>NpdApproverMailWebPart.ts</code></td></tr>
+  <tr><td>UI</td><td>React 17 + PrimeReact 10 (wrapped)</td><td><code>components/common/controls/</code></td></tr>
+  <tr><td>State</td><td>Redux Toolkit</td><td><code>src/store/</code></td></tr>
+  <tr><td>SharePoint</td><td>PnPjs v4 <code>spfi</code> + SPFx</td><td><code>SPServices.ts</code></td></tr>
+  <tr><td>SAP</td><td>REST <code>createZMatMast</code></td><td><code>sapMaterialMaster*.ts</code></td></tr>
+  <tr><td>Routing</td><td>HashRouter</td><td><code>AppRoutes.tsx</code></td></tr>
+  <tr><td>Styles</td><td>SCSS modules + theme</td><td><code>theme.scss</code>, <code>*.module.scss</code></td></tr>
 </table>
-<p>Feature screens must not import <code>primereact/*</code> directly; they use the common wrappers in <code>controls</code>. Components do not call SharePoint directly; they dispatch Redux thunks, thunks invoke business services, and services interact with SharePoint through <code>SPServices</code>.</p>
+<pre>WebPart.onInit → loadApplicationStyles
+WebPart.render → RocaNpd / NpdApproverMail
+  → setupSP(spfi SPFx) + setupSpfxContext
+  → Provider(store)
+      MainComponent → initializeApp → AppShell → AppRoutes → feature screens
+        → dispatch(thunk) → CommonServices → SPServices / SAP fetch
+        → slice update → re-render</pre>
 
-<h1>3. How the application starts</h1>
-<p>Bootstrap is deterministic and unified. Application initialization does not re-instantiate PnP across components.</p>
-<pre>RocaNpdWebPart.onInit / NpdApproverMailWebPart.onInit
-  → loadApplicationStyles (PrimeReact theme + fonts + typography)
-render
-  → React.createElement(RocaNpd / NpdApproverMail, { context })
-Component constructor
-  → spfi().using(SPFx(context))
-  → setupSP(sp) and setupSpfxContext(context)
-  → &lt;Provider store&gt; → MainComponent / MailAppRoot
-MainComponent
-  → dispatch(initializeApp(spfxContext))
-  → HashRouter → AppShell (Header + SideNavigation) → AppRoutes</pre>
-<p><code>initializeApp</code> (src/store/thunks/appThunks.ts) writes user identity into <code>appSlice</code> (display name, email, login name, userId, site URL), then executes <code>resolveUserAccess</code> in <code>roleService.ts</code>:</p>
-<ul>
-  <li>Adds Admin role if the user belongs to the NPD SharePoint group “Admins”.</li>
-  <li>Queries ROCA master site <code>ApproversMaster</code> (expanding System, Role, Brand, Users).</li>
-  <li>Matches the current user by email (using <code>normalizeEmail</code>) without guessing or filtering person fields via OData.</li>
-  <li>Aggregates all matching roles into an access union (Initiator, Vertical Head, MIS Coordinator, Consultant) alongside brand permissions.</li>
-  <li>Stores results in <code>appSlice.assignedRoles</code>, <code>mappedBrands</code>, <code>npdInitiatorBrands</code>, <code>npdVerticalHeadBrands</code>, and <code>mgRoles</code>.</li>
-</ul>
-
-<h1>4. Layered architecture &amp; Data flow</h1>
-<pre>Screen / Layout Component
-        ↓  dispatch(thunk) / useAppSelector(selector)
-Redux Thunk (src/store/thunks)
-        ↓  calls business logic
-Service Layer (src/External/CommonServices)
-        ↓  queries PnP via SPServices / Web([sp.web, rocaSiteUrl])
-SharePoint List Items (NPD_Request, NPD_ItemDetails, NPD_ApproversComments, NPD_MaterialGroupRequests, NPD_Lookup)
-        ↓  DTO mapping
-Slice extraReducer updates Redux Store State
-        ↓
-Screen re-renders reactively</pre>
-
-<h1>5. Folder map (what lives where)</h1>
+<h1>3. Web part bootstrap</h1>
+<h2>3.1 RocaNpd</h2>
 <table>
-  <tr><th>Path</th><th>Responsibility</th></tr>
-  <tr><td>src/webparts/rocaNpd/</td><td>Main NPD webpart entry, styling, React root</td></tr>
-  <tr><td>src/webparts/npdApproverMail/</td><td>Dedicated mail approval webpart (NPDApproverMail)</td></tr>
-  <tr><td>.../components/layout/</td><td>AppShell, Header, SideNavigation, Compact navigation, RoleIndicator</td></tr>
-  <tr><td>.../components/routes/</td><td>AppRoutes, ProtectedRoute, routeDefinitions, Unauthorized</td></tr>
-  <tr><td>.../components/npd/newRequest/</td><td>NPD Request form (General Info, Item Details, Other Details, Footer)</td></tr>
-  <tr><td>.../components/npd/requestList/</td><td>All Requests, Approved Requests, Workflow Status dialog</td></tr>
-  <tr><td>.../components/npd/draftRework/</td><td>Draft / ReWork and Pending Approval request lists</td></tr>
-  <tr><td>.../components/materialGroup/newRequest/</td><td>Material Group Request Form, Category selection cards, dynamic grids, Audit log</td></tr>
-  <tr><td>.../components/materialGroup/dashboard/</td><td>Material Group dashboards (All, Pending, Draft/Rework, Completed)</td></tr>
-  <tr><td>.../components/admin/</td><td>Lookup Type, Lookup, Workflow Configuration, Brand Material Extension</td></tr>
-  <tr><td>.../components/common/controls/</td><td>PrimeReact wrappers (DataTable, MultiSelect, Dialog, Loader, Toast)</td></tr>
-  <tr><td>src/store/</td><td>Redux store, slices, typed hooks, async thunks</td></tr>
-  <tr><td>src/External/CommonServices/</td><td>Configuration, interfaces, SharePoint PnP services, business logic</td></tr>
-  <tr><td>src/Documents/</td><td>Architecture, standards, checklists, Sprint test cases</td></tr>
-</table>
-
-<h1>6. Redux store architecture</h1>
-<table>
-  <tr><th>Slice</th><th>Holds</th><th>Primary Thunks</th></tr>
-  <tr><td>appSlice</td><td>User identity, roles, assigned brands, init state</td><td>initializeApp</td></tr>
-  <tr><td>uiSlice</td><td>Navigation toggle, layout state</td><td>layout actions</td></tr>
-  <tr><td>adminSlice</td><td>Lookup types, lookups, workflow configs, brand extensions</td><td>lookupThunks, lookupTypeThunks, workflowConfigThunks</td></tr>
-  <tr><td>npdFormSlice</td><td>Active NPD request: general info, item rows, other details, lookup options</td><td>npdFormThunks (hydrate, submit, save draft, fetch lookups)</td></tr>
-  <tr><td>npdRequestSlice</td><td>NPD request dashboard lists (All, Pending, Draft/Rework, Approved)</td><td>fetchNpdDashboardList, fetchNpdPendingList, fetchNpdDraftReworkList</td></tr>
-  <tr><td>materialGroupSlice</td><td>Active Material Group request: categories, rows, configs, drafts</td><td>materialGroupThunks (fetchConfigs, saveDraft, submit, consultantAction)</td></tr>
-</table>
-
-<h1>7. SharePoint Lists and Data Storage</h1>
-<table>
-  <tr><th>List Name</th><th>Site</th><th>Usage</th><th>Special Standards</th></tr>
-  <tr><td>NPD_Request</td><td>NPD Site</td><td>NPD header details, WorkFlowJSON, Status, Request ID</td><td>Title left empty on Add/Draft; Request ID generated in RequestId column</td></tr>
-  <tr><td>NPD_ItemDetails</td><td>NPD Site</td><td>Line items linked by RequestGeneralInfoId</td><td>Batch inserted/updated/deleted</td></tr>
-  <tr><td>NPD_ApproversComments</td><td>NPD Site</td><td>Approval audit trail for NPD requests</td><td>ActionVia = "System" | "Mail"; ActionOn stores date &amp; time; Title left empty</td></tr>
-  <tr><td>NPD_MaterialGroupRequests</td><td>NPD Site</td><td>Material Group requests and category JSON data</td><td>Title left empty on Add/Draft; Request ID generated in RequestId column</td></tr>
-  <tr><td>NPD_MaterialGroupAuditLogs</td><td>NPD Site</td><td>Approval audit trail for Material Group requests</td><td>ActionVia = "System" | "Mail"; ActionOn stores date &amp; time; Title left empty</td></tr>
-  <tr><td>NPD_MaterialGroupConfigs</td><td>NPD Site</td><td>Master category configurations (MG2, MG3, MG4, etc.)</td><td>Defines dynamic fields and column layouts</td></tr>
-  <tr><td>NPD_Lookup</td><td>NPD Site</td><td>Lookup options for Item Details and Admin lookups</td><td>Automatically populated on Consultant Material Group completion; Title = Name</td></tr>
-  <tr><td>NPD_LookupType</td><td>NPD Site</td><td>Lookup types categorizing lookup items</td><td>Admin master and category parent</td></tr>
-  <tr><td>NPD_WorkflowConfig</td><td>NPD Site</td><td>Sequential approval chains (Initiator → VH → MIS / Consultant)</td><td>Role progression master</td></tr>
-  <tr><td>NPD_BrandMaterialExtensionMaster</td><td>NPD Site</td><td>Brand to plant extension mappings</td><td>Auto-populates Material Extension in MIS Other Details</td></tr>
-  <tr><td>ApproversMaster</td><td>ROCA Site</td><td>Enterprise role assignments by brand and system</td><td>Email matching, enterprise scope union</td></tr>
-  <tr><td>PlantMaster</td><td>ROCA Site</td><td>Plant/Source codes and plant details</td><td>Auto-populates Plant Code in Other Details</td></tr>
+  <tr><th>File</th><th>Kind</th><th>What it implements</th><th>Uses / used by</th></tr>
+  <tr>
+    <td><code>src/webparts/rocaNpd/RocaNpdWebPart.ts</code></td>
+    <td>.ts SPFx</td>
+    <td><code>onInit</code> loads application styles; <code>render</code> mounts React; property pane; <code>lockWebPartViewport</code></td>
+    <td>Creates <code>RocaNpd.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>components/RocaNpd.tsx</code></td>
+    <td>.tsx class root</td>
+    <td>Builds <code>SPFI</code> with SPFx context; <code>setupSP</code> + <code>setupSpfxContext</code>; wraps children in Redux <code>Provider</code></td>
+    <td>RocaNpdWebPart → MainComponent</td>
+  </tr>
+  <tr>
+    <td><code>components/IRocaNpdProps.ts</code></td>
+    <td>.ts props</td>
+    <td>description, theme, Teams flags, userDisplayName, context</td>
+    <td>RocaNpd.tsx</td>
+  </tr>
+  <tr>
+    <td><code>components/MainComponent.tsx</code></td>
+    <td>.tsx</td>
+    <td>Restores email <code>npdRoute</code> query to hash (SafeLinks); dispatches <code>initializeApp</code>; flash toasts; global <code>LoaderOverlay</code>; <code>HashRouter</code> → AppShell → AppRoutes; chrome lock; <code>injectRocaPrimeOverrides</code></td>
+    <td>RocaNpd.tsx</td>
+  </tr>
+  <tr>
+    <td><code>components/IMainComponentProps.ts</code></td>
+    <td>.ts props</td>
+    <td>spfxContext, sp</td>
+    <td>MainComponent</td>
+  </tr>
+  <tr>
+    <td><code>loc/mystrings.d.ts</code></td>
+    <td>.ts</td>
+    <td>Localization typings for web part strings</td>
+    <td>RocaNpdWebPart</td>
+  </tr>
 </table>
 
-<h1>8. Vertical Head — Approve, Reject, and Rework</h1>
-<p>The Vertical Head (VH) approval flow is implemented end-to-end both from the application workbench and via Outlook email notifications.</p>
-<ul>
-  <li><b>Pending Queue:</b> VH navigates to <code>/npd/pending</code>. Requests are filtered strictly to brands mapped to the user in <code>ApproversMaster</code> for System = New Product Development and Role = Vertical Head.</li>
-  <li><b>Form Action Mode:</b> Clicking Edit opens <code>/npd/new?id={Id}&amp;mode=edit&amp;from=pending</code>. General Information and Item Details are disabled (read-only). Footer mode resolves to Vertical Head actions: <b>Cancel / Back</b>, <b>Rework</b>, <b>Reject</b>, <b>Approve</b>.</li>
-  <li><b>Remarks Validation:</b> Approver remarks are optional for Approve, but strictly mandatory for Rework and Reject (validated via <code>validateApproverRemarks</code> with immediate toast alerts).</li>
-  <li><b>Approve Action:</b> Updates <code>WorkFlowJSON</code> step for Vertical Head to <code>Status = "Approved"</code> with comments and timestamp. Advances pending role to <code>MIS Coordinator</code>. Header <code>Status</code> remains <code>Pending</code>. Sends notification email to MIS Coordinator.</li>
-  <li><b>Rework Action:</b> Updates <code>WorkFlowJSON</code> step to <code>Status = "Rework"</code>, sets header <code>Status = "Rework"</code>, and routes request back to Initiator's Draft / ReWork queue (<code>/npd/draft-rework</code>).</li>
-  <li><b>Reject Action:</b> Updates <code>WorkFlowJSON</code> step to <code>Status = "Rejected"</code>, sets header <code>Status = "Rejected"</code>, and terminates workflow.</li>
-  <li><b>Audit Logging:</b> Saves a new record to <code>NPD_ApproversComments</code> with <code>ApproverRole = "Vertical Head"</code>, <code>ActionVia = "System"</code> (or <code>"Mail"</code> if performed via email), <code>ActionOn</code> with full ISO timestamp (date + time), and <code>Title = ""</code>.</li>
-</ul>
-
-<h1>9. MIS Coordinator — Other Details &amp; Post to SAP</h1>
-<p>The MIS Coordinator processes requests after Vertical Head approval, managing SAP master parameters and final approval.</p>
-<ul>
-  <li><b>Queue &amp; Brand Scope:</b> MIS Coordinator sees all requests pending at the MIS Coordinator step enterprise-wide (not brand-scoped, and not limited to the specific email in the JSON).</li>
-  <li><b>Other Details Visibility Rule:</b>
-    <ul>
-      <li><b>Before Approved / Post to SAP:</b> The Other Details section is visible <b>ONLY to the MIS Coordinator</b> (hidden from Initiator and Vertical Head).</li>
-      <li><b>After Approved / Post to SAP:</b> The Other Details section becomes visible to <b>EVERYONE</b> (Initiator, Vertical Head, and MIS Coordinator) in read-only view.</li>
-    </ul>
-  </li>
-  <li><b>Field Auto-Population:</b>
-    <ul>
-      <li><b>Plant Code:</b> Automatically looked up from <code>PlantMaster</code> based on selected Material Type and Plant / Source.</li>
-      <li><b>Profit Center:</b> Dropdown options dynamically loaded from active lookups (<code>NPD_Lookup</code>) via <code>fetchActiveLookups</code>.</li>
-      <li><b>Material Extension:</b> Auto-populated from <code>NPD_BrandMaterialExtensionMaster</code> for the request's Brand.</li>
-    </ul>
-  </li>
-  <li><b>Post to SAP / Approve:</b> MIS Coordinator verifies required SAP fields, enters remarks, and executes Post to SAP. The action updates <code>WorkFlowJSON</code> to Approved, transitions header <code>Status</code> to <b>Approved</b>, records audit log entry with <code>ActionVia = "System"</code> and empty Title, and moves request to <code>/npd/approved</code>.</li>
-  <li><b>Rework / Reject:</b> Requires mandatory remarks, updating <code>WorkFlowJSON</code> and header status accordingly with audit log recording.</li>
-</ul>
-
-<h1>10. Dedicated NPDApproverMail Webpart</h1>
-<p>The <code>NPDApproverMail</code> webpart provides a standalone, dedicated interface for handling approver actions clicked directly from Outlook emails.</p>
-<ul>
-  <li><b>Parameter Ingestion:</b> Reads query parameters: <code>requestId</code>, <code>action</code> (Approve, Rework, Reject), <code>token</code>, <code>approverEmail</code>, and <code>system</code>.</li>
-  <li><b>Two-Ring Concentric Centered Loader:</b>
-    <ul>
-      <li>Positioned precisely at the <b>center of the viewport</b>.</li>
-      <li>Features two visible concentric circular rings: the <b>inner circular ring rotates continuously</b>, while the <b>outer circular ring remains stationary</b>.</li>
-      <li>Both rings are concurrently visible throughout processing.</li>
-    </ul>
-  </li>
-  <li><b>Top-Positioned Alerts:</b> Normal success confirmation banners and already-submitted / already-acted alerts are positioned at the <b>top of the page</b>.</li>
-  <li><b>Action Execution:</b> Validates token against <code>NPD_Request</code>. Executes workflow transition. Saves audit log to <code>NPD_ApproversComments</code> with <b><code>ActionVia = "Mail"</code></b>, complete date and time in <code>ActionOn</code>, and empty <code>Title</code>.</li>
-  <li><b>Duplicate Action Prevention:</b> Re-clicking an email link after the step has already been processed immediately displays the top-level 'Already Submitted' informational banner without modifying list data.</li>
-</ul>
-
-<h1>11. New Material Group Module &amp; Consultant Flow</h1>
-<p>The Material Group module is fully implemented for defining, submitting, approving, and configuring new material groups.</p>
-<ul>
-  <li><b>Master Category Cards:</b> Renders available categories (MG2 Product Group, MG3 Product Sub Group, MG4 Finish, MG5 Category, etc.) configured in <code>NPD_MaterialGroupConfigs</code>.</li>
-  <li><b>Dynamic Table Grids:</b> Selecting categories dynamically renders input tables. Users can Add Row and Remove Row with validations for required Code, Description, and duplicate codes within categories.</li>
-  <li><b>Save Draft &amp; Submit:</b>
-    <ul>
-      <li><b>Save Draft:</b> Writes partial entries to <code>NPD_MaterialGroupRequests</code> with <code>Status = "Draft"</code> and <code>Title = ""</code>. Appears in <code>/mg/draft-rework</code>.</li>
-      <li><b>Submit Request:</b> Generates unique Request ID (MG-YYYY-####), writes request with <code>Status = "Pending"</code>, <code>Title = ""</code>, routes to Vertical Head, and sends notification email.</li>
-    </ul>
-  </li>
-  <li><b>Vertical Head Flow:</b> MG Vertical Head reviews request in <code>/mg/new?id={Id}&amp;mode=edit&amp;from=pending</code>. Category entries are read-only. VH can Approve (routes to Consultant), Rework (returns to Initiator), or Reject. Writes audit log to <code>NPD_MaterialGroupAuditLogs</code> with <code>ActionVia = "System"</code> and empty Title.</li>
-  <li><b>Consultant SAP Configuration Flow:</b>
-    <ul>
-      <li>Consultant reviews pending requests at <code>/mg/pending</code>. Form renders dedicated <b>Consultant Remarks / SAP Configuration Note</b> panel.</li>
-      <li>Consultant enters configuration notes and clicks Complete Request.</li>
-      <li><b>Automatic Insertion into NPD_Lookup:</b> System automatically creates active records in the SharePoint <code>NPD_Lookup</code> list for every entry in the completed request, setting <code>Title = Description</code>, <code>LookupCode = Code</code>, <code>LookupTypeId = Category Id</code>, and <code>IsDeleted = "No"</code>.</li>
-      <li>Status updates to <b>Completed</b>. Request moves to Completed Requests dashboard (<code>/mg/completed</code>).</li>
-    </ul>
-  </li>
-  <li><b>Material Group Audit Log:</b> <code>MaterialGroupAuditLogTable</code> displays the complete audit history, including <code>ActionVia</code> ("System" or "Mail") and formatted date + time.</li>
-</ul>
-
-<h1>12. Lookup Auto-Refresh on Component Navigation</h1>
-<p>To ensure that newly configured Material Groups and lookups are immediately available across the application without requiring a browser hard refresh (Ctrl+F5):</p>
-<ul>
-  <li><b>Root Cause Addressed:</b> The Redux thunk <code>fetchNpdLookupOptions</code> previously contained a condition checking <code>Object.keys(form.lookupOptionsByType).length === 0</code>. After the initial page load, this condition returned false, aborting all subsequent fetch dispatches.</li>
-  <li><b>Condition Fix:</b> Updated the thunk condition in <code>src/store/thunks/npdFormThunks.ts</code> to return <code>true</code> (skipping only when a request is currently in-flight with <code>status === "loading"</code>).</li>
-  <li><b>Navigation Trigger:</b> In <code>useNpdRequestFormController.ts</code>, <code>useLocation()</code> is integrated with <code>location.key</code> and <code>location.pathname</code> in the <code>useEffect</code> dependencies. Navigating to New NPD Request (<code>/npd/new</code>) immediately triggers <code>dispatch(fetchNpdLookupOptions())</code>.</li>
-  <li><b>Non-blocking UX:</b> If options are already loaded in memory, background re-fetching updates options seamlessly without flashing full-page blocking loaders.</li>
-  <li><b>Common Applicability:</b> Also applied to brand options, Admin Lookup Master, Lookup Type Master, Brand Material Extension Master, Workflow Config Master, and Material Group Configs.</li>
-</ul>
-
-<h1>13. Audit Logging &amp; Title Column Standards</h1>
+<h2>3.2 NpdApproverMail</h2>
 <table>
-  <tr><th>Standard Area</th><th>Rule &amp; Implementation</th><th>Target Lists &amp; Components</th></tr>
-  <tr><td>ActionVia Dynamic Tracking</td><td>Must record <code>ActionVia = "Mail"</code> when action occurs via Outlook / mail webpart; <code>ActionVia = "System"</code> when performed from application UI. Displayed dynamically in UI without hardcoding fallback.</td><td>NPD_ApproversComments, NPD_MaterialGroupAuditLogs, NpdAuditLogTable, MaterialGroupAuditLogTable</td></tr>
-  <tr><td>ActionOn Full Timestamp</td><td>Stores complete ISO date and time. Formatted in UI as date and time (e.g. <code>DD/MM/YYYY HH:MM</code>).</td><td>NPD_ApproversComments, NPD_MaterialGroupAuditLogs</td></tr>
-  <tr><td>Title Column Left Empty</td><td>When items are created using <code>spAddItem</code> (including Drafts and audit rows), the <code>Title</code> column must be left empty (<code>""</code>). Do not store Brand in Title for drafts. Request ID generation logic operates independently.</td><td>NPD_Request, NPD_ApproversComments, NPD_MaterialGroupRequests, NPD_MaterialGroupAuditLogs</td></tr>
-  <tr><td>SharePoint Top Suite Bar</td><td>Default SharePoint top header (user profile, settings gear, app launcher) remains visible and unhidden. App header padding and margin adjusted for seamless vertical positioning.</td><td>hideSharePointChrome.ts, AppShell.module.scss</td></tr>
+  <tr><th>File</th><th>Kind</th><th>What it implements</th><th>Uses / used by</th></tr>
+  <tr><td><code>NpdApproverMailWebPart.ts</code></td><td>.ts SPFx</td><td>Styles + render mail root</td><td>SharePoint page hosting mail actions</td></tr>
+  <tr><td><code>components/NpdApproverMail.tsx</code></td><td>.tsx</td><td>setupSP; mounts App</td><td>WebPart</td></tr>
+  <tr><td><code>components/INpdApproverMailProps.ts</code></td><td>.ts</td><td>Props with context</td><td>NpdApproverMail.tsx</td></tr>
+  <tr><td><code>components/NpdApproverMailApp.tsx</code></td><td>.tsx</td><td>Composes Loader / ActionPanel / Result; wires Toast callbacks</td><td>NpdApproverMail.tsx</td></tr>
+  <tr><td><code>components/useNpdApproverMailController.ts</code></td><td>.ts</td><td>Parse query params; token/identity validation; apply workflow; ActionVia=Mail; duplicate prevention</td><td>NpdApproverMailApp</td></tr>
+  <tr><td><code>components/NpdApproverMailLoader.tsx</code></td><td>.tsx</td><td>Centered dual concentric rings (inner rotates, outer static)</td><td>App while processing</td></tr>
+  <tr><td><code>components/NpdApproverMailActionPanel.tsx</code></td><td>.tsx</td><td>Remarks UI for Rework/Reject from mail</td><td>App when remarks required</td></tr>
+  <tr><td><code>components/NpdApproverMailResult.tsx</code></td><td>.tsx</td><td>Top banners: success / already submitted / error</td><td>App after processing</td></tr>
+  <tr><td><code>loc/mystrings.d.ts</code></td><td>.ts</td><td>String typings</td><td>WebPart</td></tr>
 </table>
 
-<h1>14. Suggested Code Review Checklist</h1>
+<h1>4. Data stores — lists, masters, SAP, Config, Interface</h1>
+<table>
+  <tr><th>List / API</th><th>Site</th><th>Primary services / UI</th><th>Key fields / notes</th></tr>
+  <tr><td>NPD_LookupType</td><td>NPD</td><td>lookupTypeService + LookupTypeMaster</td><td>Name/Title; IsDeleted soft delete</td></tr>
+  <tr><td>NPD_Lookup</td><td>NPD</td><td>lookupService; MG Consultant insert</td><td>Title, LookupCode, LookupTypeId, IsDeleted</td></tr>
+  <tr><td>NPD_BrandMaterialExtensionMaster</td><td>NPD</td><td>brandMaterialExtensionService</td><td>Brand → Material Extension for MIS</td></tr>
+  <tr><td>NPD_WorkflowConfig</td><td>NPD</td><td>workflowConfigurationService</td><td>Role sequences NPD / MG</td></tr>
+  <tr><td>NPD_Request</td><td>NPD</td><td>npdRequestGeneralInfoService</td><td>RequestId, Status, WorkFlowJSON, Other Details; Title empty</td></tr>
+  <tr><td>NPD_ItemDetails</td><td>NPD</td><td>npdItemDetailsService</td><td>Line items; SAP boolean; request lookup</td></tr>
+  <tr><td>NPD_ApproverComments</td><td>NPD</td><td>npdApproverCommentsService</td><td>ApproverRole, Action, ActionVia, ActionOn; Title empty</td></tr>
+  <tr><td>NPD_MaterialMaster</td><td>NPD</td><td>materialMasterService + MaterialMaster UI</td><td>ItemType Old/New; display + *Code; NPDRequest</td></tr>
+  <tr><td>NPD_MaterialGroupConfig</td><td>NPD</td><td>materialGroupService</td><td>Category definitions</td></tr>
+  <tr><td>NPD_MaterialGroupRequests</td><td>NPD</td><td>materialGroupService</td><td>JSON entries, Status; Title empty</td></tr>
+  <tr><td>NPD_MaterialGroupAuditLogs</td><td>NPD</td><td>materialGroupAuditLogService</td><td>ActionVia System|Mail</td></tr>
+  <tr><td>ApproversMaster, BrandMaster, PlantMaster, RoleMaster</td><td>ROCA</td><td>roleService, rocaMasterDataService</td><td>Roles/brands/plants</td></tr>
+  <tr><td>createZMatMast</td><td>External</td><td>sapMaterialMasterService</td><td>POST body = [one TY_DATA object]; status True/False</td></tr>
+</table>
+<p><b>Config.ts</b> — single source for ListNames, FieldNames, FieldLabels, Routes, Roles, statuses, valuation classes,
+SapMaterialMasterApi URLs, email query keys, MaterialMasterItemTypes, ImportExport rules, TextInputRules.</p>
+<p><b>Interface.ts</b> — DTOs for lookups, NPD form/list/item/other-details, workflow steps, Material Master rows,
+Material Group payloads, ApproversMaster / resolved access.</p>
+<p><b>ISPServicesProps.ts</b> — typings for PnP service helpers.</p>
+
+<h1>5. Redux store — every file</h1>
+<p>Entry <code>src/store/index.ts</code> registers reducers. Typed hooks in <code>hooks.ts</code>. <code>rootState.ts</code> exports RootState.
+<code>uiProcessing.ts</code> — <code>beginUiProcessing</code> / <code>finishUiProcessing</code> for global loader / item progress.</p>
+<table>
+  <tr><th>File</th><th>Responsibility</th><th>Consumers</th></tr>
+  <tr><td><code>slices/appSlice.ts</code></td><td>User identity, roles, brands, initialized, roleStatus</td><td>MainComponent, nav, ProtectedRoute</td></tr>
+  <tr><td><code>slices/uiSlice.ts</code></td><td>sidebarCollapsed, flashMessage, globalProcessing</td><td>AppShell, MainComponent, loaders</td></tr>
+  <tr><td><code>slices/adminSlice.ts</code> + <code>adminState.types.ts</code></td><td>Lookup types, lookups, workflow configs, brand extensions + statuses</td><td>All Admin masters</td></tr>
+  <tr><td><code>slices/npdFormSlice.ts</code> + <code>npdFormState.types.ts</code></td><td>Active NPD form state (generalInfo, items, otherDetails, options, saveStatus)</td><td>NpdRequestForm + controller</td></tr>
+  <tr><td><code>slices/npdRequestSlice.ts</code> + types</td><td>Dashboard list collections</td><td>NpdRequestDashboard, NpdDraftRework</td></tr>
+  <tr><td><code>slices/materialGroupSlice.ts</code></td><td>MG form + dashboard state</td><td>MG form + dashboard</td></tr>
+  <tr><td><code>slices/materialMasterSlice.ts</code></td><td>MM rows, tab, filters, load status</td><td>MaterialMaster admin</td></tr>
+  <tr><td><code>thunks/appThunks.ts</code></td><td>initializeApp → resolveUserAccess</td><td>MainComponent</td></tr>
+  <tr><td><code>thunks/lookupThunks.ts</code></td><td>Lookup fetch/CRUD/import/export</td><td>LookupMaster</td></tr>
+  <tr><td><code>thunks/lookupTypeThunks.ts</code></td><td>Lookup Type CRUD</td><td>LookupTypeMaster</td></tr>
+  <tr><td><code>thunks/workflowConfigurationThunks.ts</code></td><td>Workflow config CRUD</td><td>WorkflowConfigurationMaster</td></tr>
+  <tr><td><code>thunks/brandMaterialExtensionThunks.ts</code></td><td>Brand extension CRUD</td><td>BrandMaterialExtensionMaster</td></tr>
+  <tr><td><code>thunks/npdFormThunks.ts</code></td><td>Hydrate, options, draft, submit, workflow actions, other details, Post to SAP orchestration</td><td>useNpdRequestFormController</td></tr>
+  <tr><td><code>thunks/npdRequestThunks.ts</code></td><td>Fetch All / Pending / Draft-Rework / Approved lists</td><td>NPD list screens</td></tr>
+  <tr><td><code>thunks/materialGroupThunks.ts</code></td><td>Configs, hydrate, draft, submit, consultant, lists</td><td>MG controller / dashboard</td></tr>
+  <tr><td><code>thunks/index.ts</code></td><td>Barrel re-exports</td><td>Import convenience</td></tr>
+</table>
+
+<h1>6. CommonServices — complete inventory</h1>
+<p>Path: <code>src/External/CommonServices/</code>. Business logic and all SharePoint / SAP I/O.</p>
+<table>
+  <tr><th>File</th><th>Functionality</th><th>Lists / APIs / consumers</th></tr>
+  <tr><td><code>Config.ts</code></td><td>Central constants</td><td>Entire app</td></tr>
+  <tr><td><code>Interface.ts</code></td><td>Shared DTOs</td><td>Services + slices</td></tr>
+  <tr><td><code>ISPServicesProps.ts</code></td><td>PnP helper typings</td><td>SPServices</td></tr>
+  <tr><td><code>SPServices.ts</code></td><td>setupSP/context; CRUD; SPReadItemsPaged; batches</td><td>All list services</td></tr>
+  <tr><td><code>roleService.ts</code></td><td>resolveUserAccess; Admins group; ApproversMaster</td><td>appThunks</td></tr>
+  <tr><td><code>permissionService.ts</code></td><td>Route/nav permissions; brand scopes; canActOnPendingNpdStep</td><td>ProtectedRoute, nav, forms</td></tr>
+  <tr><td><code>navigationConfig.ts</code></td><td>NAV_SECTIONS; buildNavHref; viewRoleSlug</td><td>SideNavigation, controllers</td></tr>
+  <tr><td><code>rocaSiteUrlResolver.ts</code></td><td>Current + ROCA master site URLs</td><td>rocaMasterDataService</td></tr>
+  <tr><td><code>rocaMasterDataService.ts</code></td><td>Brand/Plant/Role options from ROCA</td><td>Admin + NPD</td></tr>
+  <tr><td><code>lookupTypeService.ts</code></td><td>Lookup Type CRUD soft-delete</td><td>lookupTypeThunks</td></tr>
+  <tr><td><code>lookupService.ts</code></td><td>Lookup CRUD, import/export, active lookups</td><td>lookupThunks, forms</td></tr>
+  <tr><td><code>lookupFieldUtils.ts</code></td><td>Lookup field helpers</td><td>Forms / payloads</td></tr>
+  <tr><td><code>lookupOptionUtils.ts</code></td><td>Dropdown option builders</td><td>Forms</td></tr>
+  <tr><td><code>brandMaterialExtensionService.ts</code></td><td>CRUD + export</td><td>Admin + MIS Other Details</td></tr>
+  <tr><td><code>workflowConfigurationService.ts</code></td><td>Workflow config list CRUD</td><td>Admin + workflow build</td></tr>
+  <tr><td><code>workflowConfigurationUtils.ts</code></td><td>Step/sequence helpers</td><td>Workflow UI + NPD/MG</td></tr>
+  <tr><td><code>dependencyValidationService.ts</code></td><td>Block delete when dependents exist</td><td>Admin deletes</td></tr>
+  <tr><td><code>softDelete.ts</code></td><td>IsDeleted helpers</td><td>Masters</td></tr>
+  <tr><td><code>npdRequestGeneralInfoService.ts</code></td><td>Draft/submit/update NPD_Request; Post to SAP before approve</td><td>npdFormThunks</td></tr>
+  <tr><td><code>npdItemDetailsService.ts</code></td><td>Item Details CRUD; mark SAP</td><td>npdFormThunks, SAP flow</td></tr>
+  <tr><td><code>npdFormDataService.ts</code></td><td>Map list ↔ form DTOs</td><td>Hydrate/save</td></tr>
+  <tr><td><code>npdRequestIdService.ts</code></td><td>NPD-YYYY-####</td><td>Submit</td></tr>
+  <tr><td><code>npdRequestListService.ts</code></td><td>Dashboard queries</td><td>npdRequestThunks</td></tr>
+  <tr><td><code>npdRequestStatusChoices.ts</code></td><td>Status choice values</td><td>Filters</td></tr>
+  <tr><td><code>npdWorkflowJsonService.ts</code></td><td>Build/parse WorkFlowJSON; apply actions; pending helpers</td><td>Submit, approve, audit</td></tr>
+  <tr><td><code>npdWorkflowStatusView.ts</code></td><td>Workflow status dialog rows</td><td>NpdWorkflowStatusDialog</td></tr>
+  <tr><td><code>npdApproverCommentsService.ts</code></td><td>Write/read audit comments; ActionVia</td><td>Workflow + Audit table</td></tr>
+  <tr><td><code>npdApproverAssignmentService.ts</code></td><td>Emails for workflow roles</td><td>Notifications / sync</td></tr>
+  <tr><td><code>npdApproverSyncService.ts</code></td><td>Sync workflow emails with masters</td><td>Submit / assign</td></tr>
+  <tr><td><code>npdOtherDetailsService.ts</code></td><td>Plant code, valuation, profit center, material extension</td><td>MIS section</td></tr>
+  <tr><td><code>npdItemDetailsImportService.ts</code></td><td>Parse/validate Item Details Excel import</td><td>NpdItemDetailsImport</td></tr>
+  <tr><td><code>npdNotificationService.ts</code></td><td>Send NPD emails</td><td>Submit / approve</td></tr>
+  <tr><td><code>npdApprovalEmailTemplate.ts</code></td><td>HTML email body + action links</td><td>Notifications</td></tr>
+  <tr><td><code>npdEmailLogo.ts</code></td><td>Inline logo attachment</td><td>Emails</td></tr>
+  <tr><td><code>npdAppUrl.ts</code></td><td>Deep-link / mail URL builders</td><td>Emails, redirects</td></tr>
+  <tr><td><code>npdRequestTabSync.ts</code></td><td>Multi-tab edit lock</td><td>AppShell, tabLock hooks</td></tr>
+  <tr><td><code>materialMasterService.ts</code></td><td>Paged fetch; filters; duplicate validation; insert New + Code columns</td><td>Admin MM, Submit, SAP</td></tr>
+  <tr><td><code>sapMaterialMasterApiUrl.ts</code></td><td>Dev/Prod URL by site; fail closed</td><td>SAP service</td></tr>
+  <tr><td><code>sapMaterialMasterFieldConfig.ts</code></td><td>TY_DATA lengths / mappings</td><td>Payload</td></tr>
+  <tr><td><code>sapMaterialMasterPayload.ts</code></td><td>Build TY_DATA; FERT/HAWA; LookupCode</td><td>Post flow</td></tr>
+  <tr><td><code>sapMaterialMasterLookupResolver.ts</code></td><td>Display → LookupCode resolver</td><td>Payload</td></tr>
+  <tr><td><code>sapMaterialMasterLookupFieldHints.ts</code></td><td>Which fields are lookup-coded</td><td>Resolver</td></tr>
+  <tr><td><code>sapMaterialMasterService.ts</code></td><td>HTTP POST createZMatMast; body [row]</td><td>Post flow</td></tr>
+  <tr><td><code>sapMaterialMasterResponse.ts</code></td><td>Parse status True/False</td><td>Post flow</td></tr>
+  <tr><td><code>sapMaterialMasterPostFlow.ts</code></td><td>Per-line post → mark SAP → MM insert; collect failures</td><td>Approve path</td></tr>
+  <tr><td><code>materialGroupService.ts</code></td><td>Configs, draft, submit, lists, consultant → Lookup insert</td><td>MG thunks</td></tr>
+  <tr><td><code>materialGroupIdService.ts</code></td><td>MG-YYYY-####</td><td>MG submit</td></tr>
+  <tr><td><code>materialGroupValidation.ts</code></td><td>Duplicate code/description</td><td>MG form</td></tr>
+  <tr><td><code>materialGroupAuditLogService.ts</code></td><td>MG audit CRUD</td><td>MG controller / table</td></tr>
+  <tr><td><code>materialGroupNotificationService.ts</code></td><td>MG emails</td><td>MG workflow</td></tr>
+  <tr><td><code>mgAppUrl.ts</code></td><td>MG deep links</td><td>MG emails</td></tr>
+  <tr><td><code>importService.ts</code></td><td>Generic Excel parse helpers</td><td>Import UIs</td></tr>
+  <tr><td><code>exportService.ts</code></td><td>Excel export helpers</td><td>Admin + MM export</td></tr>
+  <tr><td><code>templateService.ts</code></td><td>Download import templates from library</td><td>Import dialogs</td></tr>
+  <tr><td><code>personFieldUtils.ts</code></td><td>Email normalize, personas, ApproversMaster match</td><td>Roles + tables</td></tr>
+  <tr><td><code>plantValueUtils.ts</code></td><td>Plant value normalization</td><td>NPD plants</td></tr>
+  <tr><td><code>searchTextUtils.ts</code></td><td>Case/space-insensitive search</td><td>Toolbars</td></tr>
+  <tr><td><code>multiValueDisplayUtils.ts</code></td><td>Multi-value cell display</td><td>Data tables</td></tr>
+  <tr><td><code>textInputSanitize.ts</code></td><td>Leading space / alphanumeric / digit guards</td><td>Input wrappers</td></tr>
+  <tr><td><code>loadApplicationStyles.ts</code></td><td>Prime theme + fonts</td><td>WebPart onInit</td></tr>
+  <tr><td><code>injectRocaPrimeOverrides.ts</code></td><td>Prime CSS overrides</td><td>MainComponent</td></tr>
+  <tr><td><code>hideSharePointChrome.ts</code></td><td>Viewport lock; suite bar remains visible</td><td>WebPart / MainComponent</td></tr>
+  <tr><td><code>theme.scss</code></td><td>Global theme tokens</td><td>Styles</td></tr>
+</table>
+<p>Also: <code>src/External/Loader/Loader/Loader.tsx</code> + <code>index.ts</code> — shared loader used by control <code>LoaderOverlay</code>.</p>
+<p>Offline helper (not runtime UI): <code>scripts/verifySapMaterialMaster.ts</code> verifies payload/response behaviour.</p>
+
+<h1>7. Common UI — controls, master panels, hooks, import/export</h1>
+<p>Barrel: <code>components/common/controls/index.ts</code>. Each control folder typically has <code>Component.tsx</code>, <code>I*Props.ts</code>, <code>index.ts</code>, optional <code>.module.scss</code>.</p>
+<table>
+  <tr><th>Control folder</th><th>.tsx does</th><th>.ts / props</th><th>Used by</th></tr>
+  <tr><td>InputText / InputNumber / InputTextarea</td><td>Wrapped Prime inputs; sanitize where configured</td><td>I*Props, IBaseControlProps</td><td>All forms</td></tr>
+  <tr><td>Dropdown / MultiSelect / ComboBox</td><td>Option selects</td><td>I*Props</td><td>General Info, Item Details, Admin, Other Details</td></tr>
+  <tr><td>DatePicker</td><td>Date selection</td><td>IDatePickerProps</td><td>MM / list filters</td></tr>
+  <tr><td>Checkbox</td><td>Boolean</td><td>ICheckboxProps</td><td>MG category select</td></tr>
+  <tr><td>ControlField</td><td>Label + required + child</td><td>IControlFieldProps</td><td>Form sections</td></tr>
+  <tr><td>DataTable + EmptyDash</td><td>Table wrapper; empty dash cells</td><td>IDataTableProps</td><td>All list/master screens</td></tr>
+  <tr><td>MultiValueCell</td><td>Multi values in cells</td><td>IMultiValueCellProps</td><td>Item Details / lists</td></tr>
+  <tr><td>Button</td><td>Variants</td><td>IButtonProps</td><td>Footers, toolbars</td></tr>
+  <tr><td>Dialog / ConfirmDialog</td><td>Modals</td><td>I*Props</td><td>Forms, confirms</td></tr>
+  <tr><td>DeleteConfirmDialog / DeleteBlockedDialog</td><td>Delete confirm vs dependency block</td><td>I*Props</td><td>Admin masters</td></tr>
+  <tr><td>Toast</td><td>Toast + showSuccess/Error/Approve/Rework/Reject helpers</td><td>IToastProps + helpers</td><td>Every screen + Mail app</td></tr>
+  <tr><td>FileUpload</td><td>File picker</td><td>IFileUploadProps</td><td>Import dialogs</td></tr>
+  <tr><td>Tag</td><td>Status badges</td><td>ITagProps</td><td>Status columns</td></tr>
+  <tr><td>Loader / LoaderOverlay</td><td>Processing overlay / progress</td><td>ILoaderOverlayProps</td><td>MainComponent, forms, lists</td></tr>
+</table>
+<table>
+  <tr><th>Shared UI file</th><th>Role</th><th>Used by</th></tr>
+  <tr><td><code>common/master/MasterTablePanel/*</code></td><td>Admin page chrome around DataTable</td><td>Lookup / LookupType / Workflow / BrandExtension</td></tr>
+  <tr><td><code>common/master/MasterToolbar/MasterToolbarSearch.tsx</code></td><td>Search control</td><td>Admin toolbars</td></tr>
+  <tr><td><code>common/importExport/ImportDialog/*</code></td><td>Import file dialog</td><td>Lookup + Item Details import</td></tr>
+  <tr><td><code>common/importExport/ImportValidationDialog/*</code></td><td>Validation error dialog</td><td>Import flows</td></tr>
+  <tr><td><code>common/hooks/useListPageFetch.ts</code></td><td>Reusable list fetch hook</td><td>List screens</td></tr>
+</table>
+
+<h1>8. Layout &amp; navigation — every component</h1>
+<table>
+  <tr><th>File</th><th>Kind</th><th>Functionality</th><th>Children / uses</th></tr>
+  <tr><td>AppShell.tsx</td><td>.tsx</td><td>Shell: header + sidebar + content; initNpdTabSync; version label</td><td>NavRouteSync, Header, SideNavigation</td></tr>
+  <tr><td>NavRouteSync.tsx</td><td>.tsx</td><td>Sync nav selection to hash route</td><td>AppShell</td></tr>
+  <tr><td>Header.tsx</td><td>.tsx</td><td>Top header / branding</td><td>AppShell</td></tr>
+  <tr><td>RoleIndicator.tsx</td><td>.tsx</td><td>Shows role context</td><td>Header / shell</td></tr>
+  <tr><td>SideNavigation.tsx</td><td>.tsx</td><td>Expanded navigation</td><td>NavSection, NavItem, NavPrimaryAction, SidebarBrand, SidebarToggle; useFilteredNavigation</td></tr>
+  <tr><td>SideNavigationCompact.tsx</td><td>.tsx</td><td>Collapsed icon navigation</td><td>NavCompactPrimary, NavCompactItem, NavCompactSectionIcon</td></tr>
+  <tr><td>useFilteredNavigation.ts</td><td>.ts</td><td>Filter NAV_SECTIONS by roles</td><td>SideNavigation</td></tr>
+  <tr><td>navActiveHelper.ts</td><td>.ts</td><td>Active route matching</td><td>Nav items</td></tr>
+  <tr><td>navSelectedBarTone.ts</td><td>.ts</td><td>Selected bar color tokens</td><td>Nav items</td></tr>
+  <tr><td>NavSection.tsx</td><td>.tsx</td><td>Collapsible section header</td><td>SideNavigation</td></tr>
+  <tr><td>NavItem.tsx</td><td>.tsx</td><td>Standard nav link</td><td>SideNavigation</td></tr>
+  <tr><td>NavPrimaryAction.tsx</td><td>.tsx</td><td>Primary “New …” action styling</td><td>SideNavigation</td></tr>
+  <tr><td>NavCompactPrimary.tsx</td><td>.tsx</td><td>Compact primary action</td><td>SideNavigationCompact</td></tr>
+  <tr><td>NavCompactItem.tsx</td><td>.tsx</td><td>Compact nav item</td><td>SideNavigationCompact</td></tr>
+  <tr><td>NavCompactSectionIcon.tsx</td><td>.tsx</td><td>Compact section icon</td><td>SideNavigationCompact</td></tr>
+  <tr><td>SidebarBrand.tsx</td><td>.tsx</td><td>Brand mark in sidebar</td><td>SideNavigation</td></tr>
+  <tr><td>SidebarToggle.tsx</td><td>.tsx</td><td>Collapse/expand → uiSlice</td><td>SideNavigation</td></tr>
+</table>
+
+<h1>9. Routing &amp; protection</h1>
+<table>
+  <tr><th>File</th><th>Responsibility</th></tr>
+  <tr><td><code>AppRoutes.tsx</code></td><td>Path → feature element map; home Navigate; wildcard → default; wraps ProtectedRoute</td></tr>
+  <tr><td><code>routeDefinitions.ts</code></td><td>Route metadata (path, title, description)</td></tr>
+  <tr><td><code>ProtectedRoute.tsx</code></td><td>canAccessRoute against resolved access</td></tr>
+  <tr><td><code>Unauthorized/Unauthorized.tsx</code></td><td>Unauthorized page UI</td></tr>
+  <tr><td><code>RoutePlaceholder/RoutePlaceholder.tsx</code></td><td>Placeholder if route listed but not implemented</td></tr>
+</table>
+<p><b>Implemented:</b> /npd/new, /npd/draft-rework, /npd/pending, /npd/all, /npd/approved,
+/mg/new, /mg/all, /mg/draft-rework, /mg/pending, /mg/completed,
+/admin/lookup-type, /admin/lookup, /admin/brand-extension, /admin/workflow-config, /admin/material-master.</p>
+
+<h1>10. NPD Request module — every component</h1>
+<h2>10.1 Form (create / edit / view / approver modes)</h2>
+<table>
+  <tr><th>File</th><th>Kind</th><th>Functionality</th><th>Children / services</th></tr>
+  <tr>
+    <td>NpdRequestForm.tsx</td>
+    <td>.tsx</td>
+    <td>Page composition: sections, loaders, title; wires Redux setters</td>
+    <td>GeneralInfo, ItemDetails (+Import), OtherDetails, ApproverRemarks, AuditLog, Footer, TabLock dialog; controller</td>
+  </tr>
+  <tr>
+    <td>useNpdRequestFormController.ts</td>
+    <td>.ts</td>
+    <td>Hydrate by id; mode/viewAs; read-only flags; draft/submit; VH/MIS actions; Other Details; tab lock; email action; validations; MM duplicate check + UI processing</td>
+    <td>npdFormThunks, materialMasterService, workflow/permission helpers, useNpdEmailAction, useNpdRequestTabLock</td>
+  </tr>
+  <tr><td>npdRequestFormHelpers.ts</td><td>.ts</td><td>Footer mode, cancel route, other-details visibility, persistable rows, view mode, action parse</td><td>Controller</td></tr>
+  <tr><td>npdItemDetails.types.ts</td><td>.ts</td><td>INpdItemDetailRow</td><td>Item Details</td></tr>
+  <tr><td>npdItemDetailsConfig.ts</td><td>.ts</td><td>Empty row; row↔record mapping</td><td>Controller + section</td></tr>
+  <tr><td>npdItemDetailsValidation.ts</td><td>.ts</td><td>Draft/submit/MIS validations</td><td>Controller</td></tr>
+  <tr><td>NpdGeneralInfoSection.tsx</td><td>.tsx</td><td>Brand, Material Type, Plant/Source</td><td>Dropdown, ControlField</td></tr>
+  <tr><td>NpdFormSectionPanel.tsx</td><td>.tsx</td><td>Section chrome</td><td>Form sections</td></tr>
+  <tr><td>NpdItemDetailsSection.tsx</td><td>.tsx</td><td>Item Details grid; add/remove; open import</td><td>columns hook, cells, DataTable</td></tr>
+  <tr><td>useNpdItemDetailsColumns.tsx</td><td>hook</td><td>Column defs + editors from lookups/brand rules</td><td>npdItemDetailsConfig</td></tr>
+  <tr><td>NpdItemDetailsTableCell.tsx</td><td>.tsx</td><td>Per-cell editor/display</td><td>controls</td></tr>
+  <tr><td>NpdItemDetailsActionCell.tsx</td><td>.tsx</td><td>Row actions (delete)</td><td>Button</td></tr>
+  <tr><td>NpdItemDetailsImport.tsx</td><td>.tsx</td><td>Excel import UI for lines</td><td>ImportDialog; import service</td></tr>
+  <tr><td>NpdOtherDetailsSection.tsx</td><td>.tsx</td><td>MIS Plant Code, Profit Center, Material Extension, Valuation Class, Class Type</td><td>MultiSelect/Dropdown; Redux otherDetails</td></tr>
+  <tr><td>NpdApproverRemarks.tsx</td><td>.tsx</td><td>Approver remarks textarea</td><td>InputTextarea</td></tr>
+  <tr><td>NpdApproverCommentDialog.tsx</td><td>.tsx</td><td>Comments dialog when needed</td><td>Dialog</td></tr>
+  <tr><td>NpdAuditLogTable.tsx</td><td>.tsx</td><td>Audit trail + Pending placeholders; role-only pending match; chronological order</td><td>DataTable; ApproverComments; workflow pending steps</td></tr>
+  <tr><td>NpdRequestFormFooter.tsx</td><td>.tsx</td><td>Buttons by mode: Draft/Submit; VH Approve/Rework/Reject; MIS Post to SAP</td><td>Button</td></tr>
+  <tr><td>useNpdEmailAction.ts</td><td>.ts</td><td>Handle action query from email deep link</td><td>Controller</td></tr>
+</table>
+
+<h2>10.2 Draft / Rework / Pending lists</h2>
+<table>
+  <tr><th>File</th><th>Kind</th><th>Functionality</th><th>Uses</th></tr>
+  <tr><td>NpdDraftRework.tsx</td><td>.tsx</td><td>Pending or Draft/Rework page by route; navigate Edit/View</td><td>Table, Toolbar; npdRequestThunks</td></tr>
+  <tr><td>NpdDraftReworkTable.tsx</td><td>.tsx</td><td>List columns, status tags, actions</td><td>DataTable, Tag</td></tr>
+  <tr><td>NpdDraftReworkToolbar.tsx</td><td>.tsx</td><td>Search/filter toolbar</td><td>InputText</td></tr>
+</table>
+
+<h2>10.3 All / Approved dashboards</h2>
+<table>
+  <tr><th>File</th><th>Kind</th><th>Functionality</th><th>Uses</th></tr>
+  <tr><td>NpdRequestDashboard.tsx</td><td>.tsx</td><td>variant all|approved; cards + list + workflow dialog</td><td>SummaryCards, Toolbar, Table, WorkflowStatusDialog</td></tr>
+  <tr><td>NpdRequestSummaryCards.tsx</td><td>.tsx</td><td>Status count cards</td><td>Dashboard</td></tr>
+  <tr><td>NpdRequestListToolbar.tsx</td><td>.tsx</td><td>Search/date/status filters</td><td>useNpdRequestListFilters</td></tr>
+  <tr><td>NpdRequestListTable.tsx</td><td>.tsx</td><td>Requests DataTable; View/Edit/Workflow</td><td>DataTable</td></tr>
+  <tr><td>useNpdRequestListFilters.ts</td><td>.ts</td><td>Filter state + predicates</td><td>Toolbar/Table</td></tr>
+  <tr><td>npdRequestListUtils.ts</td><td>.ts</td><td>Formatting helpers</td><td>Table</td></tr>
+  <tr><td>NpdWorkflowStatusDialog.tsx</td><td>.tsx</td><td>Workflow step status UI</td><td>useNpdWorkflowStatusDialog</td></tr>
+  <tr><td>useNpdWorkflowStatusDialog.ts</td><td>.ts</td><td>Load/build status rows</td><td>npdWorkflowStatusView</td></tr>
+</table>
+
+<h2>10.4 Tab lock</h2>
+<table>
+  <tr><th>File</th><th>Kind</th><th>Functionality</th></tr>
+  <tr><td>useNpdRequestTabLock.ts</td><td>.ts</td><td>Acquire/release edit lock via npdRequestTabSync</td></tr>
+  <tr><td>useNpdRequestTabGuard.ts</td><td>.ts</td><td>Detect other-tab ownership</td></tr>
+  <tr><td>NpdEditingRestrictedDialog.tsx</td><td>.tsx</td><td>Blocked-edit dialog; Dashboard / Reload</td></tr>
+</table>
+
+<h1>11. Material Group module — every component</h1>
+<table>
+  <tr><th>File</th><th>Kind</th><th>Functionality</th><th>Children / services</th></tr>
+  <tr><td>MaterialGroupRequestForm.tsx</td><td>.tsx</td><td>Create/edit/view/consultant composition</td><td>SelectMasters, MasterDetails, Remarks, AuditLog, Footer, Consultant dialog; controller</td></tr>
+  <tr><td>useMaterialGroupFormController.ts</td><td>.ts</td><td>Configs; toggle categories; rows; draft/submit; VH/consultant; validation</td><td>materialGroupThunks/services</td></tr>
+  <tr><td>materialGroupTypes.ts</td><td>.ts</td><td>Local types</td><td>Form</td></tr>
+  <tr><td>SelectMastersSection.tsx</td><td>.tsx</td><td>Category cards / select all</td><td>Checkbox cards</td></tr>
+  <tr><td>MasterDetailsSection.tsx</td><td>.tsx</td><td>Dynamic grids; add/remove row</td><td>DataTable / inputs</td></tr>
+  <tr><td>MaterialGroupApproverRemarks.tsx</td><td>.tsx</td><td>Remarks</td><td>InputTextarea</td></tr>
+  <tr><td>MaterialGroupAuditLogTable.tsx</td><td>.tsx</td><td>MG audit history</td><td>DataTable; audit service</td></tr>
+  <tr><td>MaterialGroupFormFooter.tsx</td><td>.tsx</td><td>Draft/Submit or VH/Consultant buttons</td><td>Button</td></tr>
+  <tr><td>MaterialGroupConsultantActionDialog.tsx</td><td>.tsx</td><td>SAP configuration note + Complete</td><td>Dialog</td></tr>
+  <tr><td>MaterialGroupDashboard.tsx</td><td>.tsx</td><td>variants all/draft-rework/pending/completed</td><td>MaterialGroupTable</td></tr>
+  <tr><td>MaterialGroupTable.tsx</td><td>.tsx</td><td>Grouped requests + actions</td><td>DataTable</td></tr>
+</table>
+
+<h1>12. Administration — every master</h1>
+<p>Shared pattern (Lookup Type, Lookup, Workflow, Brand Extension):
+<strong>Master.tsx</strong> page + <strong>Toolbar.tsx</strong> + <strong>Table.tsx</strong> + <strong>FormDialog.tsx</strong> + <strong>*Validation.ts</strong>;
+data via adminSlice thunks → CommonServices.</p>
+<table>
+  <tr><th>Module</th><th>Files</th><th>Functionality</th><th>List</th></tr>
+  <tr>
+    <td>Lookup Type</td>
+    <td>LookupTypeMaster.tsx, LookupTypeToolbar.tsx, LookupTypeTable.tsx, LookupTypeFormDialog.tsx, lookupTypeValidation.ts</td>
+    <td>CRUD soft-delete; uniqueness; search</td>
+    <td>NPD_LookupType</td>
+  </tr>
+  <tr>
+    <td>Lookup</td>
+    <td>LookupMaster.tsx, LookupToolbar.tsx, LookupTable.tsx, LookupFormDialog.tsx, lookupValidation.ts</td>
+    <td>CRUD; LookupCode; LookupType link; import/export</td>
+    <td>NPD_Lookup</td>
+  </tr>
+  <tr>
+    <td>Workflow Config</td>
+    <td>WorkflowConfigurationMaster.tsx, WorkflowConfigurationToolbar.tsx, WorkflowConfigurationTable.tsx, WorkflowConfigFormDialog.tsx, workflowConfigurationValidation.ts</td>
+    <td>Sequential roles for NPD / MG</td>
+    <td>NPD_WorkflowConfig</td>
+  </tr>
+  <tr>
+    <td>Brand Material Extension</td>
+    <td>BrandMaterialExtensionMaster.tsx, Toolbar, Table, FormDialog.tsx, brandMaterialExtensionValidation.ts</td>
+    <td>Brand ↔ extension for MIS Other Details</td>
+    <td>NPD_BrandMaterialExtensionMaster</td>
+  </tr>
+  <tr>
+    <td>Material Master</td>
+    <td>MaterialMaster.tsx, MaterialMasterToolbar.tsx, MaterialMasterTable.tsx (+ materialMasterSlice.ts / materialMasterService.ts)</td>
+    <td>Existing(Old)/New tabs; search; dates; initiator filter; export; personas; Code columns on New; paged load</td>
+    <td>NPD_MaterialMaster</td>
+  </tr>
+</table>
+<p><b>MaterialMaster.tsx</b> — tab state, fetch dispatch, compose Toolbar+Table.
+<b>MaterialMasterToolbar.tsx</b> — search, From/To dates, Initiator filter, Export.
+<b>MaterialMasterTable.tsx</b> — column visibility by tab; DataTable pagination (50).</p>
+
+<h1>13. NPDApproverMail behaviour</h1>
 <ul>
-  <li><b>Review Workflow Logic:</b> Verify <code>npdWorkflowJsonService.ts</code> for correct role state transitions across Initiator, Vertical Head, and MIS Coordinator.</li>
-  <li><b>Review Permission &amp; Visibility:</b> Verify <code>showOtherDetails</code> in <code>useNpdRequestFormController.ts</code> (MIS-only before approved; visible to everyone after approved).</li>
-  <li><b>Review Mail Webpart:</b> Inspect <code>NpdApproverMail.tsx</code> and <code>NpdApproverMailLoader.tsx</code> for centered two-ring animation and top banner positioning.</li>
-  <li><b>Review Material Group:</b> Check <code>useMaterialGroupFormController.ts</code> and <code>materialGroupThunks.ts</code> for category selection, validation, and auto-insertion into <code>NPD_Lookup</code>.</li>
-  <li><b>Review Lookup Fetch Condition:</b> Check <code>npdFormThunks.ts</code> to ensure <code>fetchNpdLookupOptions</code> allows background navigation re-fetches.</li>
-  <li><b>Review Audit Logging:</b> Verify <code>ActionVia</code> is dynamically set in <code>npdApproverCommentsService.ts</code> and <code>materialGroupAuditLogService.ts</code>.</li>
-  <li><b>Review List Writes:</b> Confirm <code>Title</code> is passed as <code>""</code> in all <code>spAddItem</code> calls across <code>NPD_Request</code>, <code>NPD_ApproversComments</code>, and <code>NPD_MaterialGroupAuditLogs</code>.</li>
+  <li>Query params: requestId, action, token, approverEmail, system (Config.NpdApproverMail / NpdEmail).</li>
+  <li>Controller validates token &amp; identity; blocks duplicate / already-acted.</li>
+  <li>Uses same workflow + ApproverComments services as in-app; ActionVia = Mail.</li>
+  <li>Loader: viewport-centered dual rings; Result: top banners.</li>
+  <li>Reuses rocaNpd Toast helpers.</li>
 </ul>
 
-<p class="meta" style="text-align:center;margin-top:28pt;">ROCA NPD • End-to-End Code Review Guide • Verified against active Sprint 2 implementation • 25 September 2026</p>
+<h1>14. End-to-end lifecycle flows</h1>
+<h2>14.1 NPD</h2>
+<pre>Initiator /npd/new
+  → NpdRequestForm + useNpdRequestFormController
+  → Save Draft (Title="") / Submit
+       → validate → validateItemsAgainstMaterialMaster → progress UI
+       → RequestId + WorkFlowJSON pending VH → email
+VH /npd/pending → Approve|Rework|Reject → ApproverComments → Audit Log
+MIS → Other Details → Post to SAP
+  → createZMatMast per SAP=false line → SAP=true → MM ItemType=New (+ Code columns)
+  → all success → Status=Approved; else keep partial + do not approve
+Approved /npd/approved → Other Details read-only for all roles</pre>
+<h2>14.2 Material Group</h2>
+<pre>/mg/new → SelectMasters → MasterDetails → Draft/Submit
+VH → Consultant / Rework / Reject
+Consultant Complete → NPD_Lookup insert (LookupCode=Code) → Completed</pre>
+<h2>14.3 Admin</h2>
+<pre>Admins → /admin/* masters → thunks → services → soft delete / dependency checks
+Material Master catalog Old + New (New from SAP success)</pre>
+
+<h1>15. Code review checklist</h1>
+<ul>
+  <li>No feature screen imports <code>primereact/*</code> form controls directly.</li>
+  <li>No SharePoint/SAP calls inside .tsx (only thunks/services).</li>
+  <li>Title empty on NPD_Request, ApproverComments, MG request/audit adds.</li>
+  <li>ActionVia Mail vs System on NPD and MG audit lists.</li>
+  <li>Post to SAP: array-of-one body; FERT/HAWA; LookupCode; SAP flag; MM insert; approve only if all succeed.</li>
+  <li>Audit Pending placeholders match by ApproverRole only (dual-role safe).</li>
+  <li>Lookup auto-refresh on navigation.</li>
+  <li>Tab lock prevents dual-edit corruption.</li>
+  <li>ProtectedRoute + filterNavigationByRoles + brand scopes.</li>
+  <li>Material Master Existing vs New column rules and paging.</li>
+</ul>
+
+<p class="meta" style="text-align:center;margin-top:24pt;">
+ROCA NPD • Complete End-to-End Code Review • All implemented .tsx / .ts modules • 05 October 2026
+</p>
 </body>
 </html>

@@ -82,23 +82,44 @@ function normalizeKey(value: string): string {
   return (value || "").trim().toLowerCase();
 }
 
+/** True when the Audit Log row is a completed VH / MIS action (not Initiated / Pending). */
+function isCompletedApproverAuditAction(status: string): boolean {
+  const normalized = normalizeKey(status);
+  return (
+    normalized === "approved" ||
+    normalized === "approve" ||
+    normalized === "rejected" ||
+    normalized === "reject" ||
+    normalized === "rework" ||
+    normalized === "in rework"
+  );
+}
+
 /**
  * True when NPD_ApproverComments already has an action for this workflow step
  * in the current cycle (after last Initiated / Resubmit).
+ *
+ * Match by Role only — the same person can be Vertical Head and later MIS
+ * Coordinator; email-only matching incorrectly hides the MIS Pending row.
  */
 function hasCommentForPendingStep(
   rows: INpdApproverCommentRow[],
   step: INpdWorkflowStepJson,
   afterSubmitTime: number,
 ): boolean {
-  const stepEmail = normalizeKey(step.UserEmail);
   const stepRole = normalizeKey(step.Role);
+  if (!stepRole) {
+    return false;
+  }
 
   return rows.some((row) => {
     if (isInitiatorWorkflowRole(row.role || "")) {
       return false;
     }
     if (isInitiatorSubmitAction(row.status)) {
+      return false;
+    }
+    if (!isCompletedApproverAuditAction(row.status)) {
       return false;
     }
 
@@ -108,18 +129,7 @@ function hasCommentForPendingStep(
       return false;
     }
 
-    const rowEmail = normalizeKey(row.actionedByEmail || "");
-    const rowRole = normalizeKey(row.role || "");
-
-    if (stepEmail && rowEmail && stepEmail === rowEmail) {
-      return true;
-    }
-
-    if (stepRole && rowRole && stepRole === rowRole) {
-      return true;
-    }
-
-    return false;
+    return normalizeKey(row.role || "") === stepRole;
   });
 }
 

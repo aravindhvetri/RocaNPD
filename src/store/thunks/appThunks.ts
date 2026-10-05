@@ -1,4 +1,5 @@
 import type { WebPartContext } from "@microsoft/sp-webpart-base";
+import { syncNpdPendingReworkApprovers } from "../../External/CommonServices/npdApproverSyncService";
 import { resolveUserAccess } from "../../External/CommonServices/roleService";
 import { resolveCurrentSiteUrl } from "../../External/CommonServices/rocaSiteUrlResolver";
 import {
@@ -39,10 +40,15 @@ export const initializeApp =
     );
     dispatch(setRoleStatus("loading"));
 
-    // Prefetch Item Details lookup options as soon as the app starts.
-    void dispatch(fetchNpdLookupOptions());
-
     try {
+      // Before roles, lists, or any approval action: align Pending/Rework
+      // WorkFlowJSON with the current ApproversMaster users.
+      await syncNpdPendingReworkApprovers(siteUrl);
+
+      // Load Item Details MultiSelect options alongside role resolution, and
+      // finish before initialized so the form does not open on an empty cache.
+      const lookupOptionsPromise = dispatch(fetchNpdLookupOptions());
+
       const access = await resolveUserAccess(
         {
           email: identity.email,
@@ -61,6 +67,7 @@ export const initializeApp =
           })),
         ),
       );
+      await lookupOptionsPromise;
     } catch (error) {
       dispatch(setRoleError(getErrorMessage(error)));
     } finally {

@@ -262,6 +262,10 @@ export const materialGroupSlice = createSlice({
       .addCase(
         fetchMaterialGroupRequestByGuidThunk.fulfilled,
         (state, action) => {
+          // Stale hydrate after New/create reset must not repopulate the form.
+          if (state.hydrateStatus !== "loading") {
+            return;
+          }
           state.hydrateStatus = "succeeded";
           const payload = action.payload;
           state.currentId =

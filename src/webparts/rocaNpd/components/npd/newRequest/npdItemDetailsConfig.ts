@@ -15,6 +15,8 @@ export interface INpdItemDetailsFieldDef {
   controlType: NpdItemDetailsControlType;
   maxLength?: number;
   conditional?: "rocaGlobalCode";
+  /** For `text` controls: digits-only when set (still InputText / SP text column). */
+  textFilter?: "alphanumeric" | "digits";
 }
 
 let nextRowId = 1;
@@ -241,6 +243,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     placeholder: "Enter HSN Code",
     minWidth: "10rem",
     controlType: "text",
+    maxLength: 8,
   },
   {
     field: "weightKg",
@@ -265,6 +268,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     placeholder: "Enter Min. Qty/Box Qty",
     minWidth: "12.5rem",
     controlType: "text",
+    textFilter: "digits",
   },
 ];
 

@@ -19,8 +19,9 @@ import AppRoutes from "./routes/AppRoutes";
 
 /**
  * Handle Outlook SafeLinks stripping hash fragments from email Login links.
- * When `npdRoute` query parameter is present, restore it as the hash route
- * before HashRouter mounts so the app navigates to the correct request.
+ * When `npdRoute` query parameter is present (NPD or Material Group emails),
+ * restore it as the hash route before HashRouter mounts.
+ * Keeps `id` / `mode` out of the SharePoint SitePages query string.
  */
 (function handleNpdEmailRedirect(): void {
   if (typeof window === "undefined") {
@@ -28,10 +29,16 @@ import AppRoutes from "./routes/AppRoutes";
   }
   const params = new URLSearchParams(window.location.search);
   const npdRoute = params.get("npdRoute");
-  if (npdRoute) {
-    const route = npdRoute.startsWith("/") ? npdRoute : `/${npdRoute}`;
-    window.history.replaceState(null, "", `${window.location.pathname}#${route}`);
+  if (!npdRoute) {
+    return;
   }
+  const route = npdRoute.startsWith("/") ? npdRoute : `/${npdRoute}`;
+  // Drop query params so SharePoint does not treat `id` as a SitePages item lookup.
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}#${route}`,
+  );
 })();
 
 const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {

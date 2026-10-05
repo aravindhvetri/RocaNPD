@@ -175,9 +175,7 @@ const NpdDraftRework: React.FC = () => {
     <section className={styles.page}>
       <Toast ref={toastRef} />
       <LoaderOverlay
-        visible={
-          listFetchPending || status === "loading" || Boolean(globalProcessing)
-        }
+        visible={listFetchPending || status === "loading"}
         label="Processing"
       />
       <NpdDraftReworkToolbar

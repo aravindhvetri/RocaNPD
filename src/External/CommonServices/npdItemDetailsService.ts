@@ -28,6 +28,7 @@ const SELECT_FIELDS = [
   FIELDS.Weight,
   FIELDS.UOM,
   FIELDS.MinQty,
+  FIELDS.SAP,
   FIELDS.RequestGeneralInfoId,
 ].join(",");
 
@@ -84,7 +85,16 @@ function mapItem(item: Record<string, unknown>): INpdItemDetailRecord {
     uom: splitMultiValue(item[FIELDS.UOM]),
     minQtyBoxQty: readText(item, FIELDS.MinQty),
     isMisAdded: readText(item, FIELDS.Title) === "MIS_ADDED",
+    sapPosted: readSapFlag(item[FIELDS.SAP]),
   };
+}
+
+function readSapFlag(value: unknown): boolean {
+  if (value === true || value === 1) {
+    return true;
+  }
+  const text = String(value ?? "").trim().toLowerCase();
+  return text === "true" || text === "yes" || text === "1";
 }
 
 function toSharePointPayload(
@@ -113,6 +123,11 @@ function toSharePointPayload(
     [FIELDS.MinQty]: record.minQtyBoxQty.trim(),
     [FIELDS.RequestGeneralInfoId]: requestId,
   };
+
+  // New lines start as not posted. Updates must not clear SAP=true.
+  if (!(record.sharePointId > 0)) {
+    payload[FIELDS.SAP] = false;
+  }
 
   if (record.weightKg !== null && Number.isFinite(record.weightKg)) {
     payload[FIELDS.Weight] = record.weightKg;
@@ -188,5 +203,23 @@ export async function saveNpdItemDetailsBatch(
     remove: toDelete,
     update: toUpdate,
     insert: toInsert,
+  });
+}
+
+export async function markNpdItemDetailPostedToSap(
+  sharePointId: number,
+): Promise<void> {
+  if (!sharePointId) {
+    throw new Error(
+      "The Item Details record could not be marked as posted to SAP.",
+    );
+  }
+
+  await SPServices.SPUpdateItem({
+    Listname: LIST_NAME(),
+    ID: sharePointId,
+    RequestJSON: {
+      [FIELDS.SAP]: true,
+    },
   });
 }

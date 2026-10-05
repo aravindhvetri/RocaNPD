@@ -256,6 +256,10 @@ const npdFormSlice = createSlice({
         }
       })
       .addCase(hydrateNpdRequestForm.fulfilled, (state, action) => {
+        // Stale hydrate after New/create reset must not repopulate the form.
+        if (state.loadStatus !== "loading") {
+          return;
+        }
         const request = action.payload.request;
         state.loadStatus = "idle";
         state.requestId = request.Id;

@@ -7,8 +7,9 @@ import type {
   IMaterialGroupRequestJsonEntry,
 } from "./Interface";
 import {
+  collectMaterialGroupCodes,
   collectMaterialGroupDescriptions,
-  findDuplicateMaterialGroupDescription,
+  findDuplicateMaterialGroupField,
 } from "./materialGroupValidation";
 import { getLookupTitles } from "./lookupFieldUtils";
 import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
@@ -463,7 +464,7 @@ export async function submitMaterialGroupRequest(
     throw new Error("Please add at least one entry before submitting.");
   }
 
-  const withinFormDuplicate = findDuplicateMaterialGroupDescription(
+  const withinFormDuplicate = findDuplicateMaterialGroupField(
     selectedConfigIds,
     entriesByConfigId,
   );
@@ -471,6 +472,9 @@ export async function submitMaterialGroupRequest(
     throw new Error(withinFormDuplicate);
   }
 
+  await assertMaterialGroupCodesAvailable(
+    collectMaterialGroupCodes(selectedConfigIds, entriesByConfigId),
+  );
   await assertMaterialGroupDescriptionsAvailable(
     collectMaterialGroupDescriptions(selectedConfigIds, entriesByConfigId),
   );
@@ -1063,6 +1067,40 @@ export interface IConsultantActionParams {
 }
 
 /**
+ * Code must be unique within the request and against NPD_Lookup LookupCode.
+ * Empty codes are ignored (Initiator may leave Code blank).
+ */
+export async function assertMaterialGroupCodesAvailable(
+  codes: string[],
+): Promise<void> {
+  const trimmed = codes
+    .map((value) => value.trim())
+    .filter((value) => Boolean(value));
+
+  const batchCodes = new Set<string>();
+  for (const code of trimmed) {
+    const key = code.toLowerCase();
+    if (batchCodes.has(key)) {
+      throw new Error(`"${code}" already exists.`);
+    }
+    batchCodes.add(key);
+  }
+
+  const existing = await fetchActiveLookups().catch(() => []);
+  const existingCodes = new Set(
+    existing
+      .map((item) => item.LookupCode.trim().toLowerCase())
+      .filter((value) => Boolean(value)),
+  );
+
+  for (const code of trimmed) {
+    if (existingCodes.has(code.toLowerCase())) {
+      throw new Error(`"${code}" already exists as a Lookup Code.`);
+    }
+  }
+}
+
+/**
  * Description must be unique within the request and against NPD_Lookup Title
  * (LookupName), same family of rule as Lookup Code uniqueness.
  */
@@ -1251,14 +1289,25 @@ export async function updateConsultantMaterialGroupAction(
       const lookupName =
         cfg?.relatedFieldTitle || cfg?.title || `Master (${configId})`;
 
-      let hasRow = false;
-      for (const row of rows) {
+      if (!rows.length) {
+        throw new Error(`Please add at least one entry for ${lookupName}.`);
+      }
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
         const code = (row.code || "").trim();
         const description = (row.description || "").trim();
-        if (!code && !description) {
-          continue;
+        if (!description) {
+          throw new Error(
+            `Description is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+          );
         }
-        hasRow = true;
+        // Consultant: Code is mandatory for Complete / Rework / Reject.
+        if (!code) {
+          throw new Error(
+            `Code is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+          );
+        }
         rawEntries.push({
           LookupId: String(relatedLookupTypeId),
           LookupName: lookupName,
@@ -1266,9 +1315,15 @@ export async function updateConsultantMaterialGroupAction(
           Description: description,
         });
       }
-      if (hasRow) {
-        configLookupIds.push(configId);
-      }
+      configLookupIds.push(configId);
+    }
+
+    const duplicateField = findDuplicateMaterialGroupField(
+      Object.keys(params.entriesByConfigId).map(Number),
+      params.entriesByConfigId,
+    );
+    if (duplicateField) {
+      throw new Error(duplicateField);
     }
   }
 

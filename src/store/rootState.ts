@@ -3,6 +3,7 @@ import type { IAppState } from "./slices/appSlice";
 import type { INpdFormState } from "./slices/npdFormState.types";
 import type { INpdRequestListState } from "./slices/npdRequestState.types";
 import type { IMaterialGroupState } from "./slices/materialGroupSlice";
+import type { IMaterialMasterState } from "./slices/materialMasterSlice";
 import type { IUiState } from "./slices/uiSlice";
 
 export type RootState = {
@@ -12,4 +13,5 @@ export type RootState = {
   npdForm: INpdFormState;
   npdRequest: INpdRequestListState;
   materialGroup: IMaterialGroupState;
+  materialMaster: IMaterialMasterState;
 };

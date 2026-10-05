@@ -73,6 +73,7 @@ const NpdOtherDetailsSection: React.FC<INpdOtherDetailsSectionProps> = ({
         <MultiSelect
           id="npdMisProfitCenter"
           label={FieldLabels.ProfitCenter}
+          required
           value={profitValue}
           options={profitOptions}
           placeholder="Select Profit Center"

@@ -57,6 +57,7 @@ import {
   toNpdItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type { INpdItemDetailRow } from "./npdItemDetails.types";
+import { validateItemsAgainstMaterialMaster } from "../../../../../External/CommonServices/materialMasterService";
 import {
   validateMisCoordinatorAction,
   validateNpdDraftForm,
@@ -236,19 +237,11 @@ export function useNpdRequestFormController(
   ]);
 
   React.useEffect(() => {
-    if (!editId) {
-      dispatch(resetNpdFormState());
-      setItemRows([createEmptyNpdItemDetailRow()]);
-      setApproverRemarks("");
-      setAuditLogs([]);
-      setRecordReady(true);
-    } else {
-      setRecordReady(false);
+    // Wait for app init so this does not race login sync and get stuck behind
+    // a blocked/empty first fetch (MultiSelect options then stay blank).
+    if (!initialized) {
+      return;
     }
-  }, [dispatch, editId]);
-
-  React.useEffect(() => {
-    // Load Item Details options as soon as the form mounts or navigation occurs.
     void dispatch(fetchNpdLookupOptions());
   }, [dispatch, initialized, location.key, location.pathname]);
 
@@ -267,14 +260,33 @@ export function useNpdRequestFormController(
     location.pathname,
   ]);
 
+  // Create = blank form. Opening New after View must not keep the prior request.
+  const formResetAt = (location.state as { formResetAt?: number } | null)
+    ?.formResetAt;
+
   React.useEffect(() => {
-    if (!initialized || !editId) {
+    if (!initialized) {
       return;
     }
 
-    void dispatch(hydrateNpdRequestForm(editId))
+    if (!editId) {
+      dispatch(resetNpdFormState());
+      setItemRows([createEmptyNpdItemDetailRow()]);
+      setApproverRemarks("");
+      setAuditLogs([]);
+      setRecordReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setRecordReady(false);
+    const hydrate = dispatch(hydrateNpdRequestForm(editId));
+    void hydrate
       .unwrap()
       .then((result) => {
+        if (cancelled) {
+          return;
+        }
         setItemRows(
           result.items.length
             ? result.items.map(toNpdItemDetailRow)
@@ -283,13 +295,28 @@ export function useNpdRequestFormController(
         setRecordReady(true);
       })
       .catch(() => {
-        setRecordReady(true);
+        if (!cancelled) {
+          setRecordReady(true);
+        }
       });
 
     void fetchNpdApproverComments(editId)
-      .then(setAuditLogs)
-      .catch(() => setAuditLogs([]));
-  }, [dispatch, editId, initialized]);
+      .then((rows) => {
+        if (!cancelled) {
+          setAuditLogs(rows);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuditLogs([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      hydrate.abort();
+    };
+  }, [dispatch, editId, formResetAt, initialized]);
 
   React.useEffect(() => {
     if (
@@ -372,17 +399,28 @@ export function useNpdRequestFormController(
         .unwrap()
         .then((saved) => {
           tabLock.notifySubmitted(saved.Id, saved.Title);
+          dispatch(
+            setFlashMessage({
+              severity: "success",
+              detail: "Request updated successfully.",
+            }),
+          );
           dispatch(resetNpdFormState());
           navigate(buildNavHref(Config.Routes.NpdPending, viewAs), {
             replace: true,
-            state: { actionSaved: true },
           });
         })
-        .catch(() => {
+        .catch((error: unknown) => {
+          const detail =
+            typeof error === "string" && error.trim()
+              ? error
+              : error instanceof Error && error.message
+                ? error.message
+                : "Failed to update the request. Please try again.";
           dispatch(
             setFlashMessage({
               severity: "error",
-              detail: "Failed to update the request. Please try again.",
+              detail,
             }),
           );
         });
@@ -441,9 +479,13 @@ export function useNpdRequestFormController(
       .unwrap()
       .then((saved) => {
         tabLock.notifyDraftSaved(saved.Id, saved.Title);
-        completeFormNavigation(Config.Routes.NpdDraftRework, {
-          draftSaved: true,
-        });
+        dispatch(
+          setFlashMessage({
+            severity: "success",
+            detail: "Draft saved successfully.",
+          }),
+        );
+        completeFormNavigation(Config.Routes.NpdDraftRework, {});
       })
       .catch(() => {
         finishUiProcessing(dispatch, false);
@@ -472,32 +514,65 @@ export function useNpdRequestFormController(
     // drop blank lines — those must fail validation above).
     const items = itemRows.map(toNpdItemDetailRecord);
     const comments = approverRemarks;
+    const totalUnits = Math.max(items.length, 1);
 
-    flushSync(() => {
-      leaveFormForProcessing(
-        Config.Routes.NpdPending,
-        Math.max(items.length, 1),
-        { showItemProgress: true },
-      );
-    });
-
-    void dispatch(submitNpdRequest({ items, comments }))
-      .unwrap()
-      .then((saved) => {
-        tabLock.notifySubmitted(saved.Id, saved.Title);
-        completeFormNavigation(Config.Routes.NpdPending, {
-          requestSubmitted: true,
-        });
-      })
-      .catch(() => {
-        finishUiProcessing(dispatch, false);
-        dispatch(
-          setFlashMessage({
-            severity: "error",
-            detail: "Failed to submit request. Please try again.",
-          }),
+    void (async () => {
+      // Plain Processing loader while Material Master duplicate check runs.
+      beginUiProcessing(dispatch, totalUnits);
+      try {
+        const materialMasterDuplicates =
+          await validateItemsAgainstMaterialMaster(items);
+        const materialMasterMessage = firstValidationMessage(
+          materialMasterDuplicates,
         );
+        if (materialMasterMessage) {
+          finishUiProcessing(dispatch, false);
+          showErrorToast(toastRef, materialMasterMessage, "Validation");
+          return;
+        }
+      } catch {
+        finishUiProcessing(dispatch, false);
+        showErrorToast(
+          toastRef,
+          "Unable to validate Item Details against Material Master. Please try again.",
+          "Validation",
+        );
+        return;
+      }
+
+      // Validation passed — switch to the line-item progress bar and leave the form.
+      flushSync(() => {
+        leaveFormForProcessing(Config.Routes.NpdPending, totalUnits, {
+          showItemProgress: true,
+        });
       });
+
+      void dispatch(submitNpdRequest({ items, comments }))
+        .unwrap()
+        .then((saved) => {
+          tabLock.notifySubmitted(saved.Id, saved.Title);
+          dispatch(
+            setFlashMessage({
+              severity: "success",
+              detail: "Request submitted successfully.",
+            }),
+          );
+          completeFormNavigation(Config.Routes.NpdPending, {});
+        })
+        .catch((error: unknown) => {
+          finishUiProcessing(dispatch, false);
+          const detail =
+            error instanceof Error && error.message
+              ? error.message
+              : "Failed to submit request. Please try again.";
+          dispatch(
+            setFlashMessage({
+              severity: "error",
+              detail,
+            }),
+          );
+        });
+    })();
   };
 
   const requestAction = (action: NpdWorkflowAction): void => {
@@ -543,6 +618,41 @@ export function useNpdRequestFormController(
         `Please enter approver remarks before ${actionText}.`,
         "Validation",
       );
+      return;
+    }
+
+    // Post to SAP: block when Material Code / Description already exist in Material Master.
+    if (lockedFooterMode === "mis-pending" && action === "Approve") {
+      const items = toPersistableItemRecords(itemRows);
+      void (async () => {
+        // Plain Processing loader while Material Master duplicate check runs.
+        beginUiProcessing(dispatch, Math.max(items.length, 1));
+        try {
+          const materialMasterDuplicates =
+            await validateItemsAgainstMaterialMaster(items, {
+              excludeRequestId: editId || undefined,
+            });
+          const materialMasterMessage = firstValidationMessage(
+            materialMasterDuplicates,
+          );
+          if (materialMasterMessage) {
+            finishUiProcessing(dispatch, false);
+            showErrorToast(toastRef, materialMasterMessage, "Validation");
+            return;
+          }
+        } catch {
+          finishUiProcessing(dispatch, false);
+          showErrorToast(
+            toastRef,
+            "Unable to validate Item Details against Material Master. Please try again.",
+            "Validation",
+          );
+          return;
+        }
+        // Clear validation loader; form `isSaving` overlay covers the workflow save.
+        finishUiProcessing(dispatch, false);
+        dispatchWorkflowAction(action, remarks);
+      })();
       return;
     }
 

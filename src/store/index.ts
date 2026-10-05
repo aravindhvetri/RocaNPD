@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import adminReducer from "./slices/adminSlice";
 import appReducer from "./slices/appSlice";
 import materialGroupReducer from "./slices/materialGroupSlice";
+import materialMasterReducer from "./slices/materialMasterSlice";
 import npdFormReducer from "./slices/npdFormSlice";
 import npdRequestReducer from "./slices/npdRequestSlice";
 import uiReducer from "./slices/uiSlice";
@@ -14,6 +15,7 @@ export const store = configureStore({
     npdForm: npdFormReducer,
     npdRequest: npdRequestReducer,
     materialGroup: materialGroupReducer,
+    materialMaster: materialMasterReducer,
   },
 });
 

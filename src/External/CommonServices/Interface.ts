@@ -246,6 +246,8 @@ export interface INpdItemDetailRecord {
   minQtyBoxQty: string;
   /** True when the line item was added by the MIS Coordinator, highlighted in Item Details table. */
   isMisAdded?: boolean;
+  /** NPD_ItemDetails.SAP — true after SAP accepted this line. */
+  sapPosted?: boolean;
 }
 
 export interface INpdItemDetailsImportParseResult {
@@ -356,6 +358,53 @@ export interface IMaterialGroupEntryRow {
   description: string;
   /** True when the row was added by the user after the form loaded (not hydrated from SharePoint). Used for highlighting. */
   isNew?: boolean;
+}
+
+/** Admin Material Master catalog row (from NPD_MaterialGroupRequests). */
+export interface IMaterialMasterRow extends Record<string, unknown> {
+  Id: number;
+  ItemType: string;
+  MaterialCode: string;
+  MaterialType: string;
+  MaterialDescription: string;
+  BrandCode: string;
+  Brand: string;
+  ProductGroupMG2Code: string;
+  ProductGroupMG2: string;
+  ProductCategoryMG3Code: string;
+  ProductCategoryMG3: string;
+  ProductTypeMG4Code: string;
+  ProductTypeMG4: string;
+  ProductSourceMG5Code: string;
+  ProductSourceMG5: string;
+  ColorMG1ACode: string;
+  ColorMG1A: string;
+  ProductRangeMGP2ACode: string;
+  ProductRangeMGP2A: string;
+  ProductSubCategoryMGP3ACode: string;
+  ProductSubCategoryMGP3A: string;
+  MaterialGroupCode: string;
+  MaterialGroup: string;
+  ExtMaterialGroupCode: string;
+  ExtMaterialGroup: string;
+  ProductSegmentCode: string;
+  ProductSegment: string;
+  TaxClassificationCode: string;
+  TaxClassification: string;
+  ClassPCSCode: string;
+  ClassPCS: string;
+  HSNCode: string;
+  Weight: string;
+  UOMCode: string;
+  UOM: string;
+  MinQty: string;
+  NpdRequestId: number;
+  Initiator: string;
+  InitiatorEmail: string;
+  Created: string;
+  CreatedBy: string;
+  CreatedByEmail: string;
+  IsDeleted: boolean;
 }
 
 /** Payload for saving an item into NPD_MaterialGroupRequests. */
