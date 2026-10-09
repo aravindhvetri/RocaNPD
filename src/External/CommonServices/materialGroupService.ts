@@ -6,18 +6,14 @@ import type {
   IMaterialGroupHydratePayload,
   IMaterialGroupRequestJsonEntry,
 } from "./Interface";
-import {
-  collectMaterialGroupCodes,
-  collectMaterialGroupDescriptions,
-  findDuplicateMaterialGroupField,
-} from "./materialGroupValidation";
 import { getLookupTitles } from "./lookupFieldUtils";
-import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
+import { bulkCreateLookups } from "./lookupService";
 import { fetchActiveLookupTypes } from "./lookupTypeService";
 import {
   addMaterialGroupAuditLog,
   fetchLatestMaterialGroupAuditComment,
   fetchMaterialGroupAuditLogs,
+  fetchMgTerminalConsultantEmailsByRequestId,
 } from "./materialGroupAuditLogService";
 import {
   generateNextMgRequestId,
@@ -464,20 +460,8 @@ export async function submitMaterialGroupRequest(
     throw new Error("Please add at least one entry before submitting.");
   }
 
-  const withinFormDuplicate = findDuplicateMaterialGroupField(
-    selectedConfigIds,
-    entriesByConfigId,
-  );
-  if (withinFormDuplicate) {
-    throw new Error(withinFormDuplicate);
-  }
-
-  await assertMaterialGroupCodesAvailable(
-    collectMaterialGroupCodes(selectedConfigIds, entriesByConfigId),
-  );
-  await assertMaterialGroupDescriptionsAvailable(
-    collectMaterialGroupDescriptions(selectedConfigIds, entriesByConfigId),
-  );
+  // New Material Group Submit: do not block on duplicate Code / Description
+  // (within the form or against Lookup Master). Consultant Complete still validates.
 
   const requestId =
     existingRequestId && isMgRequestIdTitle(existingRequestId)
@@ -689,6 +673,11 @@ export async function fetchGroupedMaterialGroupRequests(
   }
 
   const consultantInfo = await fetchConsultantApproverInfo().catch(() => null);
+  const terminalConsultantEmails = isConsultantView
+    ? await fetchMgTerminalConsultantEmailsByRequestId().catch(
+        () => new Map<number, string[]>(),
+      )
+    : new Map<number, string[]>();
   const parsedRequests: IMaterialGroupGroupedRequest[] = [];
 
   for (const item of rawItems) {
@@ -720,9 +709,24 @@ export async function fetchGroupedMaterialGroupRequests(
 
     // Role filtering — scoped by active nav role (`?as=`).
     // Admin / Consultant: never show Draft. Initiator: own requests only (incl. Draft).
+    // Consultant Completed/Rejected: only the consultant who actioned (audit log),
+    // not the current ApproversMaster assignee.
     if (isAdminView || isConsultantView) {
       if (statusEquals(status, Config.MaterialGroupStatus.Draft)) {
         continue;
+      }
+      if (
+        isConsultantView &&
+        (statusEquals(status, Config.MaterialGroupStatus.Completed) ||
+          statusEquals(status, Config.MaterialGroupStatus.Rejected))
+      ) {
+        const actors = terminalConsultantEmails.get(id) || [];
+        if (
+          !normalizedUserEmail ||
+          !actors.some((email) => email === normalizedUserEmail)
+        ) {
+          continue;
+        }
       }
     } else {
       const isOwner = isOwnedByCurrentUser(
@@ -1067,76 +1071,32 @@ export interface IConsultantActionParams {
 }
 
 /**
- * Code must be unique within the request and against NPD_Lookup LookupCode.
- * Empty codes are ignored (Initiator may leave Code blank).
+ * No-op. Material Group no longer validates Code / Description uniqueness
+ * (within the form or against Lookup Master) at any workflow stage.
  */
+export async function assertMaterialGroupCodesAndDescriptionsAvailable(
+  _codes: string[],
+  _descriptions: string[],
+): Promise<void> {
+  return;
+}
+
+/** @deprecated Prefer assertMaterialGroupCodesAndDescriptionsAvailable. */
 export async function assertMaterialGroupCodesAvailable(
   codes: string[],
 ): Promise<void> {
-  const trimmed = codes
-    .map((value) => value.trim())
-    .filter((value) => Boolean(value));
-
-  const batchCodes = new Set<string>();
-  for (const code of trimmed) {
-    const key = code.toLowerCase();
-    if (batchCodes.has(key)) {
-      throw new Error(`"${code}" already exists.`);
-    }
-    batchCodes.add(key);
-  }
-
-  const existing = await fetchActiveLookups().catch(() => []);
-  const existingCodes = new Set(
-    existing
-      .map((item) => item.LookupCode.trim().toLowerCase())
-      .filter((value) => Boolean(value)),
-  );
-
-  for (const code of trimmed) {
-    if (existingCodes.has(code.toLowerCase())) {
-      throw new Error(`"${code}" already exists as a Lookup Code.`);
-    }
-  }
+  await assertMaterialGroupCodesAndDescriptionsAvailable(codes, []);
 }
 
-/**
- * Description must be unique within the request and against NPD_Lookup Title
- * (LookupName), same family of rule as Lookup Code uniqueness.
- */
+/** @deprecated Prefer assertMaterialGroupCodesAndDescriptionsAvailable. */
 export async function assertMaterialGroupDescriptionsAvailable(
   descriptions: string[],
 ): Promise<void> {
-  const trimmed = descriptions
-    .map((value) => value.trim())
-    .filter((value) => Boolean(value));
-
-  const batchTitles = new Set<string>();
-  for (const description of trimmed) {
-    const key = description.toLowerCase();
-    if (batchTitles.has(key)) {
-      throw new Error(`"${description}" already exists.`);
-    }
-    batchTitles.add(key);
-  }
-
-  const existing = await fetchActiveLookups().catch(() => []);
-  const existingTitles = new Set(
-    existing
-      .map((item) => item.LookupName.trim().toLowerCase())
-      .filter((value) => Boolean(value)),
-  );
-
-  for (const description of trimmed) {
-    if (existingTitles.has(description.toLowerCase())) {
-      throw new Error(`"${description}" already exists.`);
-    }
-  }
+  await assertMaterialGroupCodesAndDescriptionsAvailable([], descriptions);
 }
 
 /**
- * Resolves LookupType + validates uniqueness for Complete entries.
- * Throws before any SharePoint write when Code is missing or already exists.
+ * Resolves LookupType for Complete entries. Code is required; duplicates are allowed.
  */
 async function prepareLookupMasterEntries(
   entries: IMaterialGroupRequestJsonEntry[],
@@ -1159,17 +1119,6 @@ async function prepareLookupMasterEntries(
   const typeByTitle = new Map(
     lookupTypes.map((t) => [t.Title.trim().toLowerCase(), t]),
   );
-  const existing = await fetchActiveLookups().catch(() => []);
-  const existingCodes = new Set(
-    existing.map((item) => item.LookupCode.trim().toLowerCase()),
-  );
-  const existingTitles = new Set(
-    existing
-      .map((item) => item.LookupName.trim().toLowerCase())
-      .filter((value) => Boolean(value)),
-  );
-  const batchCodes = new Set<string>();
-  const batchTitles = new Set<string>();
   const prepared: Array<{
     lookupTypeId: number;
     lookupTypeTitle: string;
@@ -1204,23 +1153,10 @@ async function prepareLookupMasterEntries(
       );
     }
 
-    const codeKey = code.toLowerCase();
-    if (existingCodes.has(codeKey) || batchCodes.has(codeKey)) {
-      throw new Error(`"${code}" already exists as a Lookup Code.`);
-    }
-
-    const name = description || code;
-    const nameKey = name.toLowerCase();
-    if (existingTitles.has(nameKey) || batchTitles.has(nameKey)) {
-      throw new Error(`"${name}" already exists.`);
-    }
-
-    batchCodes.add(codeKey);
-    batchTitles.add(nameKey);
     prepared.push({
       lookupTypeId,
       lookupTypeTitle: resolvedType.Title || lookupName,
-      name,
+      name: description || code,
       code,
     });
   }
@@ -1318,16 +1254,9 @@ export async function updateConsultantMaterialGroupAction(
       configLookupIds.push(configId);
     }
 
-    const duplicateField = findDuplicateMaterialGroupField(
-      Object.keys(params.entriesByConfigId).map(Number),
-      params.entriesByConfigId,
-    );
-    if (duplicateField) {
-      throw new Error(duplicateField);
-    }
   }
 
-  // Complete: sync Lookup Master BEFORE status change so duplicates leave request Pending.
+  // Complete: sync Lookup Master BEFORE status change.
   if (params.action === "Completed") {
     if (!comments) {
       throw new Error("Comments are required before completing.");

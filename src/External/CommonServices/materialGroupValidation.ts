@@ -24,7 +24,7 @@ export function findDuplicateMaterialGroupCode(
 
       const key = normalizeKey(code);
       if (seen.has(key)) {
-        return `"${code}" already exists.`;
+        return `"${code}" already exists as a Code.`;
       }
       seen.add(key);
     }
@@ -53,7 +53,7 @@ export function findDuplicateMaterialGroupDescription(
 
       const key = normalizeKey(description);
       if (seen.has(key)) {
-        return `"${description}" already exists.`;
+        return `"${description}" already exists as a Description.`;
       }
       seen.add(key);
     }
@@ -62,15 +62,26 @@ export function findDuplicateMaterialGroupDescription(
   return null;
 }
 
-/** First Code or Description duplicate across the whole request, if any. */
+/**
+ * Within-request Code / Description duplicates.
+ * When both exist, returns one combined message.
+ */
 export function findDuplicateMaterialGroupField(
   selectedConfigIds: number[],
   entriesByConfigId: Record<number, IMaterialGroupEntryRow[]>,
 ): string | null {
-  return (
-    findDuplicateMaterialGroupCode(selectedConfigIds, entriesByConfigId) ||
-    findDuplicateMaterialGroupDescription(selectedConfigIds, entriesByConfigId)
+  const codeDup = findDuplicateMaterialGroupCode(
+    selectedConfigIds,
+    entriesByConfigId,
   );
+  const descriptionDup = findDuplicateMaterialGroupDescription(
+    selectedConfigIds,
+    entriesByConfigId,
+  );
+  if (codeDup && descriptionDup) {
+    return `${codeDup} ${descriptionDup}`;
+  }
+  return codeDup || descriptionDup;
 }
 
 /** Collect trimmed non-empty Codes from selected master rows. */

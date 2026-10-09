@@ -223,7 +223,7 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
         field: "createdDate",
         header: FieldLabels?.CreatedDate,
         sortable: true,
-        style: { width: "7.5rem", minWidth: "7.5rem" },
+        style: { width: "8rem", minWidth: "8rem" },
         body: (row) => (
           <span className={styles.dateCell}>
             {formatNpdCreatedDate(row.createdDate)}

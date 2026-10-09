@@ -8,11 +8,14 @@ import {
   buildMissingImportHeadersError,
   findBestHeaderRowIndex,
   findColumnIndex,
+  appendImportNoSpecialCharactersErrors,
+  importDigitsOnlyError,
+  importNumericOnlyError,
+  parseImportNumericValue,
   readSpreadsheetWorkbook,
   validateRequiredImportHeaders,
 } from "./importService";
 import { getLookupOptionsByFieldName, lookupValuesMatch } from "./lookupOptionUtils";
-import { sanitizeDigitsOnlyTextInput } from "./textInputSanitize";
 
 const ITEM_FIELDS = FieldNames.NpdItemDetails;
 
@@ -313,7 +316,10 @@ function normalizeUniqueText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** Collect Already exists messages for Roca Global Code / Material Code / Description. */
+/**
+ * Collect Already exists messages for Roca Global Code / Material Code /
+ * Description. One message per Excel row lists every duplicate field name.
+ */
 function collectUniqueFieldDuplicates(
   record: INpdItemDetailRecord,
   excelRowNumber: number,
@@ -322,7 +328,7 @@ function collectUniqueFieldDuplicates(
   seenMaterialCodes: Set<string>,
   seenMaterialDescriptions: Set<string>,
 ): string[] {
-  const duplicates: string[] = [];
+  const duplicateFields: string[] = [];
   const candidates: Array<{ raw: string; label: string; seen: Set<string> }> =
     [];
 
@@ -350,21 +356,24 @@ function collectUniqueFieldDuplicates(
       return;
     }
     if (seen.has(key)) {
-      duplicates.push(`${label}: ${raw.trim()}`);
+      duplicateFields.push(label);
     }
   });
 
   // Only reserve unique keys when the row itself is not a duplicate.
-  if (!duplicates.length) {
+  if (!duplicateFields.length) {
     candidates.forEach(({ raw, seen }) => {
       const key = normalizeUniqueText(raw);
       if (key) {
         seen.add(key);
       }
     });
+    return [];
   }
 
-  return duplicates.map((entry) => `Row ${excelRowNumber} — ${entry}`);
+  const fieldList = duplicateFields.join(", ");
+  const verb = duplicateFields.length === 1 ? "already exists" : "already exist";
+  return [`Row ${excelRowNumber} — ${fieldList} ${verb}`];
 }
 
 export async function parseNpdItemDetailsImportFile(
@@ -477,21 +486,39 @@ export async function parseNpdItemDetailsImportFile(
         (column.conditional !== "rocaGlobalCode" || requireRocaGlobalCode);
 
       if (column.controlType === "text") {
-        const textValue =
-          column.textFilter === "digits"
-            ? sanitizeDigitsOnlyTextInput(raw)
-            : raw;
-        if (required && !textValue) {
+        if (required && !raw) {
           errors.push(`Row ${excelRowNumber}: ${column.header} is required.`);
           return;
         }
-        if (column.maxLength && textValue.length > column.maxLength) {
+        if (!raw) {
+          (record[column.field] as string) = "";
+          return;
+        }
+        if (column.textFilter === "digits") {
+          const formatError = importDigitsOnlyError(
+            raw,
+            column.header,
+            excelRowNumber,
+          );
+          if (formatError) {
+            errors.push(formatError);
+            return;
+          }
+        } else if (
+          appendImportNoSpecialCharactersErrors(errors, excelRowNumber, [
+            { raw, fieldLabel: column.header },
+          ])
+        ) {
+          // Still validate remaining columns on this row — do not short-circuit the row.
+          return;
+        }
+        if (column.maxLength && raw.length > column.maxLength) {
           errors.push(
             `Row ${excelRowNumber}: ${column.header} must be ${column.maxLength} characters or fewer.`,
           );
           return;
         }
-        (record[column.field] as string) = textValue;
+        (record[column.field] as string) = raw;
         return;
       }
 
@@ -504,12 +531,16 @@ export async function parseNpdItemDetailsImportFile(
           record.weightKg = null;
           return;
         }
-        const numeric = Number(String(raw).replace(/,/g, ""));
-        if (!Number.isFinite(numeric) || numeric < 0) {
-          errors.push(`Row ${excelRowNumber}: ${column.header} must be a valid number.`);
+        const formatError = importNumericOnlyError(
+          raw,
+          column.header,
+          excelRowNumber,
+        );
+        if (formatError) {
+          errors.push(formatError);
           return;
         }
-        record.weightKg = numeric;
+        record.weightKg = parseImportNumericValue(raw);
         return;
       }
 

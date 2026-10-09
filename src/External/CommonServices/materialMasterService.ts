@@ -21,7 +21,8 @@ import SPServices, { getSP } from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.MaterialMaster;
 const REQUEST_FIELDS = Config.FieldNames.NpdRequest;
-const PAGE_SIZE = MaterialMasterUi.FetchPageSize;
+/** SharePoint list-view page size for catalog continuation (not a total-row cap). */
+const CATALOG_ROW_LIMIT = MaterialMasterUi.CatalogFetchRowLimit;
 
 /** Known internal names from NPD_MaterialMaster list settings (screenshot). */
 const MM_FIELDS = {
@@ -123,7 +124,6 @@ export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
 
 export const MATERIAL_MASTER_META_COLUMNS: IMaterialMasterColumnDef[] = [
   { field: "Created", header: "Created Date", minWidth: "8rem" },
-  { field: "CreatedBy", header: "Created By", minWidth: "9rem" },
   { field: "Initiator", header: "Initiator", minWidth: "9rem" },
 ];
 
@@ -176,23 +176,6 @@ function getLookupId(value: unknown, fallbackId?: unknown): number {
   const record = value as Record<string, unknown>;
   const id = Number(record.Id ?? record.ID);
   return Number.isFinite(id) && id > 0 ? id : 0;
-}
-
-function getAuthorTitle(item: Record<string, unknown>): string {
-  const author = item.Author;
-  if (!author || typeof author !== "object") {
-    return "";
-  }
-  return String((author as Record<string, unknown>).Title ?? "").trim();
-}
-
-function getAuthorEmail(item: Record<string, unknown>): string {
-  const author = item.Author;
-  if (!author || typeof author !== "object") {
-    return "";
-  }
-  const record = author as Record<string, unknown>;
-  return String(record.EMail ?? record.Email ?? "").trim();
 }
 
 function findInternalName(
@@ -276,15 +259,8 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
   const npdRequestInternal = internalByLogical.NPDRequest || "";
   const isDeletedInternal = internalByLogical.IsDeleted || "";
 
-  // Author/Title + Author/EMail are required for Created By persona photos.
-  const selectParts = new Set<string>([
-    "Id",
-    "Created",
-    "Author/Id",
-    "Author/Title",
-    "Author/EMail",
-    itemTypeInternal,
-  ]);
+  // Created By / Author is not shown — do not select or $expand Author.
+  const selectParts = new Set<string>(["Id", "Created", itemTypeInternal]);
   if (isDeletedInternal) {
     selectParts.add(isDeletedInternal);
   }
@@ -312,7 +288,7 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
     npdRequestInternal,
     isDeletedInternal,
     select: Array.from(selectParts).join(","),
-    expand: "Author",
+    expand: "",
   };
   // Module cache write after await — last writer wins; schema is immutable once resolved.
   // eslint-disable-next-line require-atomic-updates -- intentional shared schema cache
@@ -417,8 +393,8 @@ function mapCatalogRow(
     Initiator: "",
     InitiatorEmail: "",
     Created: String(item.Created ?? ""),
-    CreatedBy: getAuthorTitle(item),
-    CreatedByEmail: getAuthorEmail(item),
+    CreatedBy: "",
+    CreatedByEmail: "",
     IsDeleted: schema.isDeletedInternal
       ? isDeletedYesFlag(item[schema.isDeletedInternal])
       : false,
@@ -504,55 +480,171 @@ async function fetchInitiatorByRequestId(
   return map;
 }
 
-async function loadMaterialMasterPages(
-  schema: IMaterialMasterSchema,
-  itemTypeValue?: string,
-): Promise<Record<string, unknown>[]> {
-  return SPServices.SPReadItemsPaged({
-    Listname: LIST_NAME(),
-    Select: schema.select,
-    Expand: schema.expand,
-    Filter: itemTypeValue
-      ? [
-          {
-            FilterKey: schema.itemTypeInternal,
-            FilterValue: itemTypeValue,
-            Operator: "eq",
-          },
-        ]
-      : [],
-    FilterCondition: "and",
-    PageSize: PAGE_SIZE,
-    Orderby: "ID",
-    // Ascending Id paging is reliable on SharePoint; UI still pages at 50.
-    Orderbydecorasc: true,
-  });
+/**
+ * OData select → CAML ViewFields.
+ * `LookupFieldId` is not a real list field — map to `LookupField` so CAML
+ * does not fail after New rows populate the NPDRequest lookup.
+ */
+function selectFieldsToCamlViewFieldNames(select: string): string[] {
+  const names = new Set<string>(["ID", "Created"]);
+  String(select || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => {
+      const base = part.split("/")[0]?.trim();
+      if (!base) {
+        return;
+      }
+      if (base === "Id" || base === "ID") {
+        names.add("ID");
+        return;
+      }
+      // OData lookup id projection (e.g. NPDRequestId) → lookup column name.
+      if (/Id$/i.test(base) && base.length > 2) {
+        names.add(base.replace(/Id$/i, ""));
+        return;
+      }
+      names.add(base);
+    });
+  return Array.from(names);
 }
 
 /**
- * Loads Material Master rows for one tab from NPD_MaterialMaster (50/page).
- * Existing => ItemType Old. New => ItemType New.
+ * Catalog CAML: filter only on indexed ID (threshold-safe).
+ * Do not put IsDeleted in Where — that non-indexed filter throttles lists >5k
+ * and previously broke page-2+ reloads after new rows were added.
  */
-export async function fetchMaterialMasterCatalog(
-  tab: MaterialMasterTab,
-): Promise<IMaterialMasterRow[]> {
+function buildMaterialMasterCamlViewXml(params: {
+  viewFieldNames: string[];
+  afterId?: number;
+  rowLimit: number;
+}): string {
+  const whereXml =
+    params.afterId && params.afterId > 0
+      ? `<Where><Gt><FieldRef Name='ID' /><Value Type='Counter'>${params.afterId}</Value></Gt></Where>`
+      : "";
+
+  const viewFieldsXml = params.viewFieldNames
+    .map((name) => `<FieldRef Name='${name}' />`)
+    .join("");
+
+  return [
+    "<View>",
+    `<Query>${whereXml}<OrderBy><FieldRef Name='ID' Ascending='TRUE' /></OrderBy></Query>`,
+    `<ViewFields>${viewFieldsXml}</ViewFields>`,
+    `<RowLimit Paged='FALSE'>${params.rowLimit}</RowLimit>`,
+    "</View>",
+  ].join("");
+}
+
+/**
+ * Loads the full Material Master catalog with CAML (up to CatalogFetchRowLimit
+ * per request). Continues by Id only when the list exceeds that limit — never
+ * pages in UI-sized batches of 50. Soft-delete is applied client-side.
+ */
+async function loadMaterialMasterCatalogRaw(
+  schema: IMaterialMasterSchema,
+): Promise<Record<string, unknown>[]> {
+  const viewFieldNames = selectFieldsToCamlViewFieldNames(schema.select);
+  // Ensure IsDeleted is selected for client-side active filtering.
+  if (
+    schema.isDeletedInternal &&
+    !viewFieldNames.some(
+      (name) =>
+        name.toLowerCase() === schema.isDeletedInternal.toLowerCase(),
+    )
+  ) {
+    viewFieldNames.push(schema.isDeletedInternal);
+  }
+  const expandFields = String(schema.expand || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const all: Record<string, unknown>[] = [];
+  const seenIds = new Set<number>();
+  let afterId = 0;
+
+  for (let guard = 0; guard < 50; guard += 1) {
+    const ViewXml = buildMaterialMasterCamlViewXml({
+      viewFieldNames,
+      afterId: afterId > 0 ? afterId : undefined,
+      rowLimit: CATALOG_ROW_LIMIT,
+    });
+
+    let page: Record<string, unknown>[] = [];
+    let drainedViaRestFallback = false;
+    try {
+      page = await SPServices.SPReadItemsByCaml({
+        Listname: LIST_NAME(),
+        ViewXml,
+        Expand: expandFields,
+      });
+    } catch {
+      // Last resort: OData ID paging returns all remaining rows (threshold-safe).
+      try {
+        page = await SPServices.SPReadItemsPaged({
+          Listname: LIST_NAME(),
+          Select: schema.select,
+          Orderby: "ID",
+          Orderbydecorasc: true,
+          PageSize: CATALOG_ROW_LIMIT,
+          Filter:
+            afterId > 0
+              ? [
+                  {
+                    FilterKey: "Id",
+                    FilterValue: String(afterId),
+                    Operator: "gt",
+                  },
+                ]
+              : [],
+        });
+        drainedViaRestFallback = true;
+      } catch {
+        throw new Error("Failed to load Material Master catalog.");
+      }
+    }
+
+    if (!page.length) {
+      break;
+    }
+
+    let maxId = afterId;
+    page.forEach((row) => {
+      const id = Number(row.Id ?? row.ID);
+      if (!Number.isFinite(id) || id <= 0 || seenIds.has(id)) {
+        return;
+      }
+      seenIds.add(id);
+      all.push(row);
+      if (id > maxId) {
+        maxId = id;
+      }
+    });
+
+    if (
+      drainedViaRestFallback ||
+      page.length < CATALOG_ROW_LIMIT ||
+      maxId <= afterId
+    ) {
+      break;
+    }
+    afterId = maxId;
+  }
+
+  return all;
+}
+
+/**
+ * Loads all Material Master rows once (Existing + New).
+ * Tab switching and filters are applied client-side — no extra SharePoint reads.
+ */
+export async function fetchMaterialMasterCatalog(): Promise<IMaterialMasterRow[]> {
   // Avoid stale schema after list/column changes during local rebuilds.
   cachedSchema = null;
   const schema = await resolveMaterialMasterSchema();
-  const itemTypeValue = getMaterialMasterTabItemType(tab);
-
-  let rawRows: Record<string, unknown>[] = [];
-  try {
-    rawRows = await loadMaterialMasterPages(schema, itemTypeValue);
-  } catch {
-    // Filtered query can fail if ItemType is not indexed; load all and filter client-side.
-    rawRows = [];
-  }
-
-  // Fallback when the ItemType filter returns nothing or errors.
-  if (!rawRows.length) {
-    rawRows = await loadMaterialMasterPages(schema);
-  }
+  const rawRows = await loadMaterialMasterCatalogRaw(schema);
 
   const mapped = rawRows
     .map((row) => mapCatalogRow(row, schema))
@@ -567,7 +659,7 @@ export async function fetchMaterialMasterCatalog(
       (row) =>
         row.Id > 0 &&
         isActiveRecord(row) &&
-        row.ItemType.toLowerCase() === itemTypeValue.toLowerCase(),
+        Boolean(row.ItemType),
     );
 
   const initiatorMap = await fetchInitiatorByRequestId(
@@ -596,42 +688,193 @@ function joinMaterialMasterMultiValue(values: string[]): string {
     .join(Config.NpdItemImport.MultiValueSeparator);
 }
 
-/** Short TTL so Initiator UI pre-check + submit service re-check share one catalog load. */
-const DUPLICATE_INDEX_CACHE_TTL_MS = 60_000;
-let duplicateIndexCache: {
-  excludeRequestId: number;
-  loadedAt: number;
-  materialCodes: Set<string>;
-  materialDescriptions: Set<string>;
-} | null = null;
-
 function invalidateMaterialMasterDuplicateIndexCache(): void {
-  duplicateIndexCache = null;
+  // Kept for insert/update call sites that cleared the old full-catalog cache.
+}
+
+/** Unique trimmed values preserving first casing. */
+function uniqueTrimmedValues(values: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  values.forEach((raw) => {
+    const trimmed = String(raw ?? "").trim();
+    if (!trimmed) {
+      return;
+    }
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    unique.push(trimmed);
+  });
+  return unique;
 }
 
 /**
- * Loads MaterialCode / MaterialDescription keys from NPD_MaterialMaster (paged).
- * Used for Initiator Submit and MIS Post to SAP duplicate checks.
- * When excludeRequestId is set, rows already linked to that NPD_Request are ignored
- * (supports safe retries after a partial Post to SAP).
+ * Threshold-safe Material Master candidate match.
+ *
+ * Filtering on MaterialCode / MaterialDescription (`In`/`Eq`) throws
+ * SPQueryThrottledException once the list exceeds the view threshold and those
+ * columns are not indexed. ID is always indexed, so we page by ID (same pattern
+ * as the catalog load), match candidates client-side, and stop early when every
+ * candidate code/description has already been found.
+ */
+async function fetchMaterialMasterMatchesByCaml(params: {
+  codes: string[];
+  descriptions: string[];
+  codeField: string;
+  descriptionField: string;
+  npdRequestInternal?: string;
+  /** When set, only rows linked to this NPD_Request Id. */
+  npdRequestId?: number;
+  /** Skip rows linked to this request (self during re-validate). */
+  excludeRequestId?: number;
+  isDeletedField?: string;
+}): Promise<Record<string, unknown>[]> {
+  const pendingCodes = new Set(
+    uniqueTrimmedValues(params.codes).map(normalizeMaterialMasterCompareValue),
+  );
+  const pendingDescriptions = new Set(
+    uniqueTrimmedValues(params.descriptions).map(
+      normalizeMaterialMasterCompareValue,
+    ),
+  );
+  if (!pendingCodes.size && !pendingDescriptions.size) {
+    return [];
+  }
+
+  const viewFields = ["ID", params.codeField, params.descriptionField];
+  if (params.npdRequestInternal) {
+    viewFields.push(params.npdRequestInternal);
+  }
+  if (params.isDeletedField) {
+    viewFields.push(params.isDeletedField);
+  }
+  const viewFieldsXml = viewFields
+    .map((name) => `<FieldRef Name='${name}' />`)
+    .join("");
+
+  const matchedById = new Map<number, Record<string, unknown>>();
+  const foundCodes = new Set<string>();
+  const foundDescriptions = new Set<string>();
+  let afterId = 0;
+  const rowLimit = CATALOG_ROW_LIMIT;
+
+  const allCandidatesFound = (): boolean =>
+    foundCodes.size >= pendingCodes.size &&
+    foundDescriptions.size >= pendingDescriptions.size;
+
+  for (let guard = 0; guard < 50 && !allCandidatesFound(); guard += 1) {
+    const whereXml =
+      afterId > 0
+        ? `<Where><Gt><FieldRef Name='ID' /><Value Type='Counter'>${afterId}</Value></Gt></Where>`
+        : "";
+    const ViewXml = [
+      "<View>",
+      `<Query>${whereXml}<OrderBy><FieldRef Name='ID' Ascending='TRUE' /></OrderBy></Query>`,
+      `<ViewFields>${viewFieldsXml}</ViewFields>`,
+      `<RowLimit Paged='FALSE'>${rowLimit}</RowLimit>`,
+      "</View>",
+    ].join("");
+
+    const page = await SPServices.SPReadItemsByCaml({
+      Listname: LIST_NAME(),
+      ViewXml,
+    });
+    if (!page.length) {
+      break;
+    }
+
+    let maxId = afterId;
+    page.forEach((row) => {
+      const id = Number(row.ID ?? row.Id);
+      if (Number.isFinite(id) && id > maxId) {
+        maxId = id;
+      }
+
+      if (params.isDeletedField && isDeletedYesFlag(row[params.isDeletedField])) {
+        return;
+      }
+
+      if (params.npdRequestInternal) {
+        const linkedId = getLookupId(
+          row[params.npdRequestInternal],
+          row[`${params.npdRequestInternal}Id`],
+        );
+        if (
+          params.npdRequestId &&
+          params.npdRequestId > 0 &&
+          linkedId !== params.npdRequestId
+        ) {
+          return;
+        }
+        if (
+          params.excludeRequestId &&
+          params.excludeRequestId > 0 &&
+          linkedId === params.excludeRequestId
+        ) {
+          return;
+        }
+      }
+
+      const code = normalizeMaterialMasterCompareValue(
+        textOf(row[params.codeField]),
+      );
+      const description = normalizeMaterialMasterCompareValue(
+        textOf(row[params.descriptionField]),
+      );
+      const codeHit = Boolean(code && pendingCodes.has(code));
+      const descriptionHit = Boolean(
+        description && pendingDescriptions.has(description),
+      );
+      if (!codeHit && !descriptionHit) {
+        return;
+      }
+
+      if (Number.isFinite(id) && id > 0) {
+        matchedById.set(id, row);
+      } else {
+        matchedById.set(matchedById.size + 1, row);
+      }
+      if (codeHit) {
+        foundCodes.add(code);
+      }
+      if (descriptionHit) {
+        foundDescriptions.add(description);
+      }
+    });
+
+    if (page.length < rowLimit || maxId <= afterId) {
+      break;
+    }
+    afterId = maxId;
+  }
+
+  return Array.from(matchedById.values());
+}
+
+/**
+ * Returns Material Master Code / Description keys that collide with the given
+ * candidates (ID-paged CAML + client match — threshold-safe).
  */
 export async function loadMaterialMasterDuplicateIndex(options?: {
   excludeRequestId?: number;
+  /** When set, only these values are queried from SharePoint. */
+  candidateCodes?: string[];
+  candidateDescriptions?: string[];
 }): Promise<{
   materialCodes: Set<string>;
   materialDescriptions: Set<string>;
 }> {
   const excludeRequestId = Number(options?.excludeRequestId) || 0;
-  const now = Date.now();
-  if (
-    duplicateIndexCache &&
-    duplicateIndexCache.excludeRequestId === excludeRequestId &&
-    now - duplicateIndexCache.loadedAt < DUPLICATE_INDEX_CACHE_TTL_MS
-  ) {
-    return {
-      materialCodes: duplicateIndexCache.materialCodes,
-      materialDescriptions: duplicateIndexCache.materialDescriptions,
-    };
+  const candidateCodes = uniqueTrimmedValues(options?.candidateCodes || []);
+  const candidateDescriptions = uniqueTrimmedValues(
+    options?.candidateDescriptions || [],
+  );
+
+  if (!candidateCodes.length && !candidateDescriptions.length) {
+    return { materialCodes: new Set(), materialDescriptions: new Set() };
   }
 
   const schema = await resolveMaterialMasterSchema();
@@ -642,35 +885,20 @@ export async function loadMaterialMasterDuplicateIndex(options?: {
     MM_FIELDS.MaterialDescription;
   const npdRequestInternal = schema.npdRequestInternal || MM_FIELDS.NPDRequest;
 
-  const selectParts = ["Id", codeField, descriptionField];
-  if (npdRequestInternal) {
-    selectParts.push(`${npdRequestInternal}Id`);
-  }
-
-  const rows = await SPServices.SPReadItemsPaged({
-    Listname: LIST_NAME(),
-    Select: selectParts.join(","),
-    Expand: "",
-    Filter: [],
-    PageSize: PAGE_SIZE,
-    Orderby: "ID",
-    Orderbydecorasc: true,
+  const rows = await fetchMaterialMasterMatchesByCaml({
+    codes: candidateCodes,
+    descriptions: candidateDescriptions,
+    codeField,
+    descriptionField,
+    npdRequestInternal: npdRequestInternal || undefined,
+    excludeRequestId: excludeRequestId > 0 ? excludeRequestId : undefined,
+    isDeletedField: schema.isDeletedInternal || undefined,
   });
 
   const materialCodes = new Set<string>();
   const materialDescriptions = new Set<string>();
 
   rows.forEach((row) => {
-    if (excludeRequestId > 0 && npdRequestInternal) {
-      const linkedId = getLookupId(
-        row[npdRequestInternal],
-        row[`${npdRequestInternal}Id`],
-      );
-      if (linkedId === excludeRequestId) {
-        return;
-      }
-    }
-
     const code = normalizeMaterialMasterCompareValue(textOf(row[codeField]));
     const description = normalizeMaterialMasterCompareValue(
       textOf(row[descriptionField]),
@@ -683,22 +911,13 @@ export async function loadMaterialMasterDuplicateIndex(options?: {
     }
   });
 
-  const resolvedIndex = {
-    excludeRequestId,
-    loadedAt: now,
-    materialCodes,
-    materialDescriptions,
-  };
-  // Module cache write after await — short TTL; concurrent refresh is acceptable.
-  // eslint-disable-next-line require-atomic-updates -- intentional shared duplicate-index cache
-  duplicateIndexCache = resolvedIndex;
-
   return { materialCodes, materialDescriptions };
 }
 
 /**
  * Returns validation messages when Item Details Material Code / Description
  * already exist in NPD_MaterialMaster (trim + lowercase compare).
+ * Queries SharePoint only for the codes/descriptions on these items.
  */
 export async function validateItemsAgainstMaterialMaster(
   items: Array<{
@@ -724,7 +943,11 @@ export async function validateItemsAgainstMaterialMaster(
   }
 
   const { materialCodes, materialDescriptions } =
-    await loadMaterialMasterDuplicateIndex(options);
+    await loadMaterialMasterDuplicateIndex({
+      excludeRequestId: options?.excludeRequestId,
+      candidateCodes: filled.map((item) => item.materialCode),
+      candidateDescriptions: filled.map((item) => item.materialDescription),
+    });
   const messages: string[] = [];
 
   filled.forEach((item) => {
@@ -918,6 +1141,7 @@ function materialMasterItemKey(code: string, description: string): string {
 /**
  * Skips lines this NPD request already wrote to Material Master so a Post to SAP
  * retry does not insert the successful lines again.
+ * Targeted CAML: only pending codes/descriptions for this request Id (no full list pull).
  */
 async function excludeMaterialMasterRowsAlreadyStored(
   requestId: number,
@@ -933,11 +1157,16 @@ async function excludeMaterialMasterRowsAlreadyStored(
   const descriptionField =
     schema.internalByLogical.MaterialDescription ||
     MM_FIELDS.MaterialDescription;
-  const existing = (await getSP()
-    .web.lists.getByTitle(LIST_NAME())
-    .items.select("Id", codeField, descriptionField)
-    .filter(`${schema.npdRequestInternal}Id eq ${requestId}`)
-    .top(5000)()) as Record<string, unknown>[];
+
+  const existing = await fetchMaterialMasterMatchesByCaml({
+    codes: items.map((item) => item.materialCode),
+    descriptions: items.map((item) => item.materialDescription),
+    codeField,
+    descriptionField,
+    npdRequestInternal: schema.npdRequestInternal,
+    npdRequestId: requestId,
+    isDeletedField: schema.isDeletedInternal || undefined,
+  });
 
   const storedKeys = new Set<string>();
   existing.forEach((row) => {
@@ -985,13 +1214,8 @@ export async function insertMaterialMasterFromNpdItems(params: {
     return;
   }
 
-  // Re-check duplicates immediately before insert to avoid races.
-  const duplicateMessages = await validateItemsAgainstMaterialMaster(pendingItems, {
-    excludeRequestId: params.requestId,
-  });
-  if (duplicateMessages.length) {
-    throw new Error(duplicateMessages[0]);
-  }
+  // Duplicate check already ran for new/updated lines before Post to SAP.
+  // Do not scan unchanged Item Details again here.
 
   const lookups = await fetchActiveLookups();
   const lookupResolver = createSapLookupCodeResolver(lookups);

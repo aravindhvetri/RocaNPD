@@ -332,6 +332,15 @@ export interface IRequestAccessInput {
   createdByEmail?: string;
   brand?: string;
   module: "npd" | "mg";
+  /** Request Status — used with workflowSteps for approver historical scope. */
+  status?: string;
+  /** NPD WorkFlowJSON steps — ownership for VH / MIS / Consultant visibility. */
+  workflowSteps?: INpdWorkflowStepJson[];
+  /**
+   * MG Consultant: emails of consultants who handled terminal actions
+   * (Completed / Rejected) for this request. From audit log, not ApproversMaster.
+   */
+  historicalActorEmails?: string[];
 }
 
 /** Dynamic JSON entry stored in NPD_MaterialGroupRequests.RequestsJSON */

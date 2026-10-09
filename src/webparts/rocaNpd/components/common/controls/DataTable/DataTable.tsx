@@ -29,7 +29,9 @@ function DataTable<T extends Record<string, unknown>>({
   globalFilter,
   globalFilterFields,
   paginatorPosition = "bottom",
-  paginatorTemplate = "FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport",
+  // CurrentPageReport first so shared pagination CSS (margin-right: auto on
+  // .p-paginator-current) keeps the page controls right-aligned.
+  paginatorTemplate = "CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink",
   currentPageReportTemplate = "Showing {first} to {last} of {totalRecords} entries",
   first,
   onPage,

@@ -7,14 +7,15 @@ import type {
   IMaterialGroupHydratePayload,
 } from "../../External/CommonServices/Interface";
 import * as materialGroupService from "../../External/CommonServices/materialGroupService";
-import { findDuplicateMaterialGroupField } from "../../External/CommonServices/materialGroupValidation";
+import {
+  assertBrowserOnline,
+  raceWithBrowserOffline,
+  toUserActionErrorMessage,
+} from "../../External/CommonServices/networkConnectivity";
 import type { RootState } from "../rootState";
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "An unexpected error occurred.";
+  return toUserActionErrorMessage(error);
 }
 
 export const fetchMaterialGroupConfigsThunk = createAsyncThunk<
@@ -47,6 +48,7 @@ export const saveMaterialGroupDraftThunk = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("materialGroup/saveDraft", async (_, { getState, rejectWithValue }) => {
   try {
+    assertBrowserOnline();
     const {
       selectedConfigIds,
       entriesByConfigId,
@@ -64,15 +66,17 @@ export const saveMaterialGroupDraftThunk = createAsyncThunk<
 
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);
 
-    return await materialGroupService.saveMaterialGroupDraft({
-      id: targetId && targetId > 0 ? targetId : undefined,
-      guid: currentGuid || undefined,
-      selectedConfigIds,
-      entriesByConfigId,
-      actorEmail: appState.userEmail,
-      actorName: appState.userDisplayName || appState.userLoginName,
-      actorId: appState.userId,
-    });
+    return await raceWithBrowserOffline(
+      materialGroupService.saveMaterialGroupDraft({
+        id: targetId && targetId > 0 ? targetId : undefined,
+        guid: currentGuid || undefined,
+        selectedConfigIds,
+        entriesByConfigId,
+        actorEmail: appState.userEmail,
+        actorName: appState.userDisplayName || appState.userLoginName,
+        actorId: appState.userId,
+      }),
+    );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
@@ -84,6 +88,7 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("materialGroup/submitRequest", async (arg, { getState, rejectWithValue }) => {
   try {
+    assertBrowserOnline();
     const {
       selectedConfigIds,
       entriesByConfigId,
@@ -124,13 +129,7 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
       }
     }
 
-    const duplicateField = findDuplicateMaterialGroupField(
-      selectedConfigIds,
-      entriesByConfigId,
-    );
-    if (duplicateField) {
-      return rejectWithValue(duplicateField);
-    }
+    // New Material Group Submit: Code / Description duplicates are allowed.
 
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);
     const comments =
@@ -140,19 +139,21 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
           ? arg.comments
           : undefined;
 
-    return await materialGroupService.submitMaterialGroupRequest({
-      id: targetId && targetId > 0 ? targetId : undefined,
-      guid: currentGuid || undefined,
-      selectedConfigIds,
-      entriesByConfigId,
-      actorEmail: appState.userEmail,
-      actorName: appState.userDisplayName || appState.userLoginName,
-      actorId: appState.userId,
-      masterTitles,
-      existingRequestId: currentRequestId || undefined,
-      existingStatus: currentStatus || undefined,
-      comments,
-    });
+    return await raceWithBrowserOffline(
+      materialGroupService.submitMaterialGroupRequest({
+        id: targetId && targetId > 0 ? targetId : undefined,
+        guid: currentGuid || undefined,
+        selectedConfigIds,
+        entriesByConfigId,
+        actorEmail: appState.userEmail,
+        actorName: appState.userDisplayName || appState.userLoginName,
+        actorId: appState.userId,
+        masterTitles,
+        existingRequestId: currentRequestId || undefined,
+        existingStatus: currentStatus || undefined,
+        comments,
+      }),
+    );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
@@ -213,6 +214,7 @@ export const consultantActionMaterialGroupThunk = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("materialGroup/consultantAction", async (params, { getState, rejectWithValue }) => {
   try {
+    assertBrowserOnline();
     const mgState = getState().materialGroup;
     const configuredMasters = (params.entriesByConfigId
       ? Object.keys(params.entriesByConfigId)
@@ -239,17 +241,19 @@ export const consultantActionMaterialGroupThunk = createAsyncThunk<
       ) ||
       Config.Roles.Consultant;
 
-    await materialGroupService.updateConsultantMaterialGroupAction({
-      ...params,
-      requestId: mgState.currentRequestId || undefined,
-      initiatorName: mgState.initiatorName || undefined,
-      initiatorEmail: mgState.initiatorEmail || undefined,
-      configuredMasters,
-      actorUserId: getState().app.userId,
-      actorEmail: getState().app.userEmail || getState().app.userLoginName,
-      actorName: getState().app.userDisplayName,
-      actorRole,
-    });
+    await raceWithBrowserOffline(
+      materialGroupService.updateConsultantMaterialGroupAction({
+        ...params,
+        requestId: mgState.currentRequestId || undefined,
+        initiatorName: mgState.initiatorName || undefined,
+        initiatorEmail: mgState.initiatorEmail || undefined,
+        configuredMasters,
+        actorUserId: getState().app.userId,
+        actorEmail: getState().app.userEmail || getState().app.userLoginName,
+        actorName: getState().app.userDisplayName,
+        actorRole,
+      }),
+    );
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }

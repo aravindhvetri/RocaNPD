@@ -158,14 +158,27 @@ export const NpdItemImport = {
   MultiValueSeparator: "; ",
 } as const;
 
+/**
+ * Attachment on NPD_Request used to recover Item Details after a mid-save
+ * network failure. Cleared after a successful Save Draft / Submit.
+ */
+export const NpdItemDetailsBackup = {
+  FileName: "NpdItemDetailsBackup.json",
+} as const;
+
 export const MaterialMasterItemTypes = {
   Existing: "Old",
   New: "New",
 } as const;
 
 export const MaterialMasterUi = {
+  /** DataTable page size (client-side only). */
   PageSize: 50,
-  FetchPageSize: 50,
+  /**
+   * Max rows per SharePoint CAML catalog request (list view threshold).
+   * UI still pages at {@link PageSize}; filters run on the fetched set.
+   */
+  CatalogFetchRowLimit: 5000,
 } as const;
 
 export const ThemeColors = {
@@ -487,6 +500,7 @@ export const Config = {
   NpdRequestIdFormat,
   MgRequestIdFormat,
   NpdItemImport,
+  NpdItemDetailsBackup,
   MaterialMasterItemTypes,
   MaterialMasterUi,
   ThemeColors,
@@ -552,7 +566,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.2",
+  AppVersion: "V1.5",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

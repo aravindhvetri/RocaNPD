@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config } from "../../../../../External/CommonServices/Config";
 import type {
   IImportParseResult,
   ILookupTypeRow,
@@ -417,7 +417,6 @@ const LookupTypeMaster: React.FC = () => {
       <ImportValidationDialog
         visible={importValidationVisible}
         sectionTitle="Import Lookup Type Master"
-        recordColumnHeader={FieldLabels.LookupTypeName}
         validationRows={importValidationRows}
         canProceed={Boolean(importPreview?.toCreate.length)}
         proceeding={isSaving}

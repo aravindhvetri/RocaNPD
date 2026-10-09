@@ -143,6 +143,23 @@ assert.doesNotThrow(() =>
     "MAT100001",
   ),
 );
+assert.doesNotThrow(() =>
+  assertSapMaterialMasterSuccess(
+    JSON.stringify({
+      status: "true",
+      message: "Success",
+      sapStatusCode: 200,
+      sapData: [
+        {
+          STATUS: "True",
+          MATNR: "MAT100009",
+          MESSAGE: "Material Created Successfully",
+        },
+      ],
+    }),
+    "MAT100009",
+  ),
+);
 assert.throws(
   () =>
     assertSapMaterialMasterSuccess(
@@ -158,6 +175,39 @@ assert.throws(
       "MAT100001",
     ),
   /Backend error/,
+);
+// Wrapper status/HTTP alone must not count as success when sapData.STATUS is False.
+assert.throws(
+  () =>
+    assertSapMaterialMasterSuccess(
+      JSON.stringify({
+        status: "true",
+        message: "Success",
+        sapStatusCode: 200,
+        sapData: [
+          {
+            STATUS: "False",
+            MATNR: "MAT100009",
+            MESSAGE: "Material Code already exist",
+          },
+        ],
+      }),
+      "MAT100009",
+    ),
+  /Material Code already exist/,
+);
+assert.throws(
+  () =>
+    assertSapMaterialMasterSuccess(
+      JSON.stringify({
+        status: "true",
+        message: "Success",
+        sapStatusCode: 200,
+        sapData: [],
+      }),
+      "MAT100009",
+    ),
+  /SAP did not receive material/,
 );
 
 assert.equal(
@@ -183,12 +233,34 @@ async function runFlow(): Promise<void> {
     postRow: async (row: ISapMaterialMasterRequestRow) => {
       posted.push(row.material);
       if (row.material === "FAIL") {
-        return JSON.stringify([{ status: "False", matnr: "FAIL", message: "Material Code already exist" }]);
+        return JSON.stringify({
+          status: "true",
+          message: "Success",
+          sapStatusCode: 200,
+          sapData: [
+            {
+              STATUS: "False",
+              MATNR: "FAIL",
+              MESSAGE: "Material Code already exist",
+            },
+          ],
+        });
       }
       if (row.material === "ERR") {
         return JSON.stringify([{ status: "False", matnr: "ERR", message: "Backend error" }]);
       }
-      return JSON.stringify([{ status: "True", matnr: row.material, message: "Material Created Successfully" }]);
+      return JSON.stringify({
+        status: "true",
+        message: "Success",
+        sapStatusCode: 200,
+        sapData: [
+          {
+            STATUS: "True",
+            MATNR: row.material,
+            MESSAGE: "Material Created Successfully",
+          },
+        ],
+      });
     },
     assertSuccess: assertSapMaterialMasterSuccess,
     markPosted: async (id: number) => {

@@ -61,11 +61,19 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
   const scopedItems = React.useMemo(() => {
     let items = dashboardItems;
     // Drafts stay on Initiator All Requests only — never Admin / VH / MIS All.
+    // Rework is Initiator-only (VH / MIS must not see Rework they sent back).
     if (variant === "all" && !isInitiatorModuleView) {
       items = items.filter((item) => !isDraftNpdStatus(item.Status));
+      if (!isAdminModuleView) {
+        items = items.filter(
+          (item) =>
+            item.Status.trim().toLowerCase() !==
+              Config.RequestStatus.Rework.toLowerCase() &&
+            item.Status.trim().toLowerCase() !== "in rework",
+        );
+      }
     }
     if (variant === "approved") {
-      // VH Approved includes Pending-with-MIS after VH Approve; others stay fully Approved only.
       items = items.filter((item) => isNpdApprovedListItem(item, viewAs));
     }
     return items;

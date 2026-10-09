@@ -12,14 +12,31 @@ import * as npdFormDataService from "../../External/CommonServices/npdFormDataSe
 import * as npdItemDetailsService from "../../External/CommonServices/npdItemDetailsService";
 import * as npdOtherDetailsService from "../../External/CommonServices/npdOtherDetailsService";
 import * as npdRequestGeneralInfoService from "../../External/CommonServices/npdRequestGeneralInfoService";
+import {
+  wasNpdWorkflowActionApplied,
+} from "../../External/CommonServices/npdWorkflowJsonService";
+import {
+  mergeNpdItemDetailsWithBackup,
+  tryLoadNpdItemDetailsBackup,
+} from "../../External/CommonServices/npdItemDetailsBackupService";
+import {
+  assertBrowserOnline,
+  isBrowserOnline,
+  isNetworkError,
+  raceWithBrowserOffline,
+  toUserActionErrorMessage,
+} from "../../External/CommonServices/networkConnectivity";
 import { selectResolvedAccess } from "../slices/appSlice";
+import { bindNpdFormDraftRequest } from "../slices/npdFormSlice";
 import type { RootState } from "../rootState";
+import {
+  beginSapUiProcessing,
+  finishUiProcessing,
+  reportSapUiProcessing,
+} from "../uiProcessing";
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "An unexpected error occurred.";
+  return toUserActionErrorMessage(error);
 }
 
 function getHeaderPayload(state: RootState, isDraft = false) {
@@ -232,10 +249,18 @@ export const populateNpdOtherDetails = createAsyncThunk<
 
 export const saveNpdDraft = createAsyncThunk<
   INpdRequestGeneralInfo,
-  INpdItemDetailRecord[],
+  | INpdItemDetailRecord[]
+  | {
+      items: INpdItemDetailRecord[];
+      partial?: boolean;
+      deletedSharePointIds?: number[];
+      /** Full Item Details grid for JSON backup (all form rows). */
+      backupItems?: INpdItemDetailRecord[];
+    },
   { rejectValue: string; state: RootState }
->("npdForm/saveDraft", async (items, { getState, rejectWithValue }) => {
+>("npdForm/saveDraft", async (arg, { getState, dispatch, rejectWithValue }) => {
   try {
+    assertBrowserOnline();
     const state = getState();
     const payload = getHeaderPayload(state, true);
     if (!payload) {
@@ -244,13 +269,63 @@ export const saveNpdDraft = createAsyncThunk<
       );
     }
 
-    return await npdRequestGeneralInfoService.saveNpdGeneralInfoDraft(
-      payload,
-      items,
-      state.app.userEmail || state.app.userLoginName,
-      state.app.siteUrl || undefined,
-      state.app.userId,
-    );
+    const items = Array.isArray(arg) ? arg : arg.items;
+    const partial = Array.isArray(arg) ? undefined : arg.partial;
+    const deletedSharePointIds = Array.isArray(arg)
+      ? undefined
+      : arg.deletedSharePointIds;
+    const backupItems = Array.isArray(arg) ? items : arg.backupItems ?? items;
+    let retainedDraftId = 0;
+
+    try {
+      return await raceWithBrowserOffline(
+        npdRequestGeneralInfoService.saveNpdGeneralInfoDraft(
+          payload,
+          items,
+          state.app.userEmail || state.app.userLoginName,
+          state.app.siteUrl || undefined,
+          state.app.userId,
+          {
+            partial: Array.isArray(arg) ? undefined : partial !== false,
+            deletedSharePointIds: Array.isArray(arg)
+              ? undefined
+              : deletedSharePointIds,
+            backupItems,
+            onDraftRetained: (draft) => {
+              retainedDraftId = draft.requestId;
+              dispatch(
+                bindNpdFormDraftRequest({
+                  requestId: draft.requestId,
+                  requestTitle: draft.requestTitle,
+                }),
+              );
+            },
+          },
+        ),
+      );
+    } catch (error) {
+      const draftMeta = error as {
+        npdDraftRequestId?: number;
+        npdDraftRequestTitle?: string;
+      } | null;
+      const draftRequestId =
+        (typeof draftMeta?.npdDraftRequestId === "number" &&
+        draftMeta.npdDraftRequestId > 0
+          ? draftMeta.npdDraftRequestId
+          : retainedDraftId) || 0;
+      if (draftRequestId > 0) {
+        dispatch(
+          bindNpdFormDraftRequest({
+            requestId: draftRequestId,
+            requestTitle:
+              draftMeta?.npdDraftRequestTitle ||
+              state.npdForm.requestTitle ||
+              undefined,
+          }),
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
@@ -258,10 +333,17 @@ export const saveNpdDraft = createAsyncThunk<
 
 export const submitNpdRequest = createAsyncThunk<
   INpdRequestGeneralInfo,
-  INpdItemDetailRecord[] | { items: INpdItemDetailRecord[]; comments?: string },
+  | INpdItemDetailRecord[]
+  | {
+      items: INpdItemDetailRecord[];
+      comments?: string;
+      /** Full Item Details grid for JSON backup (all form rows). */
+      backupItems?: INpdItemDetailRecord[];
+    },
   { rejectValue: string; state: RootState }
->("npdForm/submitRequest", async (arg, { getState, rejectWithValue }) => {
+>("npdForm/submitRequest", async (arg, { getState, dispatch, rejectWithValue }) => {
   try {
+    assertBrowserOnline();
     const state = getState();
     const payload = getHeaderPayload(state);
     if (!payload) {
@@ -272,15 +354,59 @@ export const submitNpdRequest = createAsyncThunk<
 
     const items = Array.isArray(arg) ? arg : arg.items;
     const comments = Array.isArray(arg) ? undefined : arg.comments;
+    const backupItems = Array.isArray(arg) ? items : arg.backupItems ?? items;
+    const existingRequestId = state.npdForm.requestId;
+    let retainedDraftId = 0;
 
-    return await npdRequestGeneralInfoService.submitNpdRequest(
-      payload,
-      items,
-      state.app.userEmail || state.app.userLoginName,
-      state.app.siteUrl || undefined,
-      comments,
-      state.app.userId,
-    );
+    try {
+      return await raceWithBrowserOffline(
+        npdRequestGeneralInfoService.submitNpdRequest(
+          payload,
+          items,
+          state.app.userEmail || state.app.userLoginName,
+          state.app.siteUrl || undefined,
+          comments,
+          state.app.userId,
+          (draft) => {
+            retainedDraftId = draft.requestId;
+            dispatch(
+              bindNpdFormDraftRequest({
+                requestId: draft.requestId,
+                requestTitle: draft.requestTitle,
+              }),
+            );
+          },
+          backupItems,
+        ),
+      );
+    } catch (error) {
+      const draftMeta = error as {
+        npdDraftRequestId?: number;
+        npdDraftRequestTitle?: string;
+      } | null;
+      const draftRequestId =
+        (typeof draftMeta?.npdDraftRequestId === "number" &&
+        draftMeta.npdDraftRequestId > 0
+          ? draftMeta.npdDraftRequestId
+          : retainedDraftId) || 0;
+      const checkId =
+        draftRequestId || existingRequestId || retainedDraftId || 0;
+      if (checkId > 0) {
+        dispatch(
+          bindNpdFormDraftRequest({
+            requestId: checkId,
+            requestTitle:
+              draftMeta?.npdDraftRequestTitle ||
+              state.npdForm.requestTitle ||
+              undefined,
+          }),
+        );
+      }
+
+      // Never re-fetch status on network failure — the call can hang and block
+      // Draft-page navigation while the request is already Draft in SharePoint.
+      throw error;
+    }
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
@@ -295,10 +421,15 @@ export const applyNpdWorkflowAction = createAsyncThunk<
     items?: INpdItemDetailRecord[];
     includeOtherDetails?: boolean;
     actionVia?: "System" | "Mail" | string;
+    itemSavePartial?: boolean;
+    deletedItemIds?: number[];
+    /** MIS Post to SAP: only these rows are checked against Material Master. */
+    materialMasterCheckItems?: INpdItemDetailRecord[];
   },
   { rejectValue: string; state: RootState }
->("npdForm/workflowAction", async (input, { getState, rejectWithValue }) => {
+>("npdForm/workflowAction", async (input, { getState, dispatch, rejectWithValue }) => {
   try {
+    assertBrowserOnline();
     const state = getState();
     if (!state.npdForm.requestId) {
       return rejectWithValue("The request could not be found.");
@@ -309,27 +440,76 @@ export const applyNpdWorkflowAction = createAsyncThunk<
         Config.Roles.MisCoordinator.toLowerCase() ||
       Boolean(input.includeOtherDetails);
 
-    if (isMisActor) {
+    if (isMisActor && input.action === "Approve") {
       const profitCenter = (state.npdForm.otherDetails.profitCenter || "").trim();
       if (!profitCenter) {
         return rejectWithValue("Profit Center is required.");
       }
     }
 
-    return await npdRequestGeneralInfoService.applyNpdWorkflowAction({
-      requestId: state.npdForm.requestId,
-      action: input.action,
-      comments: input.comments,
-      actorEmail: state.app.userEmail || state.app.userLoginName,
-      actorRole: input.actorRole,
-      actorUserId: state.app.userId,
-      access: selectResolvedAccess(state),
-      items: input.items,
-      otherDetails: isMisActor ? state.npdForm.otherDetails : undefined,
-      siteUrl: state.app.siteUrl || undefined,
-      actionVia: input.actionVia || "System",
-    });
+    const requestId = state.npdForm.requestId;
+    const actorRole = input.actorRole;
+
+    try {
+      return await raceWithBrowserOffline(
+        npdRequestGeneralInfoService.applyNpdWorkflowAction({
+          requestId,
+          action: input.action,
+          comments: input.comments,
+          actorEmail: state.app.userEmail || state.app.userLoginName,
+          actorRole,
+          actorUserId: state.app.userId,
+          access: selectResolvedAccess(state),
+          items: input.items,
+          otherDetails: isMisActor ? state.npdForm.otherDetails : undefined,
+          siteUrl: state.app.siteUrl || undefined,
+          actionVia: input.actionVia || "System",
+          itemSavePartial: input.itemSavePartial,
+          deletedItemIds: input.deletedItemIds,
+          materialMasterCheckItems: input.materialMasterCheckItems,
+          sapProgress:
+            isMisActor && input.action === "Approve"
+              ? {
+                  onProgress: (posted, total) => {
+                    if (total <= 0) {
+                      return;
+                    }
+                    if (posted === 0) {
+                      beginSapUiProcessing(dispatch, total);
+                      return;
+                    }
+                    reportSapUiProcessing(dispatch, posted, total);
+                  },
+                  onFinish: (success) => finishUiProcessing(dispatch, success),
+                }
+              : undefined,
+        }),
+      );
+    } catch (error) {
+      // Offline race can reject after the SharePoint status write already succeeded.
+      // Do not refetch while offline — that call waits until the network returns
+      // and keeps Post to SAP on Processing.
+      if (isNetworkError(error) && isBrowserOnline()) {
+        try {
+          const latest =
+            await npdRequestGeneralInfoService.fetchNpdGeneralInfoById(
+              requestId,
+            );
+          if (
+            wasNpdWorkflowActionApplied(latest, input.action, actorRole)
+          ) {
+            finishUiProcessing(dispatch, true);
+            return latest;
+          }
+        } catch {
+          // Still treat as failure below.
+        }
+      }
+      throw error;
+    }
   } catch (error) {
+    // Ensure SAP / global progress never stays stuck after a network failure.
+    finishUiProcessing(dispatch, false);
     return rejectWithValue(getErrorMessage(error));
   }
 });
@@ -356,7 +536,26 @@ export const hydrateNpdRequestForm = createAsyncThunk<
       npdRequestGeneralInfoService.fetchNpdGeneralInfoById(id),
       npdItemDetailsService.fetchNpdItemDetailsByRequestId(id),
     ]);
-    return { request, items };
+
+    const status = (request.Status || "").trim().toLowerCase();
+    const showBackupRows =
+      status === Config.RequestStatus.Draft.toLowerCase() ||
+      status === Config.RequestStatus.Rework.toLowerCase() ||
+      status === "in rework";
+    if (!showBackupRows) {
+      return { request, items };
+    }
+
+    // Draft / Rework: show saved rows plus backup rows not yet in the list.
+    // This read does not insert. Resubmit inserts the missing rows.
+    const backup = await tryLoadNpdItemDetailsBackup(id).catch(() => null);
+    if (!backup?.length) {
+      return { request, items };
+    }
+    return {
+      request,
+      items: mergeNpdItemDetailsWithBackup(items, backup),
+    };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }

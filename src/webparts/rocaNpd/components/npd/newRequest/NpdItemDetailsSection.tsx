@@ -9,7 +9,6 @@ import {
 import {
   createEmptyNpdItemDetailRow,
   getVisibleNpdItemDetailFields,
-  isEmptyItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
@@ -190,13 +189,6 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     setFirst(0);
   }, [isMisCoordinatorActing, onRowsChange, readOnly]);
 
-  const showBulkDelete = React.useMemo(
-    () =>
-      rows.length > 1 ||
-      rows.some((row) => !isEmptyItemDetailRow(row)),
-    [rows],
-  );
-
   const handleAddRowFromActions = React.useCallback(
     (rowId: string) => {
       handleAddItem(rowId);
@@ -237,17 +229,15 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         className={styles.headerImportButton}
         onClick={onImportClick}
       />
-      {showBulkDelete ? (
-        <Button
-          label="Delete"
-          icon="pi pi-trash"
-          size="xs"
-          title="Delete all item lines"
-          aria-label="Delete all item lines"
-          className={styles.headerDeleteButton}
-          onClick={handleBulkDeleteRows}
-        />
-      ) : null}
+      <Button
+        label="Delete"
+        icon="pi pi-trash"
+        size="xs"
+        title="Delete all item lines"
+        aria-label="Delete all item lines"
+        className={styles.headerDeleteButton}
+        onClick={handleBulkDeleteRows}
+      />
     </>
   );
 

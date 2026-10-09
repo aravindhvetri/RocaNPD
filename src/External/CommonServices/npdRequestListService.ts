@@ -113,11 +113,21 @@ export async function fetchNpdDashboardItems(
   return requests
     .filter((item) => {
       const role = scopedRole;
+      const statusLower = item.Status.trim().toLowerCase();
       // Drafts belong only on Initiator lists (All / Draft-Rework), never Admin / VH / MIS.
       if (
         role &&
         role !== Config.Roles.Initiator &&
-        item.Status.trim().toLowerCase() === RequestStatus.Draft.toLowerCase()
+        statusLower === RequestStatus.Draft.toLowerCase()
+      ) {
+        return false;
+      }
+      // Rework is Initiator-only — hide from VH / MIS All Requests.
+      if (
+        (role === Config.Roles.VerticalHead ||
+          role === Config.Roles.MisCoordinator) &&
+        (statusLower === RequestStatus.Rework.toLowerCase() ||
+          statusLower === "in rework")
       ) {
         return false;
       }
@@ -128,6 +138,8 @@ export async function fetchNpdDashboardItems(
           module: "npd",
           brand: item.Brand,
           createdByEmail: getNpdRequestOwnerEmail(item),
+          status: item.Status,
+          workflowSteps: item.WorkflowSteps,
         },
         currentUserEmail,
         scopedRole,
@@ -166,6 +178,8 @@ export async function fetchNpdPendingItems(
             module: "npd",
             brand: item.Brand,
             createdByEmail: getNpdRequestOwnerEmail(item),
+            status: item.Status,
+            workflowSteps: item.WorkflowSteps,
           },
           currentUserEmail,
           role,
@@ -248,6 +262,8 @@ export async function fetchNpdDraftReworkItems(
           module: "npd",
           brand: item.Brand,
           createdByEmail: getNpdRequestOwnerEmail(item),
+          status: item.Status,
+          workflowSteps: item.WorkflowSteps,
         },
         currentUserEmail,
         role,

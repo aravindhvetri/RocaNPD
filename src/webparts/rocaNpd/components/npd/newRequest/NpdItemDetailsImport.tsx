@@ -8,7 +8,6 @@ import type {
 } from "../../../../../External/CommonServices/Interface";
 import {
   buildImportValidationRows,
-  ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { parseNpdItemDetailsImportFile, getNpdItemDetailsRequiredHeaders } from "../../../../../External/CommonServices/npdItemDetailsImportService";
@@ -102,12 +101,13 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
 
       if (result.duplicates.length || result.errors.length) {
         setPreview(result);
+        // Duplicate strings already name the field(s). Pass them as errors so
+        // the Validation Error column shows that text, not a generic label.
         setValidationRows(
-          buildImportValidationRows(
-            result.duplicates,
-            ImportValidationMessages.duplicateNpdItemDetails,
-            result.errors,
-          ),
+          buildImportValidationRows([], "", [
+            ...result.duplicates,
+            ...result.errors,
+          ]),
         );
         setValidationVisible(true);
         onHide();

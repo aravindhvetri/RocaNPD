@@ -1,9 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { IMaterialMasterRow } from "../../External/CommonServices/Interface";
-import {
-  fetchMaterialMasterCatalog,
-  type MaterialMasterTab,
-} from "../../External/CommonServices/materialMasterService";
+import { fetchMaterialMasterCatalog } from "../../External/CommonServices/materialMasterService";
 
 export type MaterialMasterStatus = "idle" | "loading" | "error";
 
@@ -26,13 +23,14 @@ function getErrorMessage(error: unknown): string {
   return "Failed to load Material Master records.";
 }
 
+/** One catalog load for Existing + New; tab/filter are client-side only. */
 export const fetchMaterialMasterCatalogThunk = createAsyncThunk<
   IMaterialMasterRow[],
-  MaterialMasterTab,
+  void,
   { rejectValue: string }
->("materialMaster/fetchCatalog", async (tab, { rejectWithValue }) => {
+>("materialMaster/fetchCatalog", async (_, { rejectWithValue }) => {
   try {
-    return await fetchMaterialMasterCatalog(tab);
+    return await fetchMaterialMasterCatalog();
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
@@ -51,7 +49,7 @@ const materialMasterSlice = createSlice({
       .addCase(fetchMaterialMasterCatalogThunk.pending, (state) => {
         state.status = "loading";
         state.error = null;
-        state.items = [];
+        // Keep prior rows until the new catalog arrives (no empty flash).
       })
       .addCase(fetchMaterialMasterCatalogThunk.fulfilled, (state, action) => {
         state.status = "idle";

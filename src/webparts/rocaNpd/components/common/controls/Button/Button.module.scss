@@ -57,6 +57,22 @@
     }
   }
 
+  // Master reset keeps its solid fill; do not clear background on focus/active.
+  &:global(.roca-master-reset-button) {
+    &:enabled:focus,
+    &:enabled:active,
+    &:global(.p-focus),
+    &:global(.p-button:focus),
+    &:global(.p-button:active) {
+      box-shadow: none !important;
+      outline: none !important;
+      background: $roca-color-btn-primary-bg !important;
+      background-color: $roca-color-btn-primary-bg !important;
+      border-color: $roca-color-btn-primary-bg !important;
+      color: $roca-color-text-inverse !important;
+    }
+  }
+
   &:enabled:focus,
   &:enabled:active,
   &:global(.p-focus),
