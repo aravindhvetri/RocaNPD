@@ -116,10 +116,13 @@ export function syncWorkflowStepsFromApproverMaster(
   let changed = false;
 
   SYNC_ROLES.forEach((role) => {
-    const hasRole = current.some(
+    const roleSteps = current.filter(
       (step) => step.Role.trim().toLowerCase() === role.toLowerCase(),
     );
-    if (!hasRole) {
+    // Only refresh roles that still have a Pending step. Never overwrite
+    // Approved / Rejected / Rework actors on historical ownership steps.
+    const hasPending = roleSteps.some((step) => isPendingStepStatus(step.Status));
+    if (!hasPending) {
       return;
     }
 

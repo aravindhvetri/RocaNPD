@@ -11,26 +11,26 @@
 | Phase | Total Tasks | Completed | Status |
 |---|---:|---:|---|
 | Phase 0 — Project Preparation | 13 | 1 | In Progress |
-| Phase 1 — Application Foundation | 71 | 48 | In Progress |
-| Phase 2 — SharePoint Data Structure | 22 | 4 | In Progress |
-| Phase 3 — Security & Role Management | 15 | 14 | In Progress |
-| Phase 4 — Admin Module | 54 | 24 | In Progress |
-| Phase 5 — NPD Initiator Module | 36 | 30 | In Progress |
-| Phase 6 — NPD Vertical Head Module | 17 | 13 | In Progress |
-| Phase 7 — NPD MIS Coordinator Module | 24 | 16 | In Progress |
-| Phase 8 — Material Group Initiator Module | 20 | 16 | In Progress |
-| Phase 9 — Material Group Consultant Module | 15 | 14 | In Progress |
-| Phase 10 — Workflow Automation | 18 | 7 | In Progress |
-| Phase 11 — SAP Integration | 12 | 8 | In Progress |
-| Phase 12 — Material Master Integration | 9 | 5 | In Progress |
+| Phase 1 — Application Foundation | 59 | 50 | In Progress |
+| Phase 2 — SharePoint Data Structure | 22 | 15 | In Progress |
+| Phase 3 — Security & Role Management | 18 | 17 | In Progress |
+| Phase 4 — Admin Module | 87 | 82 | In Progress |
+| Phase 5 — NPD Initiator Module | 53 | 52 | In Progress |
+| Phase 6 — NPD Vertical Head Module | 23 | 23 | Complete |
+| Phase 7 — NPD MIS Coordinator Module | 26 | 26 | Complete |
+| Phase 8 — Material Group Initiator Module | 22 | 22 | Complete |
+| Phase 9 — Material Group Consultant Module | 22 | 22 | Complete |
+| Phase 10 — Workflow Automation | 19 | 17 | In Progress |
+| Phase 11 — SAP Integration | 13 | 9 | In Progress |
+| Phase 12 — Material Master Integration | 9 | 6 | In Progress |
 | Phase 13 — Analytics & Reports | 10 | 0 | Not Started |
-| Phase 14 — Email Notifications | 8 | 2 | In Progress |
+| Phase 14 — Email Notifications | 8 | 3 | In Progress |
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **384** | **166** | **In Progress** |
+| **TOTAL** | **440** | **340** | **In Progress** |
 
-**Last Updated:** 01 October 2026
+**Last Updated:** 09 October 2026
 
 ---
 
@@ -73,7 +73,7 @@
 - [x] **T-0112** Implement `setupSP()` in `SPServices.ts` (PnP v4 migration)
 - [x] **T-0113** Pass `spfxContext` and `sp` props to child components
 - [x] **T-0114** Add Redux `<Provider>` in `RocaNpd.tsx`
-- [ ] **T-0115** Configure `store/index.ts` with all feature slices (app + ui + admin lookupType done; remaining feature slices pending)
+- [x] **T-0115** Configure `store/index.ts` with all feature slices (app, ui, admin, npdForm, npdRequest, materialGroup, materialMaster)
 - [x] **T-0116** Create typed hooks (`useAppDispatch`, `useAppSelector`)
 
 ### 1.3 Styling & Theme
@@ -81,7 +81,7 @@
 - [x] **T-0120** Load PrimeReact theme, PrimeIcons, PrimeFlex in WebPart
 - [x] **T-0121** Create common theme file `External/CommonServices/theme.scss`
 - [x] **T-0122** Define all theme color CSS variables on `.roca-npd-app`
-- [ ] **T-0123** Verify PrimeReact components inherit ROCA theme inside app wrapper
+- [x] **T-0123** Verify PrimeReact components inherit ROCA theme inside app wrapper (`injectRocaPrimeOverrides` + `.roca-npd-app`)
 - [x] **T-0124** Document theme usage rules for all future components (see `ProjectStandards.md` Section 9)
 - [x] **T-0125** Overlay/nav UI consistency — filter left padding, Poppins on overlays, `$roca-color-option-selected-bg`, white selected nav item (R-UI06 / R-UI09–R-UI11)
 
@@ -105,7 +105,7 @@
 - [ ] **T-0141** Implement `ConfirmActionDialog.tsx` (Approve, Rework, Reject, Delete)
 - [ ] **T-0142** Implement `SearchFilterBar.tsx` (search + filter dropdowns)
 - [ ] **T-0143** Implement `EmptyState.tsx`
-- [ ] **T-0144** Implement `LoaderOverlay.tsx` (full-page and inline)
+- [x] **T-0144** Implement `LoaderOverlay.tsx` (full-page and inline)
 - [ ] **T-0145** Implement `ExportButton.tsx` (CSV / Excel trigger) — `exportService.ts` + screen-level export done for Lookup Type
 
 ### 1.5.1 Common Controls — PrimeReact Wrappers (`common/controls/`)
@@ -119,17 +119,17 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0165** Implement `DataTable` wrapper (pagination, sorting, loading, empty state)
 - [x] **T-0166** Implement `Toast`, `FileUpload`, `Checkbox`, `Tag` wrappers
 - [x] **T-0167** Create `common/controls/index.ts` barrel export
-- [ ] **T-0168** Wire `Toast` to Redux `appSlice` notification queue (component styled + `showWarningToast` / `showSuccessToast` / `showErrorToast` helpers done)
+- [x] **T-0168** Wire `Toast` to Redux flash queue (`uiSlice.flashMessage` + MainComponent toast helpers)
 
 ### 1.6 Common Services & Config
 
-- [ ] **T-0150** Populate `Config.ts` with list names, lookup type keys, status constants, roles (routes + nav + roles + `ListNames.LookupType` done)
-- [ ] **T-0151** Populate `Interface.ts` with all domain TypeScript interfaces (`ILookupType` done)
+- [x] **T-0150** Populate `Config.ts` with list names, lookup type keys, status constants, roles, routes, SAP API, FieldNames
+- [x] **T-0151** Populate `Interface.ts` with all domain TypeScript interfaces
 - [x] **T-0152** Create `roleService.ts` (multi-role resolution from Admins group + ROCA `ApproversMaster`, brand mapping)
-- [ ] **T-0153** Create `lookupService.ts` (lookup queries with cache helpers)
+- [x] **T-0153** Create `lookupService.ts` (lookup queries with cache helpers)
 - [x] **T-0154** Create `exportService.ts`, `importService.ts`, `templateService.ts` (reusable Import/Export)
-- [ ] **T-0155** Implement global error handling pattern (toast + slice error state)
-- [ ] **T-0156** Implement global loading state pattern
+- [x] **T-0155** Implement global error handling pattern (toast + slice error state)
+- [x] **T-0156** Implement global loading state pattern (`uiProcessing` + `LoaderOverlay`)
 
 ### 1.7 Redux Foundation
 
@@ -145,18 +145,18 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 
 ### 2.1 List Provisioning
 
-- [ ] **T-0201** Create / confirm Lookup Type Master list and fields
-- [ ] **T-0202** Create / confirm Lookup Master list and fields
-- [ ] **T-0203** Create / confirm Brand Material Extension Master list and fields
+- [x] **T-0201** Create / confirm Lookup Type Master list and fields
+- [x] **T-0202** Create / confirm Lookup Master list and fields
+- [x] **T-0203** Create / confirm Brand Material Extension Master list and fields
 - [x] **T-0204** No local Plant Master list — consume ROCA `PlantMaster` (`Config.RocaMasterListNames`)
 - [x] **T-0205** No local Role Master list — consume ROCA `RoleMaster`
 - [x] **T-0206** No local Approver Configuration list — consume ROCA `ApproversMaster`
-- [ ] **T-0207** Create / confirm Workflow Configuration Master list and fields
-- [ ] **T-0208** Create / confirm Material Master list and fields
-- [ ] **T-0209** Create / confirm NPD Request (header) list and fields
-- [ ] **T-0210** Create / confirm NPD Item (child) list and fields
-- [ ] **T-0211** Create / confirm Material Group Request (header) list and fields
-- [ ] **T-0212** Create / confirm Material Group Request Item (child) list and fields
+- [x] **T-0207** Create / confirm Workflow Configuration Master list and fields
+- [x] **T-0208** Create / confirm Material Master list and fields (`NPD_MaterialMaster`)
+- [x] **T-0209** Create / confirm NPD Request (header) list and fields
+- [x] **T-0210** Create / confirm NPD Item (child) list and fields (`NPD_ItemDetails`)
+- [x] **T-0211** Create / confirm Material Group Request (header) list and fields
+- [ ] **T-0212** Create / confirm Material Group Request Item (child) list and fields — N/A: MG masters stored as JSON on request header
 
 ### 2.2 Seed Data & Relationships
 
@@ -164,11 +164,11 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [ ] **T-0216** Seed initial Lookup Master values (brands, material types, plant codes)
 - [ ] **T-0217** Configure Lookup Type → Lookup Master relationship
 - [x] **T-0218** Brand Material Extension plants sourced from ROCA `PlantMaster` (no NPD-site Plant Master relationship)
-- [ ] **T-0219** Role/approver routing from ROCA `RoleMaster` + `ApproversMaster` (no local Role → Approver lists)
-- [ ] **T-0220** Configure NPD Request → NPD Item (1:N) relationship
-- [ ] **T-0221** Configure Material Group Request → Item (1:N) relationship
+- [x] **T-0219** Role/approver routing from ROCA `RoleMaster` + `ApproversMaster` (no local Role → Approver lists)
+- [x] **T-0220** Configure NPD Request → NPD Item (1:N) relationship (`RequestGeneralInfoId` lookup)
+- [ ] **T-0221** Configure Material Group Request → Item (1:N) relationship — N/A: JSON on header (see T-0212)
 - [ ] **T-0222** Set SharePoint list permissions per role group
-- [ ] **T-0223** Document final internal field names in `Config.ts`
+- [x] **T-0223** Document final internal field names in `Config.ts`
 - [ ] **T-0224** Validate list schemas against `NPD_TRD.md` and wireframe
 
 ---
@@ -275,7 +275,10 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0497** Export `{Name}_Export_{DD-MM-YYYY}` + themed Excel header via `xlsx-js-style` (`exportService.ts`)
 - [x] **T-0498** Import duplicate validation table in `ImportDialog` (preview/commit thunks; Proceed imports valid rows)
 - [x] **T-0498a** Centralize required Excel header validation (`validateRequiredImportHeaders`); `ImportDialog` rejects on browse/drop when FieldLabels columns missing; Lookup / Lookup Type / NPD Item Details wired
-- [x] **T-0498b** Short shared missing-columns Import Toast; `downloadTemplateFile` strips Excel data validations (plain template)
+- [x] **T-0498b** Short shared missing-columns Import Toast; earlier plain-template rewrite removed — see T-0498d
+- [x] **T-0498c** Shared Excel import value validation (`importService`): digits/numeric fields reject non-numeric cells (e.g. `ab09`); alphanumeric fields reject special characters with row + field message; no silent strip/extract — Lookup, Lookup Type, NPD Item Details
+- [x] **T-0498d** `downloadTemplateFile` downloads the `NPD_Templates` Library file as-is (preserves header formatting/background); no local workbook rebuild
+- [x] **T-0498e** `ImportValidationDialog` columns are S.NO + Validation Error only (remove record-name column) for all Import modules
 - [x] **T-0499** Taller form dialog footer buttons (`_form-dialog-standard.scss`)
 - [x] **T-0500** Workflow: editable Next Role on all steps except Initiator on edit; Current Role derived from prior Next Role
 - [x] **T-0500a** RoleMaster filter uses `System/Title eq "New Product Development"` for NPD workflow roles
@@ -317,7 +320,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 ### 4.10 Admin Redux & Services
 
 - [x] **T-0485** Create `adminSlice.ts` and lookup type thunks (`lookupTypeThunks.ts`)
-- [ ] **T-0486** Create `adminService.ts` for all master CRUD operations (`lookupTypeService.ts` done)
+- [x] **T-0486** Create domain services for all master CRUD (`lookupTypeService`, `lookupService`, `brandMaterialExtensionService`, `workflowConfigurationService`, `materialMasterService`)
 
 ---
 
@@ -349,7 +352,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0514a** Prefetch Item Details lookup options on app init; selection fields single-select only (`selectionLimit={1}`); no checkboxes — searchable dropdown look
 - [x] **T-0514b** MultiSelect overlay panel matches each Item Details input width/position; long option labels ellipsize with full-text tooltip
 - [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
-- [x] **T-0515a** Item Details header bulk Delete (Add/Import style, red icon) clears all rows when any lines exist
+- [x] **T-0515a** Item Details header bulk Delete (Add/Import style, red icon) shows only when row count &gt; 2; clears all rows to one empty line
 - [x] **T-0515b** Min. Qty/Box Qty InputText digits-only (SP text column unchanged; shared `sanitizeDigitsOnlyTextInput`)
 - [x] **T-0515c** Strip leading spaces on shared InputText/InputTextarea/search/MultiSelect filter/ComboBox
 - [x] **T-0519a** After Rework, Save Draft sets Status=Draft; Resubmit (not Save Draft) routes to next approver; RESUBMIT label when Request ID already exists
@@ -357,6 +360,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0705d** Other Details after MIS action load from `NPD_Request` only; do not re-auto-fill cleared Material Extension from Brand master
 - [x] **T-0516** Implement + Add Another Item Line with small inline plus icon next to label
 - [x] **T-0517** Implement Import items (Excel) — required FieldLabels validated on select/drop; header mapping is trim + lowercase + whitespace-insensitive so template columns match Item Details fields; up to 200 rows
+- [x] **T-0517a** Item Details Excel import: Weight / Min. Qty reject invalid numeric cells; text fields reject special characters (shared `importService` validators; validation popup with row + field)
 - [x] **T-0518** Implement Total Item Lines counter in section footer
 - [x] **T-0519** Implement Cancel / Back, Save Draft + Submit Request buttons — Save Draft persists header + items (`Status=Draft`); Submit generates Request ID and routes to Vertical Head; Cancel/Back returns to the source list via `from`
 
@@ -373,6 +377,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0523c** Item Details S.No uses absolute Prime `rowIndex + 1` across pages
 - [x] **T-0526** Block Initiator Submit when Item Details Material Code / Description already exist in `NPD_MaterialMaster` (trim + lowercase); MIS Post to SAP uses the same check (`excludeRequestId` for retries)
 - [x] **T-0526a** Show Processing loader during Material Master duplicate validation; after pass, restore Submit line-item progress bar (`showItemProgress`) — Pending/Draft destination must not mount a second LoaderOverlay that hides progress
+- [x] **T-0526b** Draft / Rework open shows rows already in `NPD_ItemDetails` plus JSON backup rows that were not inserted. Opening the form does not insert them. Resubmit inserts only the missing rows and does not create duplicates. Save Draft does not insert those backup-only rows
 - [x] **T-0501c** NPD/MG Drafts visible only in Initiator module lists — not Admin / VH / MIS / Consultant All Requests
 - [x] **T-0524** Validate Roca Global Code when applicable — Toast on Submit
 - [x] **T-0525** Validate at least one item row on submit — Toast on Submit
@@ -401,8 +406,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0609** Route Rework back to Initiator with comments
 - [x] **T-0610** Set Rejected status (permanently closed) on Reject
 - [x] **T-0611** Implement `verticalHeadAction` thunk in npdSlice — `applyNpdWorkflowAction`
-- [ ] **T-0612** Verify VH cannot access Material Group module
-- [ ] **T-0613** Verify VH cannot perform MIS Coordinator actions
+- [x] **T-0612** Verify VH cannot access Material Group module (route/nav gated to NPD system)
+- [x] **T-0613** Verify VH cannot perform MIS Coordinator actions (permission + Other Details/`?as=` gates)
 - [x] **T-0614** Verify brand-scoped data filtering
 - [x] **T-0615** NPDApproverMail web part: VH email Approve/Reject/Rework via `RequestID` + `Action` URL; updates `NPD_Request` + `NPD_ApproverComments`
 - [x] **T-0616** NPDApproverMail condition-based single-line messages with no icon/title: exact messages from WorkFlowJSON and isSubmittedRef
@@ -430,11 +435,11 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0709** Auto-populate Material Extension from Brand Material Extension Master
 - [x] **T-0710** Implement conditional Plant Code / Valuation Class logic
 - [x] **T-0711** Set Class Type = 001 always
-- [ ] **T-0712** Implement Post to SAP action with confirmation
+- [x] **T-0712** Implement Post to SAP action with confirmation (`applyNpdWorkflowAction` + `createZMatMast` per line)
 - [x] **T-0713** Implement Rework action with comments
 - [x] **T-0714** Implement Reject action with comments
 - [x] **T-0715** Implement `misCoordinatorAction` thunk (via `applyNpdWorkflowAction` + Other Details payload)
-- [ ] **T-0716** Verify MIS cannot access Material Group module
+- [x] **T-0716** Verify MIS cannot access Material Group module (route/nav gated to NPD system)
 - [x] **T-0717** Inline Approver Remarks (no popup) + Audit Log from `NPD_ApproverComments` (MG pattern)
 - [x] **T-0717a** NPD Audit Log chronological order + UI-only Pending approvers from WorkflowJSON (replaced by ApproverComments when actioned)
 - [x] **T-0718** Fix MIS Rework/Reject: update `NPD_Request` Status/WorkFlowJSON + write Approver Comments; no Item-added overlay
@@ -460,6 +465,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0811a** Block MG Submit / Complete when Description duplicates within the request or matches existing `NPD_Lookup` Title (LookupName)
 - [x] **T-0811b** Block MG Submit when Code duplicates within the request or matches existing Lookup Code; empty Code still allowed for Initiator
 - [x] **T-0811c** Consultant actions (Complete / Rework / Reject) require Code on every row and block duplicate Code/Description
+- [x] **T-0811d** MG Submit Code + Description Lookup check is one SP call (`assertMaterialGroupCodesAndDescriptionsAvailable`); combined toast when both duplicate
 - [x] **T-0812** Show success toast after Submit/Draft/Consultant via setFlashMessage (survives route change)
 - [x] **T-0817** Consultant MG email deep links use Outlook SafeLinks-safe `npdRoute` (parity with NPD VH/MIS Login URLs)
 - [x] **T-0812** Create `materialGroupSlice.ts` and `materialGroupThunks.ts`
@@ -493,13 +499,13 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0921** Consultant Complete: validate + batch-sync Lookup Master before Status; failed validation keeps Pending (Cancel does not complete)
 - [x] **T-0922** Material Group Audit Log: chronological Action On / Id order (Initiated → Rework → Resubmit), matching NPD; Pending Consultant row at bottom
 - [x] **T-0923** Fix DataTable flicker on side-nav — shared `useListPageFetch` gate so stale Redux rows do not paint before list refetch
-- [ ] **T-0914** Verify Consultant cannot access NPD module
+- [x] **T-0914** Verify Consultant cannot access NPD module (route/nav gated to MG system)
 
 ---
 
 ## Phase 10 — Workflow Automation
 
-- [ ] **T-1001** Implement NPD request creation trigger
+- [x] **T-1001** Implement NPD request creation trigger (in-app Save Draft / Submit)
 - [x] **T-1002** Implement NPD Request ID generation (`NPD-YYYY-###`)
 - [x] **T-1003** Implement NPD Draft save handling — General Information → `NPD_Request` with `WorkFlowJSON`
 - [x] **T-1003a** Empty Title on spAddItem for NPD_Request (Drafts), NPD_ApproverComments, NPD_MaterialGroupAuditLogs; existing Request ID generation logic preserved on submit
@@ -507,11 +513,11 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-1005** Implement VH Approve → route to MIS Coordinator
 - [x] **T-1006** Implement VH / MIS Rework → route to Initiator
 - [x] **T-1007** Implement VH / MIS Reject → permanently closed
-- [ ] **T-1008** Implement MIS Post to SAP → Completed
+- [x] **T-1008** Implement MIS Post to SAP → Completed (after SAP + Material Master success)
 - [x] **T-1009** Implement NPD resubmission after Rework
-- [ ] **T-1010** Implement MG request creation trigger
-- [ ] **T-1011** Implement MG Request ID generation
-- [ ] **T-1012** Implement MG Submit → route to Consultant
+- [x] **T-1010** Implement MG request creation trigger (in-app Save Draft / Submit)
+- [x] **T-1011** Implement MG Request ID generation (`MG-YYYY-###`)
+- [x] **T-1012** Implement MG Submit → route to Consultant
 - [x] **T-1013** Implement Consultant Complete → Completed
 - [x] **T-1014** Implement MG Rework → route to Initiator
 - [x] **T-1015** Implement MG Reject → permanently closed
@@ -530,6 +536,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-1105** Treat documented `status=True/False` as the result; surface the SAP message on failure (success is the item `SAP` flag, not a second request column)
 - [x] **T-1106** Approve the NPD request only after every line is accepted by SAP and written to `NPD_MaterialMaster`
 - [x] **T-1107** On SAP or Material Master failure, keep status unchanged; successful lines stay `SAP=true` and are not sent again
+- [x] **T-1107a** Post to SAP stops when the network drops, clears the loader, and stays on the form. Restoring the network does not post the remaining lines. The next Post to SAP sends only `SAP=false` lines; `SAP=true` lines are not posted again
 - [ ] **T-1108** Validate Plant Code, Storage Location, Profit Center, MRP fields before post
 - [ ] **T-1109** Validate Valuation Class and Class Type before post
 - [ ] **T-1110** Validate Material Extension before post
@@ -545,7 +552,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-1203** Map all required Material Master fields from NPD Item Details + request Brand / Material Type
 - [x] **T-1203a** Populate Material Master *Code columns from `NPD_Lookup.LookupCode` for every lookup-based Item Details field (same resolver as SAP payload)
 - [x] **T-1204** Implement duplicate detection / handling (Initiator Submit + MIS Post to SAP; short TTL index cache)
-- [ ] **T-1205** Handle Material Master creation failures (log + notify)
+- [x] **T-1205** Handle Material Master creation failures (status unchanged; error surfaced; partial SAP lines retained)
 - [ ] **T-1206** Test with completed NPD sample record
 - [ ] **T-1207** Verify Material Master data accuracy
 - [ ] **T-1208** Verify Admin Material Master list reflects auto-populated records
@@ -574,7 +581,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [ ] **T-1401** Receive final email content from ROCA
 - [ ] **T-1402** Identify all notification scenarios and recipients
 - [x] **T-1403** Create email templates
-- [ ] **T-1404** Implement notification triggers (Power Automate or equivalent)
+- [x] **T-1404** Implement notification triggers (in-app `npdNotificationService` / `materialGroupNotificationService`)
 - [x] **T-1405** Include Request ID, details, status, rework info in emails
 - [ ] **T-1406** Test each notification scenario
 - [ ] **T-1407** UAT notification flow
@@ -643,12 +650,12 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | ID | Description | Impacts Tasks | Status |
 |---|---|---|---|
 | BLK-001 | Email notification content pending from ROCA | T-1401–T-1408 | Open |
-| OPEN-001 | Exact SharePoint internal field names TBD | T-0210–T-0223 | To Confirm |
-| OPEN-002 | SAP interface specification TBD | T-1101–T-1112 | To Confirm |
+| OPEN-001 | Exact SharePoint internal field names TBD | T-0210–T-0223 | Mostly documented in `Config.ts` — residual TBD |
+| OPEN-002 | SAP interface specification | T-1101–T-1112 | Resolved — Material Master Creation REST API technical document |
 | OPEN-003 | Workflow Configuration scope (global vs per-brand) | T-0460–T-0462, T-1017 | To Confirm |
-| OPEN-004 | Material Group Request ID format TBD | T-1011 | To Confirm |
-| OPEN-005 | Material Master catalog schema confirmed for Phase A: list `NPD_MaterialGroupRequests` columns per screenshot (`ItemType` Old/New, `NPDRequest` lookup → Initiator); write/import/auto-populate still later | T-0470–T-0479a | Phase A schema OK — writes TBD |
-| OPEN-006 | Power Automate vs in-app routing | T-1017 | To Confirm |
+| OPEN-004 | Material Group Request ID format | T-1011 | Resolved — `MG-YYYY-###` |
+| OPEN-005 | Material Master catalog: list `NPD_MaterialMaster` (ItemType Old/New, NPDRequest lookup); Phase A list + Post to SAP New inserts done; manual Add/Import still later | T-0470–T-0479a, T-1201–T-1205 | Phase A + auto-populate done — manual writes TBD |
+| OPEN-006 | Power Automate vs in-app routing | T-1017 | Accepted — in-app routing/notifications; PA optional |
 
 ---
 
@@ -710,6 +717,10 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 02 Oct 2026 | Processing loader during MM validation; restore Submit item progress bar (Pending overlay no longer hides it) | T-0526a |
 | 03 Oct 2026 | MIS Post to SAP calls createZMatMast per Item Details line; Material Master insert and approval only after SAP success; retries skip `SAP=true` | T-1101–T-1107, T-1112 |
 | 05 Oct 2026 | Material Master insert fills *Code columns from NPD_Lookup.LookupCode for all lookup-based fields | T-1203a |
+| 06 Oct 2026 | Sync TaskList to implemented work: foundation slices/services, SP list confirmations, VH/MIS/Consultant gates, Post to SAP → Completed, MG workflow triggers, MM failure handling, in-app notification triggers; resolve OPEN-002/004/006 notes | T-0115, T-0123, T-0144, T-0150–T-0156, T-0168, T-0207–T-0211, T-0219–T-0223, T-0486, T-0612–T-0613, T-0712, T-0716, T-0914, T-1001, T-1008, T-1010–T-1012, T-1205, T-1404 |
+| 07 Oct 2026 | Excel import: no silent numeric extract; reject special chars with row/field messages; Lookup template download preserves Library formatting | T-0498c, T-0498d, T-0517a |
+| 07 Oct 2026 | Item Details Bulk Delete when &gt;2 rows; MG Code+Description single Lookup check; Import validation columns S.NO + Error only | T-0515a, T-0811d, T-0498e |
+| 09 Oct 2026 | Draft / Rework shows unsaved JSON backup rows without inserting them; Resubmit inserts only the missing rows. Post to SAP stops on network loss, stays on the form, and retries only `SAP=false` lines | T-0526b, T-1107a |
 
 ---
 

@@ -19,6 +19,8 @@ export interface IPostNpdItemsToSapParams {
   otherDetails: INpdOtherDetails;
   items: INpdItemDetailRecord[];
   siteUrl?: string;
+  /** Fired at 0/total and after each successful SAP API + SAP flag write. */
+  onProgress?: (posted: number, total: number) => void;
 }
 
 /**
@@ -56,6 +58,7 @@ export async function postNpdItemsToSap(
           materialType: params.materialType,
           items: [item],
         }),
+      onProgress: params.onProgress,
     },
   );
 }

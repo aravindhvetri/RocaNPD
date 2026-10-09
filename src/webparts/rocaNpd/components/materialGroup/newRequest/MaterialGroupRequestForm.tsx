@@ -52,8 +52,7 @@ const MaterialGroupRequestForm: React.FC = () => {
     const isCompleted =
       status === Config.MaterialGroupStatus.Completed.toLowerCase();
     const isDraft =
-      !status ||
-      status === Config.MaterialGroupStatus.Draft.toLowerCase();
+      !status || status === Config.MaterialGroupStatus.Draft.toLowerCase();
 
     // Draft (or create): never show dashes / placeholder IDs
     if (isDraft || mode === "create") {
@@ -119,9 +118,9 @@ const MaterialGroupRequestForm: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.headerRight}>
+        {/* <div className={styles.headerRight}>
           <span className={styles.workflowBadge}>{badgeText}</span>
-        </div>
+        </div> */}
       </div>
 
       <div className={styles.content}>
@@ -156,7 +155,8 @@ const MaterialGroupRequestForm: React.FC = () => {
           />
         ) : null}
 
-        {Boolean(currentRequestId || auditLogs.length > 0) && mode !== "create" ? (
+        {Boolean(currentRequestId || auditLogs.length > 0) &&
+        mode !== "create" ? (
           <MaterialGroupAuditLogTable
             rows={auditLogs}
             requestStatus={currentStatus}
@@ -168,6 +168,14 @@ const MaterialGroupRequestForm: React.FC = () => {
         mode={mode}
         saving={isSaving}
         submitting={isSubmitting}
+        isResubmit={
+          (currentStatus || "").trim().toLowerCase() === "rework" ||
+          (currentStatus || "").trim().toLowerCase() === "in rework"
+        }
+        showSaveDraft={
+          (currentStatus || "").trim().toLowerCase() !== "rework" &&
+          (currentStatus || "").trim().toLowerCase() !== "in rework"
+        }
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}

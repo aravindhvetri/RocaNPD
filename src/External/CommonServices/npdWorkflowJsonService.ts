@@ -8,6 +8,7 @@ import {
   fetchNpdApproverAssignmentRows,
   getEmailsForNpdWorkflowRole,
 } from "./npdApproverAssignmentService";
+import { normalizeEmail } from "./personFieldUtils";
 import { fetchActiveWorkflowSteps } from "./workflowConfigurationService";
 import {
   isNpdRequestType,
@@ -106,7 +107,7 @@ export async function buildNpdDraftWorkflowJson(
       }
       if (role.toLowerCase() === Config.Roles.VerticalHead.toLowerCase()) {
         throw new Error(
-          `No Vertical Head is assigned to brand "${brand}" in ApproversMaster.`,
+          "Vertical Head is not configured for this brand.",
         );
       }
 
@@ -186,6 +187,28 @@ function isWorkflowStep(value: unknown): value is INpdWorkflowStepJson {
 
 export function isInitiatorWorkflowRole(role: string): boolean {
   return role.trim().toLowerCase() === Config.Roles.Initiator.toLowerCase();
+}
+
+/**
+ * True when the user email appears on any WorkFlowJSON step for the given role.
+ * Used for historical Approved/Rejected visibility — not ApproversMaster.
+ */
+export function workflowRoleIncludesEmail(
+  steps: readonly INpdWorkflowStepJson[],
+  role: string,
+  userEmail: string,
+): boolean {
+  const normalizedEmail = normalizeEmail(userEmail || "");
+  const normalizedRole = role.trim().toLowerCase();
+  if (!normalizedEmail || !normalizedRole) {
+    return false;
+  }
+
+  return steps.some(
+    (step) =>
+      step.Role.trim().toLowerCase() === normalizedRole &&
+      normalizeEmail(step.UserEmail) === normalizedEmail,
+  );
 }
 
 export function applySubmitWorkflowStatuses(
@@ -382,6 +405,62 @@ export function getFirstPendingApproverRole(
   steps: readonly INpdWorkflowStepJson[],
 ): string {
   return getFirstPendingApproverStep(steps)?.Role.trim() ?? "";
+}
+
+/** Role that rejected the request, from WorkFlowJSON (no extra SharePoint read). */
+export function getRejectedApproverRole(
+  steps: readonly INpdWorkflowStepJson[],
+): string {
+  const rejected = Config.WorkflowStepStatus.Rejected.toLowerCase();
+  const step = steps.find(
+    (item) =>
+      !isInitiatorWorkflowRole(item.Role) &&
+      (item.Status || "").trim().toLowerCase() === rejected,
+  );
+  return step?.Role.trim() ?? "";
+}
+
+/**
+ * True when a workflow action already persisted: the actor no longer holds the
+ * first pending step, or the header status matches the action outcome.
+ */
+export function wasNpdWorkflowActionApplied(
+  latest: {
+    Status: string;
+    WorkflowSteps: readonly INpdWorkflowStepJson[];
+  },
+  action: NpdWorkflowAction,
+  actorRole: string,
+): boolean {
+  const actor = (actorRole || "").trim().toLowerCase();
+  if (!actor) {
+    return false;
+  }
+
+  const pendingRole = getFirstPendingApproverRole(latest.WorkflowSteps)
+    .trim()
+    .toLowerCase();
+  if (pendingRole !== actor) {
+    return true;
+  }
+
+  const status = (latest.Status || "").trim().toLowerCase();
+  if (action === "Reject") {
+    return status === Config.RequestStatus.Rejected.toLowerCase();
+  }
+  if (action === "Rework") {
+    return (
+      status === Config.RequestStatus.Rework.toLowerCase() ||
+      status === "in rework"
+    );
+  }
+  if (action === "Approve") {
+    return (
+      status === Config.RequestStatus.Approved.toLowerCase() ||
+      status === Config.RequestStatus.Completed.toLowerCase()
+    );
+  }
+  return false;
 }
 
 export function hasCompletedWorkflowStep(

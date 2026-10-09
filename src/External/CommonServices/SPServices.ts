@@ -27,6 +27,7 @@ import type { WebPartContext } from "@microsoft/sp-webpart-base";
 import {
   IFilter,
   IListItems,
+  ICamlListItems,
   IListItemUsingId,
   IAddList,
   IUpdateList,
@@ -149,6 +150,53 @@ const SPReadItems = async (params: IListItems): Promise<[]> => {
   return (await query
     .top(params.Topcount || 0)
     .orderBy(params.Orderby || "ID", params.Orderbydecorasc)()) as [];
+};
+
+/**
+ * Fetches list items with a single CAML ViewXml query (no OData $skip paging).
+ * Prefer this for large catalog loads (e.g. Material Master) instead of many
+ * 50-row REST pages.
+ */
+const SPReadItemsByCaml = async (
+  params: ICamlListItems,
+): Promise<Record<string, unknown>[]> => {
+  const list = getSP().web.lists.getByTitle(params.Listname) as {
+    getItemsByCAMLQuery?: (
+      query: { ViewXml: string },
+      ...expansions: string[]
+    ) => Promise<unknown>;
+  };
+
+  if (typeof list.getItemsByCAMLQuery !== "function") {
+    throw new Error(
+      "CAML list queries are not available in this SharePoint runtime.",
+    );
+  }
+
+  const expansions = (params.Expand || [])
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+
+  const result = await list.getItemsByCAMLQuery(
+    { ViewXml: params.ViewXml },
+    ...expansions,
+  );
+
+  if (Array.isArray(result)) {
+    return result as Record<string, unknown>[];
+  }
+
+  if (result && typeof result === "object") {
+    const record = result as Record<string, unknown>;
+    if (Array.isArray(record.value)) {
+      return record.value as Record<string, unknown>[];
+    }
+    if (Array.isArray(record.results)) {
+      return record.results as Record<string, unknown>[];
+    }
+  }
+
+  return [];
 };
 
 /**
@@ -1000,6 +1048,7 @@ export default {
   SPUpdateItem,
   SPDeleteItem,
   SPReadItems,
+  SPReadItemsByCaml,
   SPReadItemsPaged,
   SPDetailsListGroupItems,
   SPGetChoices,

@@ -1,9 +1,12 @@
-import type { AppDispatch } from "./index";
+import type { Dispatch, UnknownAction } from "@reduxjs/toolkit";
 import {
   clearGlobalProcessing,
   setGlobalProcessing,
   updateGlobalProcessing,
 } from "./slices/uiSlice";
+
+/** Compatible with both `AppDispatch` and async-thunk `dispatch`. */
+type UiProcessingDispatch = Dispatch<UnknownAction>;
 
 let progressTimerId = 0;
 
@@ -27,7 +30,7 @@ export interface IBeginUiProcessingOptions {
  * Item progress animates only when {@link IBeginUiProcessingOptions.showItemProgress} is set.
  */
 export function beginUiProcessing(
-  dispatch: AppDispatch,
+  dispatch: UiProcessingDispatch,
   total = 1,
   options?: IBeginUiProcessingOptions,
 ): void {
@@ -66,8 +69,52 @@ export function beginUiProcessing(
   }, 80);
 }
 
+/**
+ * Starts SAP Post progress at `SAP Datas: 0/{total}` with no fake animation.
+ * Updates only via {@link reportSapUiProcessing} after each successful SAP call.
+ */
+export function beginSapUiProcessing(
+  dispatch: UiProcessingDispatch,
+  total: number,
+): void {
+  clearProgressTimer();
+  const safeTotal = Math.max(0, total);
+  dispatch(
+    setGlobalProcessing({
+      current: 0,
+      total: safeTotal,
+      percent: 0,
+      showItemProgress: true,
+      progressLabel: "SAP Datas",
+    }),
+  );
+}
+
+/** Updates SAP progress after a successful createZMatMast call. */
+export function reportSapUiProcessing(
+  dispatch: UiProcessingDispatch,
+  current: number,
+  total: number,
+): void {
+  const safeTotal = Math.max(0, total);
+  const safeCurrent = Math.max(0, Math.min(current, safeTotal || current));
+  const percent =
+    safeTotal > 0
+      ? Math.min(100, Math.round((safeCurrent / safeTotal) * 100))
+      : 0;
+  dispatch(
+    updateGlobalProcessing({
+      current: safeCurrent,
+      total: safeTotal,
+      percent,
+      showItemProgress: true,
+      progressLabel: "SAP Datas",
+    }),
+  );
+}
+
 export function finishUiProcessing(
-  dispatch: AppDispatch,
+  dispatch: UiProcessingDispatch,
   success: boolean,
 ): void {
   clearProgressTimer();

@@ -63,9 +63,6 @@ const MaterialMasterTable: React.FC<IMaterialMasterTableProps> = ({
             );
             return formatted ? formatted : <EmptyDash />;
           }
-          if (column.field === "CreatedBy") {
-            return renderUserCell(row.CreatedBy, row.CreatedByEmail);
-          }
           if (column.field === "Initiator") {
             return renderUserCell(row.Initiator, row.InitiatorEmail);
           }

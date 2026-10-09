@@ -2,8 +2,11 @@ import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
-import { findDuplicateMaterialGroupField } from "../../../../../External/CommonServices/materialGroupValidation";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
+import {
+  assertBrowserOnline,
+  toUserActionErrorMessage,
+} from "../../../../../External/CommonServices/networkConnectivity";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
   addRow,
@@ -286,16 +289,7 @@ export function useMaterialGroupFormController(
         }
       }
 
-      // Duplicate non-empty Code / Description blocked for Initiator Submit and all Consultant actions.
-      const duplicateField = findDuplicateMaterialGroupField(
-        mgState.selectedConfigIds,
-        mgState.entriesByConfigId,
-      );
-      if (duplicateField) {
-        showWarningToast(toastRef, duplicateField, "Validation");
-        return false;
-      }
-
+      // Material Group: Code / Description duplicates are not validated at any stage.
       return true;
     },
     [
@@ -309,6 +303,12 @@ export function useMaterialGroupFormController(
 
   const handleSaveDraft = React.useCallback(() => {
     if (!validateEntries(false)) {
+      return;
+    }
+    try {
+      assertBrowserOnline();
+    } catch (error: unknown) {
+      showErrorToast(toastRef, toUserActionErrorMessage(error));
       return;
     }
 
@@ -337,6 +337,12 @@ export function useMaterialGroupFormController(
 
   const handleSubmit = React.useCallback(() => {
     if (!validateEntries(true)) {
+      return;
+    }
+    try {
+      assertBrowserOnline();
+    } catch (error: unknown) {
+      showErrorToast(toastRef, toUserActionErrorMessage(error));
       return;
     }
 
@@ -369,8 +375,15 @@ export function useMaterialGroupFormController(
     (action: MaterialGroupConsultantActionType) => {
       const remarks = approverRemarks.trim();
 
-      // Complete / Rework / Reject: Code mandatory + no duplicate Code/Description.
+      // Complete / Rework / Reject: Code and Description required; no duplicate checks.
       if (!validateEntries(true)) {
+        return;
+      }
+
+      try {
+        assertBrowserOnline();
+      } catch (error: unknown) {
+        showErrorToast(toastRef, toUserActionErrorMessage(error));
         return;
       }
 

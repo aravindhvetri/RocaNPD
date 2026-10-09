@@ -1,5 +1,6 @@
 import { Config } from "./Config";
 import type { INpdItemDetailRecord } from "./Interface";
+import { NETWORK_OFFLINE_MESSAGE } from "./networkConnectivity";
 import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.NpdItemDetails;
@@ -167,11 +168,31 @@ function isPersistableItem(record: INpdItemDetailRecord): boolean {
   );
 }
 
+export interface ISaveNpdItemDetailsOptions {
+  isNewRequest?: boolean;
+  /**
+   * When true, only insert/update the provided records and delete the explicit
+   * IDs — skips fetching the full Item Details list (fast path for Rework/Draft).
+   */
+  partial?: boolean;
+  deletedSharePointIds?: number[];
+  /**
+   * Checked before each insert batch. When it returns true, rows already
+   * saved stay saved and the rest of this submit is not sent.
+   */
+  shouldAbort?: () => boolean;
+}
+
 export async function saveNpdItemDetailsBatch(
   requestId: number,
   records: INpdItemDetailRecord[],
-  isNewRequest = false,
+  options: boolean | ISaveNpdItemDetailsOptions = false,
 ): Promise<void> {
+  const normalized: ISaveNpdItemDetailsOptions =
+    typeof options === "boolean" ? { isNewRequest: options } : options || {};
+  const isNewRequest = Boolean(normalized.isNewRequest);
+  const partial = Boolean(normalized.partial);
+
   const persistable = records.filter(isPersistableItem);
   const toUpdate = persistable
     .filter((record) => record.sharePointId > 0)
@@ -184,7 +205,11 @@ export async function saveNpdItemDetailsBatch(
     .map((record) => toSharePointPayload(record, requestId));
 
   let toDelete: { ID: number }[] = [];
-  if (!isNewRequest) {
+  if (partial) {
+    toDelete = (normalized.deletedSharePointIds || [])
+      .filter((id) => id > 0)
+      .map((id) => ({ ID: id }));
+  } else if (!isNewRequest) {
     const existing = await fetchNpdItemDetailsByRequestId(requestId);
     const keepIds = new Set(
       persistable.map((record) => record.sharePointId).filter((id) => id > 0),
@@ -198,12 +223,50 @@ export async function saveNpdItemDetailsBatch(
     return;
   }
 
-  await SPServices.batchMutate({
-    ListName: LIST_NAME(),
-    remove: toDelete,
-    update: toUpdate,
-    insert: toInsert,
-  });
+  // Save Draft and other callers keep a single batch. Submit passes
+  // shouldAbort so a dropped connection cannot flush the remaining rows
+  // when the browser comes back online.
+  if (!normalized.shouldAbort) {
+    await SPServices.batchMutate({
+      ListName: LIST_NAME(),
+      remove: toDelete,
+      update: toUpdate,
+      insert: toInsert,
+    });
+    return;
+  }
+
+  const abortIfRequested = (): void => {
+    if (normalized.shouldAbort?.()) {
+      throw new Error(NETWORK_OFFLINE_MESSAGE);
+    }
+  };
+
+  const insertChunkSize = 20;
+  if (!toInsert.length) {
+    abortIfRequested();
+    await SPServices.batchMutate({
+      ListName: LIST_NAME(),
+      remove: toDelete,
+      update: toUpdate,
+      insert: [],
+    });
+    abortIfRequested();
+    return;
+  }
+
+  for (let start = 0; start < toInsert.length; start += insertChunkSize) {
+    // Checked again after each batch returns, including when the network is
+    // already back. A cancelled submit must not start the next batch.
+    abortIfRequested();
+    await SPServices.batchMutate({
+      ListName: LIST_NAME(),
+      remove: start === 0 ? toDelete : [],
+      update: start === 0 ? toUpdate : [],
+      insert: toInsert.slice(start, start + insertChunkSize),
+    });
+    abortIfRequested();
+  }
 }
 
 export async function markNpdItemDetailPostedToSap(

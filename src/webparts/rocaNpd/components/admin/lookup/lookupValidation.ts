@@ -1,17 +1,9 @@
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { ILookup } from "../../../../../External/CommonServices/Interface";
-import {
-  containsSpecialCharacters,
-  sanitizeAlphanumericTextInput,
-  specialCharactersNotAllowedMessage,
-} from "../../../../../External/CommonServices/textInputSanitize";
 
 function normalizeLookupValue(value: string): string {
   return value.trim().toLowerCase();
 }
-
-/** @deprecated Prefer sanitizeAlphanumericTextInput from textInputSanitize. */
-export const sanitizeLookupTextInput = sanitizeAlphanumericTextInput;
 
 export function validateLookupForm(
   lookupTypeId: number | null,
@@ -30,10 +22,6 @@ export function validateLookupForm(
     return `${FieldLabels.LookupCode} is required.`;
   }
 
-  if (containsSpecialCharacters(trimmedCode)) {
-    return specialCharactersNotAllowedMessage(FieldLabels.LookupCode);
-  }
-
   if (trimmedCode.length > 255) {
     return `${FieldLabels.LookupCode} must be 255 characters or less.`;
   }
@@ -42,10 +30,6 @@ export function validateLookupForm(
 
   if (!trimmedName) {
     return `${FieldLabels.LookupName} is required.`;
-  }
-
-  if (containsSpecialCharacters(trimmedName)) {
-    return specialCharactersNotAllowedMessage(FieldLabels.LookupName);
   }
 
   if (trimmedName.length > 255) {

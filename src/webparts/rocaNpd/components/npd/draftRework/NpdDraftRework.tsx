@@ -35,6 +35,7 @@ import {
   matchesNpdStatusFilter,
   uniqueBrandOptions,
 } from "../requestList/npdRequestListUtils";
+import { isBrowserOnline } from "../../../../../External/CommonServices/networkConnectivity";
 import { fetchNpdRequestStatusChoices } from "../../../../../External/CommonServices/npdRequestStatusChoices";
 import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import styles from "./NpdDraftRework.module.scss";
@@ -64,6 +65,23 @@ const NpdDraftRework: React.FC = () => {
   const emailAction = parseNpdWorkflowAction(
     searchParams.get(Config.NpdEmail.QueryAction),
   );
+  const [browserOffline, setBrowserOffline] = React.useState(
+    () => !isBrowserOnline(),
+  );
+
+  React.useEffect(() => {
+    const syncOnline = (): void => {
+      setBrowserOffline(!isBrowserOnline());
+    };
+    window.addEventListener("offline", syncOnline);
+    window.addEventListener("online", syncOnline);
+    const pollId = window.setInterval(syncOnline, 300);
+    return () => {
+      window.removeEventListener("offline", syncOnline);
+      window.removeEventListener("online", syncOnline);
+      window.clearInterval(pollId);
+    };
+  }, []);
 
   React.useEffect(() => {
     void fetchNpdRequestStatusChoices().then(setStatusChoices);
@@ -94,12 +112,16 @@ const NpdDraftRework: React.FC = () => {
     } | null) ?? {};
 
   const listFetchPending = useListPageFetch(
-    () =>
-      dispatch(
+    () => {
+      if (!isBrowserOnline()) {
+        return undefined;
+      }
+      return dispatch(
         isPendingList ? fetchNpdPendingList(viewAs) : fetchNpdDraftReworkList(viewAs),
-      ),
+      );
+    },
     [dispatch, isPendingList, location.key, userEmail, viewAs],
-    initialized && !globalProcessing,
+    initialized && !globalProcessing && !browserOffline,
   );
 
   React.useEffect(() => {
@@ -175,7 +197,7 @@ const NpdDraftRework: React.FC = () => {
     <section className={styles.page}>
       <Toast ref={toastRef} />
       <LoaderOverlay
-        visible={listFetchPending || status === "loading"}
+        visible={!browserOffline && (listFetchPending || status === "loading")}
         label="Processing"
       />
       <NpdDraftReworkToolbar

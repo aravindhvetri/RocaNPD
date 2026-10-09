@@ -54,8 +54,10 @@
     }
   }
 
-  .p-button.p-button-icon-only,
-  .p-button.p-button-text.p-button-icon-only {
+  // Icon-only text actions (table row icons) clear background on focus.
+  // Master toolbar reset (`roca-master-reset-button`) must keep its solid theme fill.
+  .p-button.p-button-icon-only:not(.roca-master-reset-button),
+  .p-button.p-button-text.p-button-icon-only:not(.roca-master-reset-button) {
 
     &:enabled:focus,
     &:enabled:active,

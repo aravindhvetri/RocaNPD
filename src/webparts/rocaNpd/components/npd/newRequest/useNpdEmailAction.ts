@@ -51,7 +51,7 @@ export function useNpdEmailAction(params: {
       const viewAs = parseViewAsRole(
         searchParams.get(Config.NpdFormQuery.ViewAs),
       );
-      navigate(buildNavHref(Config.Routes.NpdPending, viewAs), {
+      navigate(buildNavHref(Config.Routes.NpdAll, viewAs), {
         replace: true,
       });
     }

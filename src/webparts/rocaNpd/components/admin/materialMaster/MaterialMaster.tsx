@@ -44,9 +44,10 @@ const MaterialMaster: React.FC = () => {
   const [initiatorFilter, setInitiatorFilter] = React.useState("all");
   const [isExporting, setIsExporting] = React.useState(false);
 
+  // Load the full catalog once; Existing/New tabs and filters are local only.
   const listFetchPending = useListPageFetch(
-    () => dispatch(fetchMaterialMasterCatalogThunk(tab)),
-    [dispatch, tab],
+    () => dispatch(fetchMaterialMasterCatalogThunk()),
+    [dispatch],
     initialized,
   );
 

@@ -4,7 +4,6 @@ export interface IImportValidationDialogProps {
   visible: boolean;
   title?: string;
   sectionTitle: string;
-  recordColumnHeader?: string;
   validationRows: IImportValidationRow[];
   canProceed?: boolean;
   proceeding?: boolean;

@@ -194,7 +194,7 @@ export function validateNpdItemDetailsRows(
 }
 
 /**
- * MIS Coordinator gate for Post to SAP / Rework / Reject:
+ * MIS Coordinator gate for Post to SAP:
  * every Item Details row must be complete, and Profit Center is required.
  */
 export function validateMisCoordinatorAction(
@@ -207,6 +207,27 @@ export function validateMisCoordinatorAction(
     messages.push("Profit Center is required.");
   }
   return messages;
+}
+
+/** MIS Reject: Profit Center is not required. */
+export function validateMisCoordinatorReject(
+  _profitCenter: string | null | undefined,
+): string[] {
+  return [];
+}
+
+/**
+ * MIS Rework: only rows that were added/updated.
+ * Profit Center is not required. Unchanged lines are not re-validated.
+ */
+export function validateMisCoordinatorRework(
+  brand: string | null,
+  changedRows: INpdItemDetailRow[],
+  _profitCenter: string | null | undefined,
+): string[] {
+  return changedRows.length
+    ? validateNpdItemDetailsRows(brand, changedRows)
+    : [];
 }
 
 /**

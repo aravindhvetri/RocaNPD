@@ -7,6 +7,8 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
   mode = "create",
   saving = false,
   submitting = false,
+  isResubmit = false,
+  showSaveDraft = true,
   onCancel,
   onSaveDraft,
   onSubmit,
@@ -86,19 +88,21 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
       </div>
 
       <div className={styles.primaryActions}>
-        <Button
-          label="Save Draft"
-          variant="secondary"
-          icon="pi pi-save"
-          size="sm"
-          className={styles.saveButton}
-          loading={saving}
-          disabled={isBusy}
-          onClick={onSaveDraft}
-        />
+        {showSaveDraft ? (
+          <Button
+            label="Save Draft"
+            variant="secondary"
+            icon="pi pi-save"
+            size="sm"
+            className={styles.saveButton}
+            loading={saving}
+            disabled={isBusy}
+            onClick={onSaveDraft}
+          />
+        ) : null}
 
         <Button
-          label="Submit to Consultant"
+          label={isResubmit ? "Resubmit" : "Submit to Consultant"}
           icon="pi pi-send"
           size="sm"
           className={styles.submitButton}

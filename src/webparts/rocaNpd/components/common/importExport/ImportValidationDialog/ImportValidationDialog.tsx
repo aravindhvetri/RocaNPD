@@ -7,7 +7,6 @@ const ImportValidationDialog: React.FC<IImportValidationDialogProps> = ({
   visible,
   title = "Import",
   sectionTitle,
-  recordColumnHeader,
   validationRows,
   canProceed = false,
   proceeding = false,
@@ -26,7 +25,7 @@ const ImportValidationDialog: React.FC<IImportValidationDialogProps> = ({
     <Dialog
       visible={visible}
       title={title}
-      width={recordColumnHeader ? "44rem" : "38rem"}
+      width="38rem"
       className={styles.validationDialog}
       onHide={onHide}
       footer={
@@ -57,7 +56,6 @@ const ImportValidationDialog: React.FC<IImportValidationDialogProps> = ({
             <thead>
               <tr>
                 <th>S.NO</th>
-                {recordColumnHeader ? <th>{recordColumnHeader}</th> : null}
                 <th>Validation Error</th>
               </tr>
             </thead>
@@ -65,7 +63,6 @@ const ImportValidationDialog: React.FC<IImportValidationDialogProps> = ({
               {validationRows.map((row) => (
                 <tr key={`${row.serialNo}-${row.validationError}`}>
                   <td>{row.serialNo}</td>
-                  {recordColumnHeader ? <td>{row.recordName}</td> : null}
                   <td>
                     <span className={styles.validationError}>
                       {row.validationError}

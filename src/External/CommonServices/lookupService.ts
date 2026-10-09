@@ -12,6 +12,7 @@ import {
   assertRequiredImportHeaders,
   findBestHeaderRowIndex,
   findColumnIndex,
+  appendImportRowFieldErrors,
   readSpreadsheetRows,
 } from "./importService";
 import {
@@ -128,10 +129,6 @@ async function resolveMissingLookupTypeTitles(
       LookupTypeTitle: typeTitleById.get(lookup.LookupTypeId) ?? "",
     };
   });
-}
-
-function buildDuplicateKey(lookupTypeId: number, lookupName: string): string {
-  return `${lookupTypeId}::${lookupName.trim().toLowerCase()}`;
 }
 
 async function readLookupItems(
@@ -270,38 +267,12 @@ export async function bulkCreateLookups(
     return;
   }
 
-  // Final SharePoint guard — do not trust Redux/list state from page load (multi-tab).
-  const existing = await fetchActiveLookups();
-  const existingCodes = new Set(
-    existing.map((item) => item.LookupCode.trim().toLowerCase()),
-  );
-  const existingNameKeys = new Set(
-    existing.map(
-      (item) =>
-        `${item.LookupTypeId}:${item.LookupName.trim().toLowerCase()}`,
-    ),
-  );
-  const batchCodes = new Set<string>();
-  const batchNameKeys = new Set<string>();
-
+  // Used by Lookup Excel import and Material Group Complete — duplicates allowed.
+  // Manual Lookup Add/Edit still uses assertLookupNotDuplicate via create/update.
   for (const record of records) {
-    const codeKey = (record.lookupCode ?? "").trim().toLowerCase();
-    if (!codeKey) {
+    if (!(record.lookupCode ?? "").trim()) {
       throw new Error(`${FieldLabels.LookupCode} is required.`);
     }
-    if (existingCodes.has(codeKey) || batchCodes.has(codeKey)) {
-      throw new Error(
-        `"${(record.lookupCode ?? "").trim()}" already exists as a Lookup Code.`,
-      );
-    }
-
-    const nameKey = `${record.lookupTypeId}:${record.lookupName.trim().toLowerCase()}`;
-    if (existingNameKeys.has(nameKey) || batchNameKeys.has(nameKey)) {
-      throw new Error(`"${record.lookupName.trim()}" already exists.`);
-    }
-
-    batchCodes.add(codeKey);
-    batchNameKeys.add(nameKey);
   }
 
   await SPServices.batchInsert({
@@ -352,16 +323,6 @@ export async function parseLookupImportFile(
     lookupTypeByTitle.set(lookupType.Title.trim().toLowerCase(), lookupType);
   });
 
-  const existingKeys = new Set(
-    existingItems.map((item) =>
-      buildDuplicateKey(item.LookupTypeId, item.LookupName),
-    ),
-  );
-  const existingCodes = new Set(
-    existingItems.map((item) => item.LookupCode.trim().toLowerCase()),
-  );
-  const seenInFile = new Set<string>();
-  const seenCodesInFile = new Set<string>();
   const toCreate: ILookupImportRecord[] = [];
   const duplicates: string[] = [];
   const errors: string[] = [];
@@ -379,37 +340,36 @@ export async function parseLookupImportFile(
     const lookupTypeTitle = String(row[lookupTypeColumnIndex] ?? "").trim();
     const lookupName = String(row[lookupNameColumnIndex] ?? "").trim();
     const lookupCode = String(row[lookupCodeColumnIndex] ?? "").trim();
+    const excelRowNumber = rowIndex + 1;
 
     if (!lookupTypeTitle && !lookupName && !lookupCode) {
       continue;
     }
 
-    if (!lookupTypeTitle) {
-      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupType} is required.`);
-      continue;
-    }
+    // Collect every field-level error for this row — do not stop at the first.
+    let rowHasFieldErrors = false;
 
-    if (!lookupCode) {
-      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupCode} is required.`);
-      continue;
-    }
+    // Lookup / Lookup Type allow special characters — do not block import on them.
+    rowHasFieldErrors =
+      appendImportRowFieldErrors(errors, [
+        !lookupTypeTitle
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupType} is required.`
+          : null,
+        !lookupCode
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupCode} is required.`
+          : null,
+        !lookupName
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupName} is required.`
+          : null,
+        lookupCode && lookupCode.length > 255
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupCode} must be 255 characters or less.`
+          : null,
+        lookupName && lookupName.length > 255
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupName} must be 255 characters or less.`
+          : null,
+      ]) || rowHasFieldErrors;
 
-    if (lookupCode.length > 255) {
-      errors.push(
-        `Row ${rowIndex + 1}: ${FieldLabels.LookupCode} must be 255 characters or less.`,
-      );
-      continue;
-    }
-
-    if (!lookupName) {
-      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupName} is required.`);
-      continue;
-    }
-
-    if (lookupName.length > 255) {
-      errors.push(
-        `Row ${rowIndex + 1}: ${FieldLabels.LookupName} must be 255 characters or less.`,
-      );
+    if (rowHasFieldErrors) {
       continue;
     }
 
@@ -417,28 +377,12 @@ export async function parseLookupImportFile(
 
     if (!lookupType) {
       errors.push(
-        `Row ${rowIndex + 1}: ${FieldLabels.LookupType} "${lookupTypeTitle}" was not found.`,
+        `Row ${excelRowNumber}: ${FieldLabels.LookupType} "${lookupTypeTitle}" was not found.`,
       );
       continue;
     }
 
-    const codeKey = lookupCode.trim().toLowerCase();
-    if (existingCodes.has(codeKey) || seenCodesInFile.has(codeKey)) {
-      errors.push(
-        `Row ${rowIndex + 1}: "${lookupCode}" already exists as a Lookup Code.`,
-      );
-      continue;
-    }
-
-    const duplicateKey = buildDuplicateKey(lookupType.Id, lookupName);
-
-    if (existingKeys.has(duplicateKey) || seenInFile.has(duplicateKey)) {
-      duplicates.push(lookupName);
-      continue;
-    }
-
-    seenInFile.add(duplicateKey);
-    seenCodesInFile.add(codeKey);
+    // Excel import allows duplicate Name / Code (including values already in Lookup).
     toCreate.push({
       lookupTypeId: lookupType.Id,
       lookupTypeTitle: lookupType.Title,
@@ -447,7 +391,7 @@ export async function parseLookupImportFile(
     });
   }
 
-  if (!toCreate.length && !duplicates.length && !errors.length) {
+  if (!toCreate.length && !errors.length) {
     throw new Error("The uploaded file does not contain any lookup records.");
   }
 

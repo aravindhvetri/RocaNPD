@@ -11,24 +11,24 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 51 | 40 | 11 |
-| C — SharePoint Data | 24 | 5 | 19 |
-| D — Security & Roles | 24 | 15 | 9 |
-| E — UI / UX / Theme | 29 | 10 | 19 |
-| F — Admin Module | 39 | 24 | 15 |
-| G — NPD Module | 50 | 45 | 5 |
-| H — Material Group Module | 27 | 15 | 12 |
-| I — Workflow & Automation | 20 | 0 | 20 |
-| J — SAP Integration | 18 | 9 | 9 |
-| K — Material Master | 11 | 4 | 7 |
+| B — Technical Foundation | 73 | 62 | 11 |
+| C — SharePoint Data | 26 | 15 | 11 |
+| D — Security & Roles | 31 | 30 | 1 |
+| E — UI / UX / Theme | 41 | 35 | 6 |
+| F — Admin Module | 73 | 70 | 3 |
+| G — NPD Module | 95 | 94 | 1 |
+| H — Material Group Module | 41 | 41 | 0 |
+| I — Workflow & Automation | 20 | 18 | 2 |
+| J — SAP Integration | 19 | 10 | 9 |
+| K — Material Master | 11 | 8 | 3 |
 | L — Reports | 10 | 0 | 10 |
-| M — Email Notifications | 8 | 3 | 5 |
-| N — Testing | 24 | 0 | 24 |
+| M — Email Notifications | 8 | 6 | 2 |
+| N — Testing | 26 | 0 | 26 |
 | O — UAT | 18 | 0 | 18 |
-| P — Deployment | 16 | 0 | 16 |
-| **TOTAL** | **363** | **159** | **204** |
+| P — Deployment | 22 | 0 | 22 |
+| **TOTAL** | **530** | **395** | **135** |
 
-**Last Updated:** 01 October 2026
+**Last Updated:** 09 October 2026
 
 ---
 
@@ -43,7 +43,7 @@
 - [x] **CHK-A05** `Checklist.md` created with all verification items
 - [ ] **CHK-A06** Wireframe screenshots captured for all screens (`src/Documents/Wireframe/`)
 - [ ] **CHK-A07** SharePoint list schemas documented and approved
-- [ ] **CHK-A08** SAP integration specification documented and approved
+- [x] **CHK-A08** SAP integration specification documented and approved
 - [ ] **CHK-A09** Email notification content received from ROCA (BLK-001)
 - [ ] **CHK-A10** Development, UAT, and production environments identified
 - [ ] **CHK-A11** All open items (OPEN-001–OPEN-006) resolved or accepted
@@ -71,16 +71,16 @@
 - [x] **CHK-B09** `WebPartContext` passed from WebPart → RocaNpd → MainComponent
 - [x] **CHK-B10** `SPFI` instance passed to child components as `sp` prop
 - [x] **CHK-B11** SPServices uses PnP v4 API (no `@pnp/sp/presets/all`)
-- [ ] **CHK-B12** Cross-site web queries work via `Web([sp.web, siteUrl])`
-- [ ] **CHK-B13** Batch insert/update/delete operations work correctly
+- [x] **CHK-B12** Cross-site web queries work via `Web([sp.web, siteUrl])`
+- [x] **CHK-B13** Batch insert/update/delete operations work correctly
 
 ### B.3 Redux
 
-- [ ] **CHK-B14** Redux store configured with all feature slices (app + ui slices done; lookup/npd/mg/admin pending)
+- [x] **CHK-B14** Redux store configured with all feature slices (app, ui, admin, npdForm, npdRequest, materialGroup, materialMaster)
 - [x] **CHK-B15** Typed hooks (`useAppDispatch`, `useAppSelector`) available
 - [x] **CHK-B16** `initializeApp` thunk runs on app mount
-- [ ] **CHK-B17** Loading states display during async operations
-- [ ] **CHK-B18** Error states captured in slices and shown to user
+- [x] **CHK-B17** Loading states display during async operations
+- [x] **CHK-B18** Error states captured in slices and shown to user
 - [x] **CHK-B19** Toast notifications work for success, error, and warning (common styled Toast)
 
 ### B.4 Routing & App Shell
@@ -101,11 +101,14 @@
 - [ ] **CHK-B27** ConfirmActionDialog appears before Approve / Rework / Reject / Delete
 - [ ] **CHK-B28** SearchFilterBar filters list data correctly
 - [ ] **CHK-B29** EmptyState displays when no records found
-- [ ] **CHK-B30** LoaderOverlay shows during data fetch and save operations
+- [x] **CHK-B30** LoaderOverlay shows during data fetch and save operations
 - [x] **CHK-B31** Export generates valid Excel file via `exportService.ts` (Lookup Type Master verified)
 - [x] **CHK-B31a** Reusable Import/Export services and `ImportDialog` documented in ProjectStandards Section 5.8
 - [x] **CHK-B31b** Shared import header gate: `validateRequiredImportHeaders` / `ImportDialog.expectedHeaders` rejects mismatched columns on select/drop for all Import modules
-- [x] **CHK-B31c** Missing-column Import Toast uses short shared message (download template); template download has no Excel data validations
+- [x] **CHK-B31c** Missing-column Import Toast uses short shared message (download template)
+- [x] **CHK-B31d** Shared Excel import value validation: digits/numeric cells (e.g. Weight, Min. Qty) reject mixed values like `ab09` with “Only numbers are allowed”; alphanumeric fields reject special characters with row + field in the validation popup; values are never silently stripped or partially extracted (`importService`)
+- [x] **CHK-B31e** Import template download uses the `NPD_Templates` Library file as-is (header background/formatting preserved); no local rewrite that drops styles
+- [x] **CHK-B31f** `ImportValidationDialog` shows **S.NO** and **Validation Error** only (no record-name / field-name column) for Lookup, Lookup Type, and Item Details imports
 
 ### B.6 Common Controls — PrimeReact Wrappers
 
@@ -136,17 +139,17 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-B39j** Export filename uses `{Name}_Export_{DD-MM-YYYY}` with themed Excel header row
 - [x] **CHK-B39k** Master toolbar controls (Search/Import/Export/Add New) use compact shared height
 - [x] **CHK-B39l** Form dialog footer buttons use taller min-height via `_form-dialog-standard.scss`
-- [ ] **CHK-B40** Toast wrapper connected to Redux notification queue
+- [x] **CHK-B40** Toast wrapper connected to Redux notification queue (`ui.flashMessage`)
 - [x] **CHK-B41** `common/controls/index.ts` barrel export — feature modules import from here only
 - [ ] **CHK-B42** No feature module file imports directly from `primereact/*`
 - [ ] **CHK-B43** No hardcoded color hex values outside `theme.scss`
 
 ### B.7 Redux Data Flow
 
-- [ ] **CHK-B44** Components dispatch thunks — never call SPServices directly
-- [ ] **CHK-B45** Thunks call domain services; services call SPServices
-- [ ] **CHK-B46** Form drafts held in Redux until Save Draft / Submit (no per-keystroke SP writes)
-- [ ] **CHK-B47** Lookup data cached in `lookupSlice` and reused across screens
+- [x] **CHK-B44** Components dispatch thunks — never call SPServices directly
+- [x] **CHK-B45** Thunks call domain services; services call SPServices
+- [x] **CHK-B46** Form drafts held in Redux until Save Draft / Submit (no per-keystroke SP writes)
+- [x] **CHK-B47** Lookup data cached via `lookupService` / Redux (admin + npdForm) and reused across screens
 
 ---
 
@@ -154,18 +157,18 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### C.1 Lists Exist and Schema Correct
 
-- [ ] **CHK-C01** Lookup Type Master list provisioned with correct fields
-- [ ] **CHK-C02** Lookup Master list provisioned with correct fields
-- [ ] **CHK-C03** Brand Material Extension Master list provisioned
+- [x] **CHK-C01** Lookup Type Master list provisioned with correct fields
+- [x] **CHK-C02** Lookup Master list provisioned with correct fields
+- [x] **CHK-C03** Brand Material Extension Master list provisioned
 - [x] **CHK-C04** No local Plant Master list — ROCA `PlantMaster` is the plant data source
 - [x] **CHK-C05** No local Role Master list — ROCA `RoleMaster` is the role data source
 - [x] **CHK-C06** No local Approver Configuration list — ROCA `ApproversMaster` is the approver data source
-- [ ] **CHK-C07** Workflow Configuration Master list provisioned
-- [ ] **CHK-C08** Material Master list provisioned
-- [ ] **CHK-C09** NPD Request list provisioned
-- [ ] **CHK-C10** NPD Item list provisioned with ParentRequest lookup
-- [ ] **CHK-C11** Material Group Request list provisioned
-- [ ] **CHK-C12** Material Group Request Item list provisioned
+- [x] **CHK-C07** Workflow Configuration Master list provisioned
+- [x] **CHK-C08** Material Master list provisioned (`NPD_MaterialMaster`)
+- [x] **CHK-C09** NPD Request list provisioned
+- [x] **CHK-C10** NPD Item list provisioned with ParentRequest lookup (`RequestGeneralInfoId`)
+- [x] **CHK-C11** Material Group Request list provisioned
+- [ ] **CHK-C12** Material Group Request Item list provisioned — N/A: masters stored as JSON on request header
 
 ### C.2 Seed Data & Relationships
 
@@ -174,9 +177,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-C15** Lookup Type → Lookup Master relationship works in queries
 - [x] **CHK-C16** Brand Material Extension plants sourced from ROCA `PlantMaster` (no NPD-site Plant Master list)
 - [x] **CHK-C17** Workflow Next Role from ROCA `RoleMaster`; routing from ROCA `ApproversMaster` (no local Role/Approver lists)
-- [ ] **CHK-C18** NPD Request → NPD Item 1:N relationship works
-- [ ] **CHK-C19** Material Group Request → Item 1:N relationship works
-- [ ] **CHK-C20** Internal field names documented in `Config.ts`
+- [x] **CHK-C18** NPD Request → NPD Item 1:N relationship works
+- [ ] **CHK-C19** Material Group Request → Item 1:N relationship works — N/A: JSON on header
+- [x] **CHK-C20** Internal field names documented in `Config.ts`
 
 ### C.3 Permissions
 
@@ -218,15 +221,15 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### D.3 Access Control — MIS Coordinator
 
-- [ ] **CHK-D16** MIS Coordinator sees requests approved by VH and assigned to self
+- [x] **CHK-D16** MIS Coordinator sees requests approved by VH and assigned to self
 - [x] **CHK-D17** MIS Coordinator can edit Item Details and Other Details
-- [ ] **CHK-D18** MIS Coordinator can Post to SAP, Rework, Reject
+- [x] **CHK-D18** MIS Coordinator can Post to SAP, Rework, Reject
 - [x] **CHK-D19** MIS Coordinator cannot access Material Group module
 
 ### D.4 Access Control — Consultant
 
-- [ ] **CHK-D20** Consultant sees assigned Material Group pending requests
-- [ ] **CHK-D21** Consultant can Complete, Rework, Reject Material Group requests
+- [x] **CHK-D20** Consultant sees assigned Material Group pending requests
+- [x] **CHK-D21** Consultant can Complete, Rework, Reject Material Group requests
 - [x] **CHK-D22** Consultant cannot access NPD module
 
 ### D.5 Access Control — Admin
@@ -250,9 +253,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-E02** Theme imported globally in `RocaNpdWebPart.ts`
 - [x] **CHK-E03** Application root uses `theme.module.scss` `appRoot` class for CSS variables
 - [x] **CHK-E04** No hardcoded hex/rgb colors in component SCSS or TS (only in `theme.scss`) — verified for layout components
-- [ ] **CHK-E05** All status badges use `--roca-color-status-*` variables
-- [ ] **CHK-E06** Primary buttons use `--roca-color-btn-primary-*` (teal brand color)
-- [ ] **CHK-E07** Dialog headers use `--roca-color-header-bg` (matches wireframe modal)
+- [x] **CHK-E05** All status badges use `--roca-color-status-*` variables — N/A until dedicated StatusBadge; status text uses shared formatters today
+- [x] **CHK-E06** Primary buttons use `--roca-color-btn-primary-*` (teal brand color)
+- [x] **CHK-E07** Dialog headers use `--roca-color-header-bg` (matches wireframe modal)
 - [x] **CHK-E08** PrimeReact components styled consistently inside `.roca-npd-app` (overlays via `_roca-form-controls.scss` + `injectRocaPrimeOverrides.ts`)
 
 ### E.2 Wireframe Alignment
@@ -260,7 +263,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-E09** Left navigation matches NavSelectDesign.png (icon tones, hover, selected bar, pill actions)
 - [x] **CHK-E09a** Administration nav excludes Plant Master, Role, and Approver Configuration (ROCA-sourced; no local modules)
 - [x] **CHK-E09b** Role group banners separate Initiator / VH / MIS / Consultant / Admin blocks in expanded side nav
-- [x] **CHK-E06** Primary/accent colors match wireframe (#40919D accent, #162C34 sidebar, semantic nav icons)
+- [x] **CHK-E09c** Primary/accent colors match wireframe (#40919D accent, #162C34 sidebar, semantic nav icons)
 - [x] **CHK-E17b** Nav hover = subtle translucent bg; selected = **white** bg + dark teal text + colored left bar; icons keep semantic colors
 - [x] **CHK-E17c** Sidebar shrink/expand toggle matches shrink.png; content area adjusts; primary actions hover + selected only on click
 - [x] **CHK-E17d** Side navigation bottom border below Reports section removed (`.section:last-child { border-bottom: none; }`); other section separators preserved
@@ -278,16 +281,16 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ### E.3 UX Behavior
 
-- [ ] **CHK-E17** Loading spinner/skeleton shown during data operations
+- [x] **CHK-E17** Loading spinner/skeleton shown during data operations
 - [x] **CHK-E18** Empty state shown when lists have no records
 - [x] **CHK-E19** Success toast shown after Save, Submit, Approve, Complete, etc. — consistent “… successfully.” format (created / updated / deleted / imported)
 - [x] **CHK-E20** Error toast shown on validation failure or SP errors
 - [x] **CHK-E21** Cancel / Back returns to the source list (`from` query: All, Pending, Approved, Draft/Rework); New Request without `from` goes to All Requests — confirm dialog pending
-- [ ] **CHK-E22** Read-only screens cannot be edited (form controls disabled)
-- [ ] **CHK-E23** Editable screens show only permitted actions for current role
+- [x] **CHK-E22** Read-only screens cannot be edited (form controls disabled)
+- [x] **CHK-E23** Editable screens show only permitted actions for current role
 - [x] **CHK-E24** Horizontal scroll works on wide Item Details grid (shared surface scrollbar)
 - [x] **CHK-E25** Total Item Lines counter updates correctly on NPD form
-- [ ] **CHK-E26** Dynamic pending/completed counters update on list views
+- [x] **CHK-E26** Dynamic pending/completed counters update on list views
 - [x] **CHK-E27** `DeleteBlockedDialog` (“Cannot Delete”) is compact — reduced padding, centered message and Close button (overrides injected dialog padding via `.roca-delete-blocked-dialog`)
 - [x] **CHK-E28** Export disabled when displayed DataTable has no rows (Lookup Type, Lookup, Brand Material Extension, NPD All/Approved)
 - [x] **CHK-E29** Master/list DataTables ordered by `Modified` descending (newest modified first)
@@ -336,6 +339,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F09i** Add New button keeps the same background on click/focus (no color flash)
 - [x] **CHK-F09j** Import rejects file on browse/drop when required Excel headers do not match FieldLabels (Lookup Type, Lookup Code, Lookup Name); Toast; file not accepted
 - [x] **CHK-F09k** Lookup / Lookup Type Add/Edit: special characters blocked while typing (letters, numbers, spaces only)
+- [x] **CHK-F09l** Lookup / Lookup Type Excel import rejects special characters (validation popup with row + field); Lookup template download preserves Library header formatting
 
 ### F.3 Plant / Role / Approver — ROCA site (no local admin screens)
 
@@ -370,7 +374,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F04o** Multi-tab: Lookup Type create/update/import and Lookup create/update/import re-fetch SharePoint before persist (not Redux-only)
 ### F.8 Material Master
 
-> **Phase A (current):** Admin read-only Material Master list. Source: `NPD_MaterialGroupRequests`. Tabs Existing (`ItemType=Old`, hide empty columns) / New (`ItemType=New`, all columns). Search, date From/To, Initiator filter, Export, Created Date / Created By / Initiator. Fetch all via `getPaged()` (50/batch); UI 50/page. **Not in Phase A:** template, import, add/edit, auto-populate from NPD Completed.
+> **Phase A (done):** Admin read-only Material Master list from `NPD_MaterialMaster`. Tabs Existing (`ItemType=Old`, hide empty columns) / New (`ItemType=New`, all columns). Search, date From/To, Initiator filter, Export. Paged fetch (50/batch); UI 50/page. **Also done:** auto-populate New rows on MIS Post to SAP. **Still deferred:** template, import, manual add/edit.
 
 - [x] **CHK-F29a** Material Master requirements reviewed (MD docs + list/Figma screenshots); Phase A scope confirmed before implementation
 - [x] **CHK-F29** Material Master list with Existing / New tabs, search, date filters, Initiator filter, and Export works
@@ -384,7 +388,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-F33** Add Record manually works *(deferred — not Phase A)*
 - [x] **CHK-F34** Creation Date From/To filters work
 - [x] **CHK-F35** Initiator filter works
-- [ ] **CHK-F36** Auto-populated records from completed NPD appear correctly *(Phase 12 / later)*
+- [x] **CHK-F36** Auto-populated records from completed NPD appear correctly under Material Master New tab (ItemType=New after Post to SAP)
 - [x] **CHK-F36a** Material Master fetch filters by `ItemType` Old/New so future Item Details submit rows can appear under New without schema redesign
 
 ---
@@ -420,17 +424,20 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G14** Roca Global Code column hidden for other brands
 - [x] **CHK-G15** Item Details grid displays all required BRD columns; MultiSelect options from Lookup list by Lookup Type (`trim` + lowercase, compact / parenthetical-stripped title match); DataTable paginates at 7 rows when there are more than 7 items; lookup options prefetched on app init so available on first NPD Form open
 - [x] **CHK-G15a** Item Details selection fields allow only one option (`selectionLimit={1}`); panel is searchable dropdown-style (no checkboxes, search kept, closes after pick); **other options stay enabled** so the user can change the selection
-- [x] **CHK-G15b** Item Details Tab focus keeps horizontal scroll inside the table wrapper only (does not shift form page layout)- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
+- [x] **CHK-G15b** Item Details Tab focus keeps horizontal scroll inside the table wrapper only (does not shift form page layout)
+- [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
 - [x] **CHK-G16a** Item Details: Delete icon hidden when only one row remains; shown on **all** rows once a second row exists (Actions column remounts on mode change); lone Add button is centered
-- [x] **CHK-G16c** Item Details header Delete (red trash, same chrome as Add/Import) appears once rows exist; clears all lines and leaves one empty row
+- [x] **CHK-G16c** Item Details header Bulk Delete (red trash, same chrome as Add/Import) shows only when there are **more than 2** rows; hidden for 1 or 2 rows; clears all lines and leaves one empty row
 - [x] **CHK-G16b** NPD Item Details text fields block special characters via shared `textInputSanitize` / `Config.TextInputRules`
 - [x] **CHK-G16d** Min. Qty/Box Qty stays InputText (SP Single Line of Text) but accepts digits only (`textFilter: "digits"` / `sanitizeDigitsOnlyTextInput`)
 - [x] **CHK-G16e** InputText / InputTextarea / search / MultiSelect filter / ComboBox strip leading spaces (`stripLeadingSpaces`) — first character cannot be a space
 - [x] **CHK-G16f** After VH/MIS Rework, Initiator Save Draft sets Status=`Draft` (keeps Request ID); Resubmit only moves to Pending / next approver
+- [x] **CHK-G16g** HSN Code accepts alphanumeric text up to 8 characters (`maxLength: 8`)
 - [x] **CHK-G37e** MIS Profit Center shows required asterisk (`*`) next to the label
 - [x] **CHK-G37f** After MIS Rework / Reject / Post, Other Details always show `NPD_Request` values (cleared Material Extension stays empty — not re-filled from Brand Material Extension)
 - [x] **CHK-G17** + Add Another Item Line works with small inline plus icon next to label
 - [x] **CHK-G18** Import items from Excel works — required FieldLabels validated on select/drop (`expectedHeaders`); Excel headers match Item Details fields with trim + lowercase + whitespace-insensitive mapping; all valid rows (up to 200) import into the grid
+- [x] **CHK-G18a** Item Details Excel import: Weight / Min. Qty/Box Qty reject invalid numeric values (e.g. `ab09`) without extracting digits; text fields reject special characters; validation popup names the row and field
 - [x] **CHK-G19** Save Draft saves header + items without submitting
 - [x] **CHK-G20** Submit Request validates and routes to Vertical Head
 - [x] **CHK-G20a** Initiator footer shows SUBMIT REQUEST for new/draft; RESUBMIT when request status is Rework
@@ -451,13 +458,14 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G26e** Item Details S.No continues sequentially across pagination (Prime absolute `rowIndex` + 1; do not add `first`)
 - [x] **CHK-G26h** Initiator Submit blocked when Material Code / Description already exists in Material Master (toast); MIS Post to SAP uses the same rule
 - [x] **CHK-G26i** Processing loader shown while Material Master duplicate validation runs; after pass, Submit line-item progress bar (`n / total`) appears as usual (Pending page does not cover it with a second overlay)
+- [x] **CHK-G26j** Draft / Rework shows Item Details already saved in `NPD_ItemDetails` and the remaining rows from the JSON backup. Opening the form does not insert them. Resubmit inserts only the missing rows and does not create duplicates
 - [x] **CHK-G27** Roca Global Code validated when applicable — validation Toast on Submit
 - [x] **CHK-G28** At least one item row required on submit — validation Toast on Submit
 
 ### G.4 Vertical Head
 
 - [x] **CHK-G29** All Requests scoped to mapped brand(s) only
-- [ ] **CHK-G30** Pending Approval shows assigned requests with counter
+- [x] **CHK-G30** Pending Approval shows assigned requests with counter
 - [x] **CHK-G31** Request detail is read-only (header + items)
 - [x] **CHK-G32** Approve routes to MIS Coordinator and updates status
 - [x] **CHK-G33** Rework routes to Initiator with comments
@@ -487,8 +495,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G43** Traded + Domestic → Plant Code = CCWH, Valuation Class = 5000
 - [x] **CHK-G44** Traded + Imported → Plant Code = CCWH, Valuation Class = 5100
 - [x] **CHK-G45** Class Type always set to 001
-- [ ] **CHK-G46** Post to SAP succeeds → status Completed, Material Master updated
-- [ ] **CHK-G47** Post to SAP failure → error shown, status NOT changed to Completed
+- [x] **CHK-G46** Post to SAP succeeds → status Completed, Material Master updated
+- [x] **CHK-G47** Post to SAP failure → error shown, status NOT changed to Completed
 - [x] **CHK-G48** Rework routes to Initiator; Reject permanently closes
 - [x] **CHK-G49** Approver Remarks inline (no popup) for VH / MIS; Audit Log from `NPD_ApproverComments`
 - [x] **CHK-G49a** Audit Log ordered chronologically by Action On (Initiated → Rework → Resubmit); UI-only Pending rows from WorkflowJSON for waiting approvers (not stored in lists)
@@ -517,6 +525,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-H11** Description mandatory validation per row
 - [x] **CHK-H11a** Material Group Description must be unique within the request and against `NPD_Lookup` Title (LookupName) — same uniqueness family as Lookup Code; Submit / Complete blocked with “already exists”
 - [x] **CHK-H11b** Material Group Code optional for Initiator but must be unique across the request (and vs `NPD_Lookup` LookupCode) on Submit — empty Code allowed; duplicate non-empty Codes blocked
+- [x] **CHK-H11c** Consultant Complete / Rework / Reject require Code on all rows and block duplicate Code/Description (not Complete-only)
+- [x] **CHK-H11d** MG Code + Description Lookup uniqueness uses **one** `fetchActiveLookups` call; Code-only duplicate shows Code message; both duplicates show one combined validation message
 - [x] **CHK-H12** Success toasts after MG/NPD Submit (and Draft / Consultant actions) show via app-level flash so navigation does not unmount them
 - [x] **CHK-H12** Consultant Outlook email Login links use SafeLinks-safe `npdRoute` on `SitePages/RocaNPD.aspx` (same pattern as VH/MIS) — hash `id`/`mode` no longer breaks SitePages
 - [x] **CHK-H25** Select Masters cards show no hover/cursor effect in View or Consultant-read-only mode
@@ -557,25 +567,25 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 
 ## I — Workflow & Automation
 
-- [ ] **CHK-I01** NPD Draft → Submit → Pending → VH queue works end-to-end
-- [ ] **CHK-I02** VH Approve → MIS queue works
-- [ ] **CHK-I03** VH Rework → Initiator edit → resubmit → back in workflow
-- [ ] **CHK-I04** VH Reject → permanently closed, no resubmit
-- [ ] **CHK-I05** MIS Rework → Initiator edit → resubmit works
-- [ ] **CHK-I06** MIS Reject → permanently closed
-- [ ] **CHK-I07** MIS Post to SAP → Completed works
-- [ ] **CHK-I08** MG Draft → Submit → Consultant queue works
-- [ ] **CHK-I09** Consultant Complete → Completed works
-- [ ] **CHK-I10** Consultant Rework → Initiator resubmit works
-- [ ] **CHK-I11** Consultant Reject → permanently closed
-- [ ] **CHK-I12** Request ID generated correctly on first submit (not on draft)
-- [ ] **CHK-I13** Current approver field updated at each workflow stage
-- [ ] **CHK-I14** Rework comments visible to Initiator on reworked requests
-- [ ] **CHK-I15** Rejection comments recorded and visible
-- [ ] **CHK-I16** Power Automate flows fire on correct triggers (if used)
-- [ ] **CHK-I17** Workflow Configuration Master drives stage sequence
-- [ ] **CHK-I18** ROCA `ApproversMaster` drives user routing
-- [ ] **CHK-I19** Status transitions are valid (no invalid state jumps)
+- [x] **CHK-I01** NPD Draft → Submit → Pending → VH queue works end-to-end
+- [x] **CHK-I02** VH Approve → MIS queue works
+- [x] **CHK-I03** VH Rework → Initiator edit → resubmit → back in workflow
+- [x] **CHK-I04** VH Reject → permanently closed, no resubmit
+- [x] **CHK-I05** MIS Rework → Initiator edit → resubmit works
+- [x] **CHK-I06** MIS Reject → permanently closed
+- [x] **CHK-I07** MIS Post to SAP → Completed works
+- [x] **CHK-I08** MG Draft → Submit → Consultant queue works
+- [x] **CHK-I09** Consultant Complete → Completed works
+- [x] **CHK-I10** Consultant Rework → Initiator resubmit works
+- [x] **CHK-I11** Consultant Reject → permanently closed
+- [x] **CHK-I12** Request ID generated correctly on first submit (not on draft)
+- [x] **CHK-I13** Current approver field updated at each workflow stage
+- [x] **CHK-I14** Rework comments visible to Initiator on reworked requests
+- [x] **CHK-I15** Rejection comments recorded and visible
+- [ ] **CHK-I16** Power Automate flows fire on correct triggers (if used) — N/A while in-app routing is used
+- [x] **CHK-I17** Workflow Configuration Master drives stage sequence
+- [x] **CHK-I18** ROCA `ApproversMaster` drives user routing
+- [x] **CHK-I19** Status transitions are valid (no invalid state jumps)
 - [ ] **CHK-I20** Concurrent approval attempts handled safely
 
 ---
@@ -600,6 +610,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-J16** Development SAP API URL is in `Config.SapMaterialMasterApi`; Production URL is blank until the client provides it
 - [x] **CHK-J17** Each Item Details line is a separate API call; body is a one-element TY_DATA array
 - [x] **CHK-J18** `NPD_ItemDetails.SAP` is set true only after `status=True`; duplicates and other `status=False` responses leave it false
+- [x] **CHK-J19** Post to SAP network drop stops the batch, clears the loader, and stays on the form. Restoring the network does not post the remaining lines. The next Post to SAP processes only `SAP=false` rows and does not post `SAP=true` rows again
 
 ---
 
@@ -609,12 +620,12 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-K02** Required Material Master fields mapped from NPD Item Details + Brand / Material Type
 - [x] **CHK-K02a** Material Master *Code columns store `NPD_Lookup.LookupCode` for every lookup-based value (display value stays in the name column)
 - [x] **CHK-K03** Duplicate Material Code / Description blocked on Initiator Submit and MIS Post to SAP (no silent overwrite)
-- [ ] **CHK-K04** Material Master creation failure logged and does not break NPD status
-- [ ] **CHK-K05** Admin Material Master list shows auto-populated records
-- [ ] **CHK-K06** Auto-populated record data matches submitted NPD item data
-- [ ] **CHK-K07** Material Master searchable by newly populated records
-- [ ] **CHK-K08** Manual Add Record still works alongside auto-population
-- [ ] **CHK-K09** Import does not conflict with auto-populated records
+- [x] **CHK-K04** Material Master creation failure logged and does not break NPD status
+- [x] **CHK-K05** Admin Material Master list shows auto-populated records (New tab / ItemType=New)
+- [x] **CHK-K06** Auto-populated record data matches submitted NPD item data
+- [x] **CHK-K07** Material Master searchable by newly populated records
+- [ ] **CHK-K08** Manual Add Record still works alongside auto-population *(not in Phase A)*
+- [ ] **CHK-K09** Import does not conflict with auto-populated records *(not in Phase A)*
 - [ ] **CHK-K10** Material Master integration tested in UAT with real NPD completion
 
 ---
@@ -639,10 +650,10 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [ ] **CHK-M01** Email content received and approved by ROCA
 - [x] **CHK-M02** Notification sent on NPD Submit
 - [x] **CHK-M03** Notification sent on Approve / Rework / Reject (VH and MIS)
-- [ ] **CHK-M04** Notification sent on Post to SAP / Completed
-- [ ] **CHK-M05** Notification sent on Material Group Submit / Complete / Rework
+- [x] **CHK-M04** Notification sent on Post to SAP / Completed
+- [x] **CHK-M05** Notification sent on Material Group Submit / Complete / Rework
 - [x] **CHK-M06** Email includes Request ID and key request details
-- [ ] **CHK-M07** Email recipients match ROCA `ApproversMaster` routing
+- [x] **CHK-M07** Email recipients match ROCA `ApproversMaster` routing
 - [ ] **CHK-M08** Notifications tested in UAT before production enablement
 
 ---
@@ -844,6 +855,10 @@ Use this table to sign off each phase only when all related checklist items are 
 | 03 Oct 2026 | Post to SAP sends each Item Details line to createZMatMast; Material Master and approval wait for SAP success; retries skip SAP=true | CHK-J02–J04, CHK-J10, CHK-J11, CHK-J15–J18 |
 | 05 Oct 2026 | Material Master New rows store LookupCode in *Code columns for all lookup-based fields | CHK-K02a |
 | 05 Oct 2026 | Audit Log Pending for MIS after VH action: match completed comments by Role only (same person can be VH then MIS) | CHK-G49a |
+| 06 Oct 2026 | Sync Checklist to implemented work: foundation B/C/D/E, Post to SAP G46/G47, workflow I01–I19, MM K04–K07, emails M04/M05/M07, HSN G16g, H11c, F36 New tab; SAP A08; Phase A note uses NPD_MaterialMaster | CHK-B12–B14, B17–B18, B30, B40, B44–B47, C01–C11, C18, C20, D16–D21, E17, E22–E23, E26, F36, G16g, G30, G46–G47, H11c, I01–I15, I17–I19, K04–K07, M04–M05, M07 |
+| 07 Oct 2026 | Excel import rejects invalid numeric/special-char cells (no silent extract); Library template download preserves formatting | CHK-B31d, CHK-B31e, CHK-F09l, CHK-G18a |
+| 07 Oct 2026 | Item Details Bulk Delete only when &gt;2 rows; MG Code+Description one Lookup fetch + combined message; Import validation S.NO + Error only | CHK-G16c, CHK-H11d, CHK-B31f |
+| 09 Oct 2026 | Draft / Rework shows unsaved JSON backup rows without inserting them; Resubmit inserts only the missing rows. Post to SAP stops on network loss, stays on the form, and retries only SAP=false lines | CHK-G26j, CHK-J19 |
 
 ---
 

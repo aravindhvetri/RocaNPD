@@ -17,6 +17,14 @@ export interface IListItems {
   PageNumber?: number;
 }
 
+/** CAML list read — prefer for large Material Master catalog loads. */
+export interface ICamlListItems {
+  Listname: string;
+  ViewXml: string;
+  /** Person/lookup expansions (e.g. `Author`). */
+  Expand?: string[];
+}
+
 export interface IAddList {
   Listname: string;
   RequestJSON: object;
@@ -61,7 +69,8 @@ export interface IPeopleObj {
 
 export interface IAttachContents {
   name: string;
-  content: [];
+  /** PnP accepts string, Blob, or ArrayBuffer for attachment content. */
+  content: string | Blob | ArrayBuffer;
 }
 
 export interface IAttachDelete {
