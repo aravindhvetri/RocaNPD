@@ -173,6 +173,14 @@
   color: $roca-color-text-primary;
 }
 
+.cellText {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Compact calendar popup for Material Master date filters only. */
 :global(.roca-mm-datepicker.p-datepicker) {
   width: 17.5rem !important;

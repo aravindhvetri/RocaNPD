@@ -324,10 +324,17 @@ export interface IImportValidationRow {
 export const ImportValidationMessages = {
   duplicateLookupType: "Duplicate Lookup Type Name",
   duplicateLookupName: "Duplicate Lookup Name under this Type",
-  duplicateLookupCode: "Duplicate Lookup Code",
+  /** Prefer row-specific messages from parseLookupImportFile (includes Lookup Type). */
+  duplicateLookupCode: "Duplicate Lookup Code under this Lookup Type",
   duplicateNpdItemDetails: "Already exists",
 } as const;
 
+/**
+ * Builds rows for the Import validation dialog.
+ * When `duplicateMessage` is empty, each duplicate string is shown as-is
+ * (used when parsers already include Lookup Type / Code detail).
+ * When provided, the message is prefixed and the detail is appended.
+ */
 export function buildImportValidationRows(
   duplicates: string[],
   duplicateMessage: string,
@@ -336,7 +343,9 @@ export function buildImportValidationRows(
   const rows: IImportValidationRow[] = duplicates.map((name, index) => ({
     serialNo: index + 1,
     recordName: name,
-    validationError: duplicateMessage,
+    validationError: duplicateMessage.trim()
+      ? `${duplicateMessage}: ${name}`
+      : name,
   }));
 
   errors.forEach((message) => {

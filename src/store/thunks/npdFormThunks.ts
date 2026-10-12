@@ -318,9 +318,9 @@ export const saveNpdDraft = createAsyncThunk<
           bindNpdFormDraftRequest({
             requestId: draftRequestId,
             requestTitle:
-              draftMeta?.npdDraftRequestTitle ||
-              state.npdForm.requestTitle ||
-              undefined,
+              typeof draftMeta?.npdDraftRequestTitle === "string"
+                ? draftMeta.npdDraftRequestTitle
+                : state.npdForm.requestTitle || undefined,
           }),
         );
       }
@@ -359,6 +359,8 @@ export const submitNpdRequest = createAsyncThunk<
     let retainedDraftId = 0;
 
     try {
+      // Zero grace: reconnect must not resume this Submit. Remaining Item
+      // Details are inserted only on the next Send Request click.
       return await raceWithBrowserOffline(
         npdRequestGeneralInfoService.submitNpdRequest(
           payload,
@@ -378,8 +380,10 @@ export const submitNpdRequest = createAsyncThunk<
           },
           backupItems,
         ),
+        0,
       );
     } catch (error) {
+      npdRequestGeneralInfoService.cancelInFlightNpdSubmit();
       const draftMeta = error as {
         npdDraftRequestId?: number;
         npdDraftRequestTitle?: string;
@@ -396,9 +400,9 @@ export const submitNpdRequest = createAsyncThunk<
           bindNpdFormDraftRequest({
             requestId: checkId,
             requestTitle:
-              draftMeta?.npdDraftRequestTitle ||
-              state.npdForm.requestTitle ||
-              undefined,
+              typeof draftMeta?.npdDraftRequestTitle === "string"
+                ? draftMeta.npdDraftRequestTitle
+                : state.npdForm.requestTitle || undefined,
           }),
         );
       }
@@ -449,6 +453,35 @@ export const applyNpdWorkflowAction = createAsyncThunk<
 
     const requestId = state.npdForm.requestId;
     const actorRole = input.actorRole;
+    const existingRequest: INpdRequestGeneralInfo | undefined =
+      requestId && state.npdForm.workflowSteps.length
+        ? {
+            Id: requestId,
+            Title: state.npdForm.requestTitle || "",
+            Brand: state.npdForm.generalInfo.brand || "",
+            MaterialType: state.npdForm.generalInfo.materialType || "",
+            Plant: state.npdForm.generalInfo.plantSource || "",
+            Status: state.npdForm.requestStatus || "",
+            IsDeleted: false,
+            WorkFlowJSON: "",
+            WorkflowSteps: state.npdForm.workflowSteps,
+            AuthorEmail: "",
+            AuthorTitle: "",
+            InitiatorEmail: "",
+            InitiatorId: 0,
+            Created: "",
+            Modified: "",
+            PlantCode: state.npdForm.otherDetails.plantCode || "",
+            StorageLocation: state.npdForm.otherDetails.storageLocation || "",
+            ProfitCenter: state.npdForm.otherDetails.profitCenter || "",
+            MRPGroup: state.npdForm.otherDetails.mrpGroup || "",
+            MRPController: state.npdForm.otherDetails.mrpController || "",
+            ValuationClass: state.npdForm.otherDetails.valuationClass || "",
+            ClassType: state.npdForm.otherDetails.classType || "",
+            MaterialExtension:
+              state.npdForm.otherDetails.materialExtension || "",
+          }
+        : undefined;
 
     try {
       return await raceWithBrowserOffline(
@@ -467,6 +500,7 @@ export const applyNpdWorkflowAction = createAsyncThunk<
           itemSavePartial: input.itemSavePartial,
           deletedItemIds: input.deletedItemIds,
           materialMasterCheckItems: input.materialMasterCheckItems,
+          existingRequest,
           sapProgress:
             isMisActor && input.action === "Approve"
               ? {
@@ -548,13 +582,23 @@ export const hydrateNpdRequestForm = createAsyncThunk<
 
     // Draft / Rework: show saved rows plus backup rows not yet in the list.
     // This read does not insert. Resubmit inserts the missing rows.
-    const backup = await tryLoadNpdItemDetailsBackup(id).catch(() => null);
+    // Soft-deleted keys block stale backup lines (e.g. Initiator rows MIS removed).
+    const [backup, softDeletedMatchKeys] = await Promise.all([
+      tryLoadNpdItemDetailsBackup(id).catch(() => null),
+      npdItemDetailsService
+        .fetchNpdItemDetailsSoftDeletedMatchKeys(id)
+        .catch(() => new Set<string>()),
+    ]);
     if (!backup?.length) {
       return { request, items };
     }
     return {
       request,
-      items: mergeNpdItemDetailsWithBackup(items, backup),
+      items: mergeNpdItemDetailsWithBackup(
+        items,
+        backup,
+        softDeletedMatchKeys,
+      ),
     };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));

@@ -23,7 +23,16 @@ const ProtectedRoute: React.FC<IProtectedRouteProps> = ({ children }) => {
     return <LoaderOverlay visible label="Processing" />;
   }
 
-  if (!access.assignedRoles.length) {
+  // Rework email links open /npd/new or /mg/new with id. Let the form load so
+  // it can show the Initiator-access toast. Route role checks would otherwise
+  // send a former Initiator to Unauthorized before that message appears.
+  const emailFormId = new URLSearchParams(location.search).get("id");
+  const isEmailFormDeepLink =
+    Boolean(emailFormId) &&
+    (location.pathname === Config.Routes.NpdNew ||
+      location.pathname === Config.Routes.MgNew);
+
+  if (!access.assignedRoles.length && !isEmailFormDeepLink) {
     if (location.pathname === Config.Routes.Unauthorized) {
       return children;
     }
@@ -34,7 +43,7 @@ const ProtectedRoute: React.FC<IProtectedRouteProps> = ({ children }) => {
     return <Navigate to={getDefaultRoute(access)} replace />;
   }
 
-  if (!canAccessRoute(access, location.pathname)) {
+  if (!canAccessRoute(access, location.pathname) && !isEmailFormDeepLink) {
     return <Navigate to={Config.Routes.Unauthorized} replace />;
   }
 

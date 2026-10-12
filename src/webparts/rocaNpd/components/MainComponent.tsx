@@ -5,6 +5,7 @@ import {
   lockWebPartViewport,
   unlockWebPartViewport,
 } from "../../../External/CommonServices/hideSharePointChrome";
+import { resolveNpdWebAbsoluteUrl } from "../../../External/CommonServices/npdAppUrl";
 import { injectRocaPrimeOverrides } from "../../../External/CommonServices/injectRocaPrimeOverrides";
 import themeStyles from "../styles/theme.module.scss";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
@@ -20,8 +21,8 @@ import AppRoutes from "./routes/AppRoutes";
 
 /**
  * Handle Outlook SafeLinks stripping hash fragments from email Login links.
- * When `npdRoute` query parameter is present (NPD or Material Group emails),
- * restore it as the hash route before HashRouter mounts.
+ * When `npdRoute` is on the site URL (NPD or Material Group emails), restore it
+ * as the hash route before HashRouter mounts so the user lands on the right page.
  * Keeps `id` / `mode` out of the SharePoint SitePages query string.
  */
 (function handleNpdEmailRedirect(): void {
@@ -34,12 +35,12 @@ import AppRoutes from "./routes/AppRoutes";
     return;
   }
   const route = npdRoute.startsWith("/") ? npdRoute : `/${npdRoute}`;
-  // Drop query params so SharePoint does not treat `id` as a SitePages item lookup.
-  window.history.replaceState(
-    null,
-    "",
-    `${window.location.pathname}#${route}`,
-  );
+  // Restore on the site URL so Outlook login never stays on SitePages/RocaNPD.aspx.
+  const siteUrl = resolveNpdWebAbsoluteUrl().replace(/\/+$/, "");
+  const target = siteUrl
+    ? `${siteUrl}#${route}`
+    : `${window.location.pathname}#${route}`;
+  window.history.replaceState(null, "", target);
 })();
 
 const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {

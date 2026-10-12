@@ -1,7 +1,9 @@
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { Config } from "../../../../../../External/CommonServices/Config";
 import { validateRequiredImportHeaders } from "../../../../../../External/CommonServices/importService";
-import { Button, Dialog } from "../../controls";
+import { Button, Dialog, LoaderOverlay } from "../../controls";
+import { awaitUiPaint } from "../awaitUiPaint";
 import type { IImportDialogProps } from "./IImportDialogProps";
 import styles from "./ImportDialog.module.scss";
 
@@ -29,6 +31,11 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [isDragActive, setIsDragActive] = React.useState(false);
   const [isValidatingHeaders, setIsValidatingHeaders] = React.useState(false);
+  const [localImporting, setLocalImporting] = React.useState(false);
+
+  const interactionLocked =
+    importing || localImporting || isValidatingHeaders;
+  const showImportLoader = importing || localImporting || isValidatingHeaders;
 
   React.useEffect(() => {
     if (!visible) {
@@ -36,11 +43,13 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
       setSelectedFile(null);
       setIsDragActive(false);
       setIsValidatingHeaders(false);
+      // Keep localImporting if parent closed the dialog mid-import so the
+      // overlay stays until onImport settles.
     }
   }, [visible]);
 
   const assignFile = (file: File | undefined): void => {
-    if (!file || importing || isValidatingHeaders) {
+    if (!file || interactionLocked) {
       return;
     }
 
@@ -96,7 +105,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
   };
 
   const openFilePicker = (): void => {
-    if (importing || isValidatingHeaders) {
+    if (interactionLocked) {
       return;
     }
     inputRef.current?.click();
@@ -111,7 +120,7 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
     event.preventDefault();
-    if (!importing && !isValidatingHeaders) {
+    if (!interactionLocked) {
       setIsDragActive(true);
     }
   };
@@ -128,114 +137,130 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
   };
 
   const handleImport = (): void => {
-    if (importing || isValidatingHeaders || !selectedFile) {
+    if (interactionLocked || !selectedFile) {
       return;
     }
 
-    void onImport(selectedFile);
+    const file = selectedFile;
+    // Commit loader immediately so small/fast files cannot finish before paint.
+    flushSync(() => {
+      setLocalImporting(true);
+    });
+    void (async () => {
+      await awaitUiPaint();
+      try {
+        await onImport(file);
+      } finally {
+        setLocalImporting(false);
+      }
+    })();
   };
 
   const canDownloadTemplate =
     Boolean(templateFileName) && Boolean(onDownloadTemplate) && !templateLoading;
-  const interactionLocked = importing || isValidatingHeaders;
 
   return (
-    <Dialog
-      visible={visible}
-      title={title}
-      width="44rem"
-      className={styles.importDialog}
-      onHide={onHide}
-      footer={
-        <div className={styles.footer}>
-          <Button
-            label="Cancel"
-            variant="secondary"
-            size="sm"
-            disabled={interactionLocked}
-            onClick={onHide}
-          />
-          <Button
-            label="Import"
-            size="sm"
-            loading={importing}
-            disabled={!selectedFile || interactionLocked}
-            onClick={handleImport}
-          />
-        </div>
-      }
-    >
-      <div className={styles.body}>
-        <section>
-          <h3 className={styles.sectionTitle}>{importSectionTitle}</h3>
-          <div
-            className={`${styles.dropZone} ${isDragActive ? styles.dropZoneActive : ""}`}
-            role="button"
-            tabIndex={0}
-            onClick={openFilePicker}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                openFilePicker();
-              }
-            }}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              accept={accept}
-              className={styles.hiddenInput}
+    <>
+      <LoaderOverlay visible={showImportLoader} label="Processing" />
+      <Dialog
+        visible={visible}
+        title={title}
+        width="44rem"
+        className={styles.importDialog}
+        onHide={interactionLocked ? () => undefined : onHide}
+        footer={
+          <div className={styles.footer}>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="sm"
               disabled={interactionLocked}
-              onChange={handleInputChange}
+              onClick={onHide}
             />
-            <i
-              className={`pi pi-cloud-upload ${styles.uploadIcon}`}
-              aria-hidden="true"
+            <Button
+              label="Import"
+              size="sm"
+              loading={importing || localImporting}
+              disabled={!selectedFile || interactionLocked}
+              onClick={handleImport}
             />
-            <p className={styles.dropZonePrimary}>
-              Click to browse or drag and drop
-            </p>
-            <p className={styles.dropZoneSecondary}>
-              {acceptedFormatsLabel}
-              <br />
-              {maxSizeLabel}
-            </p>
-            {isValidatingHeaders && (
-              <p className={styles.selectedFileName}>Validating columns...</p>
-            )}
-            {!isValidatingHeaders && selectedFile && (
-              <p className={styles.selectedFileName}>{selectedFile.name}</p>
-            )}
           </div>
-        </section>
-
-        <section className={styles.templatePanel}>
-          <h3 className={styles.sectionTitle}>{templateSectionHint}</h3>
-          {templateLoading ? (
-            <p className={styles.templateUnavailable}>Loading template...</p>
-          ) : canDownloadTemplate ? (
-            <div className={styles.templateRow}>
-              <span className={styles.templateFileName}>{templateFileName}</span>
-              <Button
-                variant="text"
-                icon="pi pi-download"
-                iconOnly
-                className={styles.downloadButton}
+        }
+      >
+        <div className={styles.body}>
+          <section>
+            <h3 className={styles.sectionTitle}>{importSectionTitle}</h3>
+            <div
+              className={`${styles.dropZone} ${isDragActive ? styles.dropZoneActive : ""}`}
+              role="button"
+              tabIndex={0}
+              onClick={openFilePicker}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openFilePicker();
+                }
+              }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                ref={inputRef}
+                type="file"
+                accept={accept}
+                className={styles.hiddenInput}
                 disabled={interactionLocked}
-                onClick={onDownloadTemplate}
+                onChange={handleInputChange}
               />
+              <i
+                className={`pi pi-cloud-upload ${styles.uploadIcon}`}
+                aria-hidden="true"
+              />
+              <p className={styles.dropZonePrimary}>
+                Click to browse or drag and drop
+              </p>
+              <p className={styles.dropZoneSecondary}>
+                {acceptedFormatsLabel}
+                <br />
+                {maxSizeLabel}
+              </p>
+              {isValidatingHeaders && (
+                <p className={styles.selectedFileName}>Validating columns...</p>
+              )}
+              {!isValidatingHeaders && selectedFile && (
+                <p className={styles.selectedFileName}>{selectedFile.name}</p>
+              )}
             </div>
-          ) : (
-            <p className={styles.templateUnavailable}>
-              {templateUnavailableMessage}
-            </p>
-          )}
-        </section>
-      </div>
-    </Dialog>
+          </section>
+
+          <section className={styles.templatePanel}>
+            <h3 className={styles.sectionTitle}>{templateSectionHint}</h3>
+            {templateLoading ? (
+              <p className={styles.templateUnavailable}>Loading template...</p>
+            ) : canDownloadTemplate ? (
+              <div className={styles.templateRow}>
+                <span className={styles.templateFileName}>
+                  {templateFileName}
+                </span>
+                <Button
+                  variant="text"
+                  icon="pi pi-download"
+                  iconOnly
+                  className={styles.downloadButton}
+                  disabled={interactionLocked}
+                  onClick={onDownloadTemplate}
+                />
+              </div>
+            ) : (
+              <p className={styles.templateUnavailable}>
+                {templateUnavailableMessage}
+              </p>
+            )}
+          </section>
+        </div>
+      </Dialog>
+    </>
   );
 };
 

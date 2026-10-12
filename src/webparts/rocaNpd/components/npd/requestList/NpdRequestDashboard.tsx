@@ -7,6 +7,7 @@ import {
   exportToExcel,
 } from "../../../../../External/CommonServices/exportService";
 import type { INpdRequestListItemRow } from "../../../../../External/CommonServices/Interface";
+import { isNpdHiddenFromApproverAllRequests } from "../../../../../External/CommonServices/npdRequestListService";
 import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
@@ -67,9 +68,10 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
       if (!isAdminModuleView) {
         items = items.filter(
           (item) =>
-            item.Status.trim().toLowerCase() !==
-              Config.RequestStatus.Rework.toLowerCase() &&
-            item.Status.trim().toLowerCase() !== "in rework",
+            !isNpdHiddenFromApproverAllRequests(
+              item.Status,
+              item.WorkflowSteps,
+            ),
         );
       }
     }
@@ -111,7 +113,11 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
           fileName: buildExportFileName("NPD_All_Requests"),
           sheetName: "All Requests",
           columns: [
-            { header: FieldLabels.RequestId, value: (row) => row.Title },
+            {
+              header: FieldLabels.RequestId,
+              value: (row) =>
+                isDraftNpdStatus(row.Status) ? "" : row.Title,
+            },
             { header: FieldLabels.BrandMg1, value: (row) => row.Brand },
             { header: FieldLabels.MaterialType, value: (row) => row.MaterialType },
             { header: FieldLabels.Plant, value: (row) => row.Plant },

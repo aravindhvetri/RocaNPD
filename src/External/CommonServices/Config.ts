@@ -62,9 +62,9 @@ export const NpdMisPlantCodes = {
 
 /** MIS Other Details — Valuation Class display values (saved to NPD_Request). */
 export const NpdValuationClasses = {
-  FinishedProduct: "Finished Product - 6000",
-  TradedDomestic: "Traded Goods & Domestic - 5000",
-  TradedImported: "Traded Goods & Imported - 5100",
+  FinishedProduct: "6000",
+  TradedDomestic: "5000",
+  TradedImported: "5100",
 } as const;
 
 /** MIS Other Details — Class Type is always this value. */
@@ -145,8 +145,13 @@ export const TemplateTypes = {
 } as const;
 
 export const NpdRequestIdFormat = {
+  /**
+   * New format: `{BrandCode}-YYYY-MM-DD-#####` (BrandCode from ROCA BrandMaster).
+   * Legacy `NPD-YYYY-###` titles remain recognized for existing requests.
+   */
   Prefix: "NPD-",
-  PadLength: 3,
+  PadLength: 5,
+  BrandCodeField: "BrandCode",
 } as const;
 
 export const MgRequestIdFormat = {
@@ -180,6 +185,12 @@ export const MaterialMasterUi = {
    */
   CatalogFetchRowLimit: 5000,
 } as const;
+
+/**
+ * Max items per SharePoint `$batch` mutate (add/update/delete).
+ * Used by Lookup import, Item Details submit/resubmit, and Material Master inserts.
+ */
+export const SharePointMutateBatchSize = 100;
 
 export const ThemeColors = {
   Primary: "#1d4e56",
@@ -287,6 +298,8 @@ export const FieldNames = {
     MinQty: "MinQty",
     /** Yes/No. True after this line has been accepted by the SAP Material Master API. */
     SAP: "SAP",
+    /** Yes/No soft-delete. Active Item Details queries use IsDeleted = false. */
+    IsDeleted: "IsDeleted",
     RequestGeneralInfo: "RequestGeneralInfo",
     RequestGeneralInfoId: "RequestGeneralInfoId",
   },
@@ -566,7 +579,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.5",
+  AppVersion: "V1.7",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

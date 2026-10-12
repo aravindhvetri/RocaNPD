@@ -287,12 +287,15 @@ export function applyApproverActionToWorkflow(
   const nextRole =
     approved && actorRoleIndex >= 0 ? roleOrder[actorRoleIndex + 1] : undefined;
 
-  return steps.map((step, index) => {
+  let stampedActor = actorIndex >= 0;
+
+  const mapped = steps.map((step, index) => {
     if (isInitiatorWorkflowRole(step.Role)) {
       return { ...step, Status: "" };
     }
 
     if (index === actorIndex) {
+      stampedActor = true;
       return {
         ...step,
         UserEmail: actorEmail.trim() || step.UserEmail,
@@ -322,6 +325,25 @@ export function applyApproverActionToWorkflow(
 
     return step;
   });
+
+  // Safety: if the actor step was not resolved, still stamp Rework/Reject on the
+  // matching role's first non-initiator step so workflow state matches header Status.
+  if (!stampedActor && !approved && actionStatus) {
+    const fallbackIndex = mapped.findIndex(
+      (step) =>
+        !isInitiatorWorkflowRole(step.Role) &&
+        step.Role.trim().toLowerCase() === normalizedRole,
+    );
+    if (fallbackIndex >= 0) {
+      mapped[fallbackIndex] = {
+        ...mapped[fallbackIndex],
+        UserEmail: actorEmail.trim() || mapped[fallbackIndex].UserEmail,
+        Status: actionStatus,
+      };
+    }
+  }
+
+  return mapped;
 }
 
 export function resolveRequestStatusAfterAction(

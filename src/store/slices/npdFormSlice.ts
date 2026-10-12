@@ -73,8 +73,9 @@ const npdFormSlice = createSlice({
       if (action.payload.requestId > 0) {
         state.requestId = action.payload.requestId;
       }
-      if (action.payload.requestTitle) {
-        state.requestTitle = action.payload.requestTitle;
+      // Allow clearing Title (empty string) when Draft has no Request ID yet.
+      if (typeof action.payload.requestTitle === "string") {
+        state.requestTitle = action.payload.requestTitle.trim() || null;
       }
       state.requestStatus = "Draft";
     },

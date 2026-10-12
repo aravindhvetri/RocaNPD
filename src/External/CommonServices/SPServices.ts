@@ -53,6 +53,7 @@ import {
   IRemoveFiles,
   IAzureUsers,
 } from "./ISPServicesProps";
+import { SharePointMutateBatchSize } from "./Config";
 import { MSGraphClient } from "@microsoft/sp-http";
 import * as moment from "moment";
 
@@ -435,51 +436,65 @@ const SPDetailsListGroupItems = async (params: IDetailsListGroup) => {
   return varGroup;
 };
 
+const MUTATE_BATCH_SIZE = SharePointMutateBatchSize;
+
+async function runBatchedChunks<T>(
+  rows: T[],
+  runChunk: (chunk: T[]) => Promise<void>,
+): Promise<void> {
+  if (!rows.length) {
+    return;
+  }
+  for (let start = 0; start < rows.length; start += MUTATE_BATCH_SIZE) {
+    await runChunk(rows.slice(start, start + MUTATE_BATCH_SIZE));
+  }
+}
+
 const batchInsert = async (params: {
   ListName: string;
   responseData: any[];
 }): Promise<void> => {
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  for (const data of params.responseData) {
-    list.items.add(data);
-  }
-
-  await execute();
+  await runBatchedChunks(params.responseData || [], async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    for (const data of chunk) {
+      list.items.add(data);
+    }
+    await execute();
+  });
 };
 
 const batchUpdate = async (params: {
   ListName: string;
   responseData: any[];
 }): Promise<void> => {
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  for (const data of params.responseData) {
-    const itemId = Number(data.ID ?? data.Id ?? data.id);
-    const rest = { ...data };
-    delete rest.ID;
-    delete rest.Id;
-    delete rest.id;
-    list.items.getById(itemId).update(rest);
-  }
-
-  await execute();
+  await runBatchedChunks(params.responseData || [], async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    for (const data of chunk) {
+      const itemId = Number(data.ID ?? data.Id ?? data.id);
+      const rest = { ...data };
+      delete rest.ID;
+      delete rest.Id;
+      delete rest.id;
+      list.items.getById(itemId).update(rest);
+    }
+    await execute();
+  });
 };
 
 const batchDelete = async (params: {
   ListName: string;
   responseData: any[];
 }): Promise<void> => {
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  for (const data of params.responseData) {
-    list.items.getById(data.ID).recycle();
-  }
-
-  await execute();
+  await runBatchedChunks(params.responseData || [], async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    for (const data of chunk) {
+      list.items.getById(data.ID).recycle();
+    }
+    await execute();
+  });
 };
 
 const batchMutate = async (params: {
@@ -496,25 +511,39 @@ const batchMutate = async (params: {
     return;
   }
 
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  toDelete.forEach((row) => {
-    list.items.getById(Number(row.ID)).recycle();
-  });
-  toUpdate.forEach((row) => {
-    const id = Number(row.ID ?? row.Id ?? row.id);
-    const rest = { ...row };
-    delete rest.ID;
-    delete rest.Id;
-    delete rest.id;
-    list.items.getById(id).update(rest);
-  });
-  toInsert.forEach((data) => {
-    list.items.add(data);
+  // Deletes and updates first (full sets, chunked), then inserts — keeps
+  // Lookup import / Item Details resubmit at 100 ops per $batch.
+  await runBatchedChunks(toDelete, async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    chunk.forEach((row) => {
+      list.items.getById(Number(row.ID)).recycle();
+    });
+    await execute();
   });
 
-  await execute();
+  await runBatchedChunks(toUpdate, async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    chunk.forEach((row) => {
+      const id = Number(row.ID ?? row.Id ?? row.id);
+      const rest = { ...row };
+      delete rest.ID;
+      delete rest.Id;
+      delete rest.id;
+      list.items.getById(id).update(rest);
+    });
+    await execute();
+  });
+
+  await runBatchedChunks(toInsert, async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    chunk.forEach((data) => {
+      list.items.add(data);
+    });
+    await execute();
+  });
 };
 
 const formatInputs = (data: IListItems): IListItems => {

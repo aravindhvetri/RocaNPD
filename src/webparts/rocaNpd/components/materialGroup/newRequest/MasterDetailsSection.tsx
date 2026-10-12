@@ -61,7 +61,7 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                     {rowCount} {rowCount === 1 ? "entry" : "entries"}
                   </span>
                 </div>
-                {!readOnly && (
+                {!readOnly && !isConsultantMode ? (
                   <Button
                     label="Add Row"
                     icon="pi pi-plus"
@@ -70,24 +70,32 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                     className={styles.addRowBtn}
                     onClick={() => onAddRow(configId)}
                   />
-                )}
+                ) : null}
               </div>
 
-              <div className={styles.tableContainer}>
+              <div
+                className={`${styles.tableContainer}${
+                  readOnly || isConsultantMode ? ` ${styles.fieldsOnlyTable}` : ""
+                }`}
+              >
                 <div className={styles.columnHeaderRow}>
                   <div className={styles.colHeader}>
                     <span>Code</span>
-                    {isConsultantMode && (
-                      <span className={styles.requiredAsterisk}>*</span>
-                    )}
+                    {isConsultantMode ? (
+                      <span className={styles.requiredAsterisk} aria-hidden="true">
+                        *
+                      </span>
+                    ) : null}
                   </div>
                   <div className={styles.colHeader}>
                     <span>Description</span>
-                    <span className={styles.requiredAsterisk}>*</span>
+                    <span className={styles.requiredAsterisk} aria-hidden="true">
+                      *
+                    </span>
                   </div>
-                  {!readOnly && (
+                  {!readOnly && !isConsultantMode ? (
                     <div className={styles.actionColHeader}>Action</div>
-                  )}
+                  ) : null}
                 </div>
 
                 {rows.length > 0 ? (
@@ -106,9 +114,9 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                           }
                           disabled={readOnly}
                           required={isConsultantMode}
-          onChange={(val) =>
-            onUpdateRow(configId, row.tempId, "code", val)
-          }
+                          onChange={(val) =>
+                            onUpdateRow(configId, row.tempId, "code", val)
+                          }
                         />
                       </div>
                       <div className={styles.inputField}>
@@ -116,7 +124,7 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                           value={row.description}
                           placeholder={`e.g. Description for ${masterTitle}`}
                           required
-                          disabled={readOnly}
+                          disabled={readOnly || isConsultantMode}
                           onChange={(val) =>
                             onUpdateRow(
                               configId,
@@ -127,7 +135,7 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                           }
                         />
                       </div>
-                      {!readOnly && (
+                      {!readOnly && !isConsultantMode ? (
                         <div className={styles.actionCol}>
                           <Button
                             variant="text"
@@ -139,12 +147,15 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                             aria-label="Delete row"
                           />
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ))
                 ) : (
                   <div className={styles.emptyMasterRowsMessage}>
-                    No entries added. {!readOnly && 'Click "Add Row" above to add an entry.'}
+                    No entries added.
+                    {!readOnly && !isConsultantMode
+                      ? ' Click "Add Row" above to add an entry.'
+                      : ""}
                   </div>
                 )}
               </div>

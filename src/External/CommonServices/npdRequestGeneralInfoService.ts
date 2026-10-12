@@ -10,7 +10,6 @@ import type {
 import { addNpdApproverComment, resolveApproverUserIds } from "./npdApproverCommentsService";
 import {
   buildNpdItemDetailsMatchKey,
-  mergeNpdItemDetailsWithBackup,
   tryLoadNpdItemDetailsBackup,
   upsertNpdItemDetailsBackupAttachment,
 } from "./npdItemDetailsBackupService";
@@ -79,6 +78,7 @@ function beginNpdSubmitToken(): number {
 function isNpdSubmitCancelled(token: number): boolean {
   return token > 0 && cancelledNpdSubmitToken === token;
 }
+import { isDeletedYesFlag } from "./lookupFieldUtils";
 import { postNpdItemsToSap } from "./sapMaterialMasterService";
 import {
   getActiveRecordCreatePayload,
@@ -122,7 +122,7 @@ const EXPAND_FIELDS = "Author,Initiator";
 
 /** Minimal select when Other Details columns are not yet provisioned. */
 const SELECT_FIELDS_CORE =
-  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail";
+  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail,Initiator/Id,Initiator/Title,Initiator/EMail";
 
 function getNumericId(value: unknown): number {
   const id = Number(value);
@@ -202,7 +202,7 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     MaterialType: String(item[FIELDS.MaterialType] ?? ""),
     Plant: String(item[FIELDS.Plant] ?? ""),
     Status: String(item[FIELDS.Status] ?? ""),
-    IsDeleted: Boolean(item[SOFT_DELETE_FIELD]),
+    IsDeleted: isDeletedYesFlag(item[SOFT_DELETE_FIELD]),
     WorkFlowJSON: workflowJson,
     WorkflowSteps: parseWorkflowJson(item[FIELDS.WorkFlowJSON] ?? workflowJson),
     AuthorEmail: getAuthorEmail(item),
@@ -532,7 +532,7 @@ export async function submitNpdRequest(
   const requestIdTitle =
     payload.existingTitle && isNpdRequestIdTitle(payload.existingTitle)
       ? payload.existingTitle.trim()
-      : await generateNextNpdRequestId();
+      : await generateNextNpdRequestId(payload.brand.trim(), contextSiteUrl);
 
   // Hold as Draft/Rework while Item Details save. Never Pending until items finish.
   let holdingStatus: string = RequestStatus.Draft;
@@ -567,7 +567,9 @@ export async function submitNpdRequest(
     }
   }
 
-  const isNewRequest = !(payload.id && payload.id > 0);
+  // Keep Title empty while holding as Draft. Request ID is written only when
+  // Status becomes Pending (Phase 3). Resubmit already has a Request ID.
+  const holdingTitle = isResubmit ? requestIdTitle : "";
   let requestId = 0;
 
   try {
@@ -576,70 +578,56 @@ export async function submitNpdRequest(
       payload,
       workflowJson,
       holdingStatus,
-      requestIdTitle,
+      holdingTitle,
       initiatorEmail,
       initiatorUserId,
     );
     // Bind immediately so an offline race still knows which Draft to reopen.
     onDraftRetained?.({
       requestId,
-      requestTitle: requestIdTitle,
+      requestTitle: holdingTitle,
     });
 
     const formBackup =
       backupItems && backupItems.length ? backupItems : items;
-    let rowsToInsert = items;
-
-    if (isResubmit) {
-      // Resubmit is the only time missing JSON rows are inserted.
-      // The open form shows only rows already in NPD_ItemDetails.
-      const existingBackup = await tryLoadNpdItemDetailsBackup(requestId);
-      if (existingBackup?.length) {
-        const savedOnForm = formBackup.filter((row) => row.sharePointId > 0);
-        const seen = new Set(
-          items
-            .map((row) => buildNpdItemDetailsMatchKey(row))
-            .filter(Boolean),
-        );
-        const missing = mergeNpdItemDetailsWithBackup(
-          savedOnForm,
-          existingBackup,
-        ).filter((row) => {
-          if (row.sharePointId > 0) {
-            return false;
-          }
-          const key = buildNpdItemDetailsMatchKey(row);
-          if (key && seen.has(key)) {
-            return false;
-          }
-          if (key) {
-            seen.add(key);
-          }
-          return true;
-        });
-        rowsToInsert = [...items, ...missing];
-      } else {
-        await upsertNpdItemDetailsBackupAttachment(requestId, formBackup);
-      }
-    } else {
-      // First Submit: attach the full grid before row inserts.
-      await upsertNpdItemDetailsBackupAttachment(requestId, formBackup);
-    }
+    // Always refresh the attachment from the current form so deleted lines
+    // are removed from JSON and cannot be re-inserted later.
+    await upsertNpdItemDetailsBackupAttachment(requestId, formBackup);
     stopIfOffline();
 
-    // Phase 2: Item Details before Pending.
-    // Resubmit: insert newly added rows plus JSON rows not yet stored.
+    // Phase 2: soft-delete rows removed from the form; insert current rows
+    // that are not already active. Keys of rows being soft-deleted do not
+    // block a replacement line with the same Material Code.
+    const storedItems = await fetchNpdItemDetailsByRequestId(requestId);
+    stopIfOffline();
+    const formKeepIds = new Set(
+      formBackup.map((row) => row.sharePointId).filter((id) => id > 0),
+    );
+    const softDeleteIds = storedItems
+      .map((row) => row.sharePointId)
+      .filter((id) => id > 0 && !formKeepIds.has(id));
+    const softDeleteIdSet = new Set(softDeleteIds);
+    const storedKeys = new Set(
+      storedItems
+        .filter((row) => !softDeleteIdSet.has(row.sharePointId))
+        .map((row) => buildNpdItemDetailsMatchKey(row))
+        .filter(Boolean),
+    );
+    const remainingToInsert = items.filter((row) => {
+      if (row.sharePointId > 0) {
+        return !softDeleteIdSet.has(row.sharePointId);
+      }
+      const key = buildNpdItemDetailsMatchKey(row);
+      return !key || !storedKeys.has(key);
+    });
+
     const shouldAbortSubmit = (): boolean =>
       isNpdSubmitCancelled(submitToken) || !isBrowserOnline();
 
-    if (isResubmit) {
-      await saveNpdItemDetailsBatch(requestId, rowsToInsert, {
+    if (remainingToInsert.length || softDeleteIds.length) {
+      await saveNpdItemDetailsBatch(requestId, remainingToInsert, {
         partial: true,
-        shouldAbort: shouldAbortSubmit,
-      });
-    } else {
-      await saveNpdItemDetailsBatch(requestId, rowsToInsert, {
-        isNewRequest,
+        deletedSharePointIds: softDeleteIds,
         shouldAbort: shouldAbortSubmit,
       });
     }
@@ -677,6 +665,8 @@ export async function submitNpdRequest(
         ID: requestId,
         RequestJSON: {
           [FIELDS.Status]: holdingStatus,
+          // Clear any Request ID written before Pending for first-time submit.
+          ...(!isResubmit ? { [FIELDS.Title]: "" } : {}),
         },
       }).catch(() => undefined);
       if (!offlineNow) {
@@ -688,7 +678,7 @@ export async function submitNpdRequest(
       }
       onDraftRetained?.({
         requestId,
-        requestTitle: requestIdTitle,
+        requestTitle: holdingTitle,
       });
       const wrapped =
         error instanceof Error ? error : new Error(String(error));
@@ -697,7 +687,7 @@ export async function submitNpdRequest(
         npdDraftRequestTitle?: string;
       };
       draftMeta.npdDraftRequestId = requestId;
-      draftMeta.npdDraftRequestTitle = requestIdTitle;
+      draftMeta.npdDraftRequestTitle = holdingTitle;
       throw wrapped;
     }
     throw error;
@@ -769,6 +759,7 @@ export async function submitNpdRequest(
       action: isResubmit ? "Resubmitted" : "Submitted",
       to: pendingEmails,
       includeActionButtons: shouldIncludeNpdEmailActions(pendingRole),
+      role: pendingRole,
       siteUrl: contextSiteUrl,
     });
   } catch {
@@ -830,6 +821,11 @@ export async function applyNpdWorkflowAction(params: {
    */
   materialMasterCheckItems?: INpdItemDetailRecord[];
   /**
+   * In-memory request already loaded on the form. When provided (and Id matches),
+   * skips the blocking NPD_Request re-read before the status update.
+   */
+  existingRequest?: INpdRequestGeneralInfo;
+  /**
    * MIS Post to SAP progress: report after each successful SAP API call
    * (including 0/total at loop start); finish when the SAP batch ends.
    */
@@ -838,7 +834,13 @@ export async function applyNpdWorkflowAction(params: {
     onFinish?: (success: boolean) => void;
   };
 }): Promise<INpdRequestGeneralInfo> {
-  const request = await fetchNpdGeneralInfoById(params.requestId);
+  const request =
+    params.existingRequest &&
+    params.existingRequest.Id === params.requestId &&
+    (params.existingRequest.WorkflowSteps?.length ||
+      (params.existingRequest.WorkFlowJSON || "").trim())
+      ? params.existingRequest
+      : await fetchNpdGeneralInfoById(params.requestId);
   const actorRole =
     resolveActorWorkflowRole(
       request.WorkflowSteps,
@@ -1007,6 +1009,7 @@ export async function applyNpdWorkflowAction(params: {
   const committedFallback: INpdRequestGeneralInfo = {
     ...request,
     Status: headerStatus,
+    WorkFlowJSON: stringifyWorkflowJson(updatedSteps),
     WorkflowSteps: updatedSteps,
   };
 
@@ -1024,14 +1027,18 @@ export async function applyNpdWorkflowAction(params: {
     }
   }
 
+  // Vertical Head: only the Status/WorkFlowJSON update above is required.
+  // Do not re-read NPD_Request — navigate immediately with the committed snapshot.
   let saved = committedFallback;
-  try {
-    saved = await fetchNpdGeneralInfoById(params.requestId);
-  } catch (fetchError) {
-    console.warn(
-      "NPD Request updated but reload after workflow action failed:",
-      fetchError,
-    );
+  if (!isVerticalHeadActor) {
+    try {
+      saved = await fetchNpdGeneralInfoById(params.requestId);
+    } catch (fetchError) {
+      console.warn(
+        "NPD Request updated but reload after workflow action failed:",
+        fetchError,
+      );
+    }
   }
 
   // Comments / email must not block navigation after a successful commit.
@@ -1058,7 +1065,22 @@ export async function applyNpdWorkflowAction(params: {
       );
     }
 
-    const nextPendingRole = getFirstPendingApproverRole(saved.WorkflowSteps);
+    let requestForNotify = saved;
+    // VH may return before Initiator email is known — load once in background.
+    if (
+      isVerticalHeadActor &&
+      !getNpdRequestOwnerEmail(requestForNotify).trim()
+    ) {
+      try {
+        requestForNotify = await fetchNpdGeneralInfoById(params.requestId);
+      } catch {
+        // Notification best-effort only.
+      }
+    }
+
+    const nextPendingRole = getFirstPendingApproverRole(
+      requestForNotify.WorkflowSteps,
+    );
     const isFinalApproval =
       params.action === "Approve" && !nextPendingRole;
 
@@ -1069,23 +1091,23 @@ export async function applyNpdWorkflowAction(params: {
 
     if (params.action === "Approve") {
       if (isFinalApproval) {
-        recipients = [getNpdRequestOwnerEmail(saved)];
+        recipients = [getNpdRequestOwnerEmail(requestForNotify)];
         recipientRole = Config.Roles.Initiator;
         notificationAction = "Approved";
         includeActionButtons = false;
       } else {
-        recipients = getPendingApproverEmails(saved.WorkflowSteps);
+        recipients = getPendingApproverEmails(requestForNotify.WorkflowSteps);
         recipientRole = nextPendingRole;
         includeActionButtons = shouldIncludeNpdEmailActions(nextPendingRole);
       }
     } else {
-      recipients = [getNpdRequestOwnerEmail(saved)];
+      recipients = [getNpdRequestOwnerEmail(requestForNotify)];
       recipientRole = Config.Roles.Initiator;
     }
 
     try {
       await sendNpdApprovalNotification({
-        request: saved,
+        request: requestForNotify,
         action: notificationAction,
         comments: params.comments,
         role: recipientRole,
@@ -1117,7 +1139,7 @@ export async function fetchNpdGeneralInfoById(
       Listname: LIST_NAME(),
       SelectedId: id,
       Select: SELECT_FIELDS_CORE,
-      Expand: "Author",
+      Expand: "Author,Initiator",
     });
   }
 

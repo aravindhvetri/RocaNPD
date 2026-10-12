@@ -172,12 +172,11 @@ const NpdAuditLogTable: React.FC<INpdAuditLogTableProps> = ({
     const chronological = sortAuditRowsChronologically(rows);
     const normalizedStatus = (requestStatus || "").trim().toLowerCase();
 
-    // Show WorkflowJSON Pending/empty approvers while the request is still in flight
-    // (Pending or Rework). Hide on Draft / Approved / Rejected / Completed.
+    // Pending placeholders only while actually Pending with an approver.
+    // After VH/MIS Rework, Status stays Rework until Initiator Resubmit —
+    // do not show "Pending with MIS/VH" until then.
     const allowPendingPlaceholders =
-      normalizedStatus === RequestStatus.Pending.toLowerCase() ||
-      normalizedStatus === RequestStatus.Rework.toLowerCase() ||
-      normalizedStatus === "in rework";
+      normalizedStatus === RequestStatus.Pending.toLowerCase();
 
     if (!allowPendingPlaceholders || !workflowSteps.length) {
       return chronological;
@@ -230,7 +229,12 @@ const NpdAuditLogTable: React.FC<INpdAuditLogTableProps> = ({
         header: "Action",
         style: { width: "10rem", minWidth: "9rem" },
         body: (row) => (
-          <span className={styles.actionText}>{row.status || "—"}</span>
+          <span
+            className={styles.actionText}
+            title={row.status?.trim() ? row.status : undefined}
+          >
+            {row.status || "—"}
+          </span>
         ),
       },
       {

@@ -4,15 +4,12 @@ import {
 } from "./npdAppUrl";
 
 /**
- * Absolute URL of SitePages/RocaNPD.aspx on the current NPD web.
- * Same host page as NPD email Login links (Outlook SafeLinks–safe).
+ * Absolute URL of the current NPD web (site root).
+ * Outlook email Login and hash deep links use this — never SitePages/RocaNPD.aspx.
+ * Recipients may not have that page; checks run from the site URL + query params.
  */
 export function getMgAppPageUrl(contextSiteUrl?: string): string {
-  const siteUrl = resolveNpdWebAbsoluteUrl(contextSiteUrl).replace(/\/+$/, "");
-  if (!siteUrl) {
-    return "";
-  }
-  return `${siteUrl}/${Config.NpdApproverMail.SitePagesFolder}/RocaNPD.aspx`;
+  return resolveNpdWebAbsoluteUrl(contextSiteUrl).replace(/\/+$/, "");
 }
 
 /**
@@ -33,21 +30,22 @@ export function buildMgHashUrl(
 }
 
 /**
- * Outlook-safe deep link: encodes the hash route as `npdRoute` (same as NPD Login).
- * MainComponent restores it to the hash before HashRouter mounts.
+ * Outlook-safe deep link: encodes the hash route as `npdRoute` on the site URL
+ * (not SitePages/RocaNPD.aspx). Recipients may not have that page during login;
+ * after sign-in they return to the site URL and MainComponent restores the hash.
  */
 export function buildMgEmailLoginUrl(
   hashPathAndQuery: string,
   contextSiteUrl?: string,
 ): string {
-  const pageUrl = getMgAppPageUrl(contextSiteUrl);
-  if (!pageUrl) {
+  const siteUrl = resolveNpdWebAbsoluteUrl(contextSiteUrl).replace(/\/+$/, "");
+  if (!siteUrl) {
     return "";
   }
   const path = hashPathAndQuery.startsWith("/")
     ? hashPathAndQuery
     : `/${hashPathAndQuery}`;
-  return `${pageUrl}?npdRoute=${encodeURIComponent(path)}`;
+  return `${siteUrl}?npdRoute=${encodeURIComponent(path)}`;
 }
 
 function buildMgFormHashRoute(
@@ -72,7 +70,7 @@ export function buildMgRequestFormUrl(
 ): string {
   const viewAs =
     mode === "consultant-edit" ? Config.Roles.Consultant : undefined;
-  return buildMgHashUrl(
+  return buildMgEmailLoginUrl(
     buildMgFormHashRoute(requestListItemId, mode, viewAs),
     contextSiteUrl,
   );
@@ -80,7 +78,7 @@ export function buildMgRequestFormUrl(
 
 /**
  * Consultant submit-notification Login URL — SafeLinks resilient.
- * Do not put `id` / `mode` on the server query string (SharePoint SitePages error).
+ * Route is encoded as `npdRoute` on the site URL (not SitePages/RocaNPD.aspx).
  */
 export function buildMgConsultantEmailLoginUrl(
   requestListItemId: number,

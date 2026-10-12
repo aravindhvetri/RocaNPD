@@ -1,12 +1,20 @@
 import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config } from "../../../../../External/CommonServices/Config";
+import { ApproverSystems, Config } from "../../../../../External/CommonServices/Config";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
+import {
+  hasRole,
+  INITIATOR_ACCESS_DENIED_MESSAGE,
+  isApproversMasterInitiatorForBrand,
+} from "../../../../../External/CommonServices/permissionService";
+import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
+import { selectResolvedAccess } from "../../../../../store/slices/appSlice";
 import {
   assertBrowserOnline,
   toUserActionErrorMessage,
 } from "../../../../../External/CommonServices/networkConnectivity";
+import { assertMaterialGroupCodesUniqueInLookupTypes } from "../../../../../External/CommonServices/materialGroupService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
   addRow,
@@ -74,6 +82,7 @@ export function useMaterialGroupFormController(
 
   const mgState = useAppSelector((state) => state.materialGroup);
   const appState = useAppSelector((state) => state.app);
+  const access = useAppSelector(selectResolvedAccess);
 
   const urlId = searchParams.get("id") || searchParams.get("guid");
   const urlMode = searchParams.get("mode") as MaterialGroupFormMode | null;
@@ -94,9 +103,19 @@ export function useMaterialGroupFormController(
   const isRework =
     (mgState.currentStatus || "").trim().toLowerCase() === "rework" ||
     (mgState.currentStatus || "").trim().toLowerCase() === "in rework";
+  const isDraftOrRework =
+    isRework ||
+    (mgState.currentStatus || "").trim().toLowerCase() ===
+      Config.MaterialGroupStatus.Draft.toLowerCase();
+  const [initiatorAccessDenied, setInitiatorAccessDenied] =
+    React.useState(false);
+  const deniedInitiatorAccessIdRef = React.useRef("");
 
   // Compute active mode
   const mode: MaterialGroupFormMode = React.useMemo(() => {
+    if (initiatorAccessDenied) {
+      return "view";
+    }
     if (urlMode === "view") {
       return "view";
     }
@@ -115,7 +134,7 @@ export function useMaterialGroupFormController(
       return urlMode || "edit";
     }
     return "create";
-  }, [urlMode, urlId, isConsultant, mgState.currentStatus]);
+  }, [initiatorAccessDenied, urlMode, urlId, isConsultant, mgState.currentStatus]);
 
   const approverRemarksLabel = React.useMemo(
     () => getApproverRemarksLabel(appState.assignedRoles),
@@ -126,6 +145,28 @@ export function useMaterialGroupFormController(
     mode === "consultant-edit" && isApprover;
 
   const [approverRemarks, setApproverRemarks] = React.useState("");
+  /** Blocks double-clicks before Redux pending (e.g. during uniqueness check). */
+  const actionInFlightRef = React.useRef(false);
+  const [localActionBusy, setLocalActionBusy] = React.useState<
+    "idle" | "saving" | "submitting" | "consultant"
+  >("idle");
+
+  const tryBeginActionBusy = React.useCallback(
+    (kind: "saving" | "submitting" | "consultant"): boolean => {
+      if (actionInFlightRef.current) {
+        return false;
+      }
+      actionInFlightRef.current = true;
+      setLocalActionBusy(kind);
+      return true;
+    },
+    [],
+  );
+
+  const endActionBusy = React.useCallback(() => {
+    actionInFlightRef.current = false;
+    setLocalActionBusy("idle");
+  }, []);
 
   // Create = blank form. Opening New after View must not keep the prior request.
   const formResetAt = (location.state as { formResetAt?: number } | null)
@@ -151,6 +192,87 @@ export function useMaterialGroupFormController(
     dispatch(resetMaterialGroupForm());
     return undefined;
   }, [dispatch, formResetAt, urlId]);
+
+  React.useEffect(() => {
+    if (!urlId) {
+      deniedInitiatorAccessIdRef.current = "";
+      setInitiatorAccessDenied(false);
+      return;
+    }
+    if (
+      appState.roleStatus === "loading" ||
+      mgState.hydrateStatus === "loading" ||
+      !isDraftOrRework ||
+      deniedInitiatorAccessIdRef.current === urlId
+    ) {
+      return;
+    }
+    if (mgState.hydrateStatus !== "succeeded") {
+      return;
+    }
+
+    // Consultant / Admin / other approvers opening a record must never get this
+    // toast. Only the request's Initiator (Rework email / edit link) is checked.
+    if (hasRole(access.assignedRoles, Config.Roles.Admin)) {
+      return;
+    }
+    if (isConsultant || urlMode === "view" || urlMode === "consultant-edit") {
+      return;
+    }
+
+    const loginEmail = normalizeEmail(
+      appState.userEmail || appState.userLoginName || "",
+    );
+    const requestInitiatorEmail = normalizeEmail(
+      mgState.initiatorEmail || "",
+    );
+    if (
+      !loginEmail ||
+      !requestInitiatorEmail ||
+      loginEmail !== requestInitiatorEmail
+    ) {
+      return;
+    }
+
+    const stillAssignedInitiator =
+      isApproversMasterInitiatorForBrand(
+        access,
+        undefined,
+        ApproverSystems.NewProductDevelopment,
+      ) ||
+      isApproversMasterInitiatorForBrand(
+        access,
+        undefined,
+        ApproverSystems.NewMaterialGroup,
+      );
+    if (stillAssignedInitiator) {
+      return;
+    }
+
+    deniedInitiatorAccessIdRef.current = urlId;
+    setInitiatorAccessDenied(true);
+    dispatch(
+      setFlashMessage({
+        severity: "error",
+        detail: INITIATOR_ACCESS_DENIED_MESSAGE,
+      }),
+    );
+    showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
+  }, [
+    appState.assignedRoles,
+    appState.roleAssignments,
+    appState.roleStatus,
+    appState.userEmail,
+    appState.userLoginName,
+    dispatch,
+    isConsultant,
+    isDraftOrRework,
+    mgState.hydrateStatus,
+    mgState.initiatorEmail,
+    toastRef,
+    urlId,
+    urlMode,
+  ]);
 
   // Handle global errors
   React.useEffect(() => {
@@ -234,6 +356,42 @@ export function useMaterialGroupFormController(
     navigate(buildNavHref(route, viewAs));
   }, [dispatch, navigate, searchParams]);
 
+  /** Collect filled codes keyed by Lookup Type (RelatedFields) for uniqueness checks. */
+  const collectCodeUniquenessEntries = React.useCallback(() => {
+    const entries: Array<{
+      lookupTypeId: number;
+      lookupTypeTitle: string;
+      code: string;
+    }> = [];
+
+    for (const configId of mgState.selectedConfigIds) {
+      const configItem = mgState.configs.find((c) => c.id === configId);
+      const lookupTypeId =
+        configItem?.relatedFieldId && configItem.relatedFieldId > 0
+          ? configItem.relatedFieldId
+          : configId;
+      const lookupTypeTitle =
+        configItem?.relatedFieldTitle ||
+        configItem?.title ||
+        `Master (${configId})`;
+      const rows = mgState.entriesByConfigId[configId] || [];
+
+      for (const row of rows) {
+        const code = row.code.trim();
+        if (!code) {
+          continue;
+        }
+        entries.push({ lookupTypeId, lookupTypeTitle, code });
+      }
+    }
+
+    return entries;
+  }, [
+    mgState.configs,
+    mgState.entriesByConfigId,
+    mgState.selectedConfigIds,
+  ]);
+
   const validateEntries = React.useCallback(
     (isSubmitting: boolean = false): boolean => {
       if (mgState.selectedConfigIds.length === 0) {
@@ -266,6 +424,8 @@ export function useMaterialGroupFormController(
           return false;
         }
 
+        const seenCodesInMaster = new Set<string>();
+
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (!row.description.trim()) {
@@ -286,13 +446,41 @@ export function useMaterialGroupFormController(
             );
             return false;
           }
+
+          const codeKey = row.code.trim().toLowerCase();
+          if (codeKey) {
+            if (seenCodesInMaster.has(codeKey)) {
+              showWarningToast(
+                toastRef,
+                `Code "${row.code.trim()}" is duplicated under ${masterTitle}.`,
+                "Validation",
+              );
+              return false;
+            }
+            seenCodesInMaster.add(codeKey);
+          }
         }
       }
 
-      // Material Group: Code / Description duplicates are not validated at any stage.
+      // Also block the same Code under masters that share one Lookup Type.
+      const seenByLookupType = new Set<string>();
+      for (const entry of collectCodeUniquenessEntries()) {
+        const key = `${entry.lookupTypeId}::${entry.code.toLowerCase()}`;
+        if (seenByLookupType.has(key)) {
+          showWarningToast(
+            toastRef,
+            `Code "${entry.code}" is duplicated under ${entry.lookupTypeTitle}.`,
+            "Validation",
+          );
+          return false;
+        }
+        seenByLookupType.add(key);
+      }
+
       return true;
     },
     [
+      collectCodeUniquenessEntries,
       mgState.configs,
       mgState.entriesByConfigId,
       mgState.selectedConfigIds,
@@ -301,7 +489,28 @@ export function useMaterialGroupFormController(
     ],
   );
 
+  const assertCodesUniqueAgainstLookup = React.useCallback(async (): Promise<boolean> => {
+    try {
+      await assertMaterialGroupCodesUniqueInLookupTypes(
+        collectCodeUniquenessEntries(),
+      );
+      return true;
+    } catch (error: unknown) {
+      showWarningToast(
+        toastRef,
+        toUserActionErrorMessage(error) ||
+          "A Lookup Code already exists under this Lookup Type.",
+        "Validation",
+      );
+      return false;
+    }
+  }, [collectCodeUniquenessEntries, toastRef]);
+
   const handleSaveDraft = React.useCallback(() => {
+    if (initiatorAccessDenied) {
+      showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
+      return;
+    }
     if (!validateEntries(false)) {
       return;
     }
@@ -309,6 +518,9 @@ export function useMaterialGroupFormController(
       assertBrowserOnline();
     } catch (error: unknown) {
       showErrorToast(toastRef, toUserActionErrorMessage(error));
+      return;
+    }
+    if (!tryBeginActionBusy("saving")) {
       return;
     }
 
@@ -332,10 +544,26 @@ export function useMaterialGroupFormController(
       })
       .catch(() => {
         // Error toast is shown once via the mgState.error effect.
+      })
+      .finally(() => {
+        endActionBusy();
       });
-  }, [dispatch, navigate, searchParams, toastRef, validateEntries]);
+  }, [
+    dispatch,
+    endActionBusy,
+    initiatorAccessDenied,
+    navigate,
+    searchParams,
+    toastRef,
+    tryBeginActionBusy,
+    validateEntries,
+  ]);
 
   const handleSubmit = React.useCallback(() => {
+    if (initiatorAccessDenied) {
+      showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
+      return;
+    }
     if (!validateEntries(true)) {
       return;
     }
@@ -345,37 +573,65 @@ export function useMaterialGroupFormController(
       showErrorToast(toastRef, toUserActionErrorMessage(error));
       return;
     }
+    // Lock + loader immediately so rapid clicks cannot create duplicates
+    // while uniqueness validation / thunk pending have not fired yet.
+    if (!tryBeginActionBusy("submitting")) {
+      return;
+    }
 
-    void dispatch(
-      submitMaterialGroupRequestThunk({ comments: approverRemarks }),
-    )
-      .unwrap()
-      .then((result) => {
-        // Flash via MainComponent Toast — form Toast unmounts on navigate.
-        dispatch(
-          setFlashMessage({
-            severity: "success",
-            detail: `Request ${result.requestId} submitted to Consultant successfully.`,
-          }),
-        );
-        dispatch(resetMaterialGroupForm());
-        navigate(
-          buildNavHref(
-            Config.Routes.MgAll,
-            searchParams.get(Config.NpdFormQuery.ViewAs),
-          ),
-        );
-      })
-      .catch(() => {
-        // Error toast is shown once via the mgState.error effect.
-      });
-  }, [approverRemarks, dispatch, navigate, searchParams, toastRef, validateEntries]);
+    void (async () => {
+      try {
+        if (!(await assertCodesUniqueAgainstLookup())) {
+          return;
+        }
+
+        try {
+          const result = await dispatch(
+            submitMaterialGroupRequestThunk({ comments: approverRemarks }),
+          ).unwrap();
+          // Flash via MainComponent Toast — form Toast unmounts on navigate.
+          dispatch(
+            setFlashMessage({
+              severity: "success",
+              detail: `Request ${result.requestId} submitted to Consultant successfully.`,
+            }),
+          );
+          dispatch(resetMaterialGroupForm());
+          navigate(
+            buildNavHref(
+              Config.Routes.MgAll,
+              searchParams.get(Config.NpdFormQuery.ViewAs),
+            ),
+          );
+        } catch {
+          // Error toast is shown once via the mgState.error effect.
+        }
+      } finally {
+        endActionBusy();
+      }
+    })();
+  }, [
+    approverRemarks,
+    assertCodesUniqueAgainstLookup,
+    dispatch,
+    endActionBusy,
+    initiatorAccessDenied,
+    navigate,
+    searchParams,
+    toastRef,
+    tryBeginActionBusy,
+    validateEntries,
+  ]);
 
   const handleConsultantAction = React.useCallback(
     (action: MaterialGroupConsultantActionType) => {
+      if (actionInFlightRef.current) {
+        return;
+      }
+
       const remarks = approverRemarks.trim();
 
-      // Complete / Rework / Reject: Code and Description required; no duplicate checks.
+      // Complete / Rework / Reject: Code and Description required; Code unique per Lookup Type.
       if (!validateEntries(true)) {
         return;
       }
@@ -415,47 +671,61 @@ export function useMaterialGroupFormController(
         return;
       }
 
-      void dispatch(
-        consultantActionMaterialGroupThunk({
-          id: targetId,
-          guid: mgState.currentGuid || (targetId ? String(targetId) : ""),
-          action,
-          comments: remarks,
-          entriesByConfigId: mgState.entriesByConfigId,
-        }),
-      )
-        .unwrap()
-        .then(() => {
-          const successLabel =
-            action === "Rework"
-              ? "sent back for Rework"
-              : action === "Rejected"
-                ? "Rejected"
-                : "Completed";
-          // Flash via MainComponent Toast — form Toast unmounts on navigate.
-          dispatch(
-            setFlashMessage({
-              severity: "success",
-              detail: `Request ${mgState.currentRequestId || ""} ${successLabel} successfully.`,
-            }),
-          );
-          dispatch(resetMaterialGroupForm());
-          const viewAs = searchParams.get(Config.NpdFormQuery.ViewAs);
-          if (action === "Completed") {
-            navigate(buildNavHref(Config.Routes.MgCompleted, viewAs));
-          } else {
-            // Rework / Reject → All Requests (Consultant cannot open Initiator Draft/Rework)
-            navigate(buildNavHref(Config.Routes.MgAll, viewAs));
+      if (!tryBeginActionBusy("consultant")) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          if (!(await assertCodesUniqueAgainstLookup())) {
+            return;
           }
-        })
-        .catch(() => {
-          // Error toast is shown once via the mgState.error effect.
-        });
+
+          try {
+            await dispatch(
+              consultantActionMaterialGroupThunk({
+                id: targetId,
+                guid: mgState.currentGuid || (targetId ? String(targetId) : ""),
+                action,
+                comments: remarks,
+                entriesByConfigId: mgState.entriesByConfigId,
+              }),
+            ).unwrap();
+            const successLabel =
+              action === "Rework"
+                ? "sent back for Rework"
+                : action === "Rejected"
+                  ? "Rejected"
+                  : "Completed";
+            // Flash via MainComponent Toast — form Toast unmounts on navigate.
+            dispatch(
+              setFlashMessage({
+                severity: "success",
+                detail: `Request ${mgState.currentRequestId || ""} ${successLabel} successfully.`,
+              }),
+            );
+            dispatch(resetMaterialGroupForm());
+            const viewAs = searchParams.get(Config.NpdFormQuery.ViewAs);
+            if (action === "Completed") {
+              navigate(buildNavHref(Config.Routes.MgCompleted, viewAs));
+            } else {
+              // Rework / Reject → All Requests (Consultant cannot open Initiator Draft/Rework)
+              navigate(buildNavHref(Config.Routes.MgAll, viewAs));
+            }
+          } catch {
+            // Error toast is shown once via the mgState.error effect.
+          }
+        } finally {
+          endActionBusy();
+        }
+      })();
     },
     [
       approverRemarks,
       approverRemarksLabel,
+      assertCodesUniqueAgainstLookup,
       dispatch,
+      endActionBusy,
       mgState.configs,
       mgState.currentGuid,
       mgState.currentId,
@@ -465,6 +735,7 @@ export function useMaterialGroupFormController(
       navigate,
       searchParams,
       toastRef,
+      tryBeginActionBusy,
       validateEntries,
     ],
   );
@@ -492,10 +763,13 @@ export function useMaterialGroupFormController(
     latestCommentAction: mgState.latestCommentAction,
     auditLogs: mgState.auditLogs,
     isSaving:
+      localActionBusy !== "idle" ||
       mgState.saveStatus === "saving" ||
       mgState.submitStatus === "submitting" ||
       mgState.consultantActionStatus === "saving",
-    isSubmitting: mgState.submitStatus === "submitting",
+    isSubmitting:
+      localActionBusy === "submitting" ||
+      mgState.submitStatus === "submitting",
     showApproverRemarks,
     approverRemarks,
     approverRemarksLabel,

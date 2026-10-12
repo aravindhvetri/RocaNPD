@@ -47,6 +47,7 @@ const ComboBox: React.FC<IComboBoxProps> = ({
       panelClassName={styles.panel}
       className={error ? "p-invalid" : undefined}
       inputClassName="w-full"
+      title={value?.trim() ? value : undefined}
       pt={{
         input: {
           root: {
@@ -54,6 +55,7 @@ const ComboBox: React.FC<IComboBoxProps> = ({
             autoComplete: "off",
             autoCorrect: "off",
             spellCheck: false,
+            title: value?.trim() ? value : undefined,
           },
         },
       }}

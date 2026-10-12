@@ -201,7 +201,7 @@
       color: $roca-color-text-inverse;
       border: none !important;
       font-weight: 400;
-      font-size: 0.8125rem;
+      font-size: calc(0.8125rem + 1px);
       padding: 0.4rem 0.875rem;
       vertical-align: middle !important;
       white-space: nowrap;

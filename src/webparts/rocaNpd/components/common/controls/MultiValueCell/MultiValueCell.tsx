@@ -20,7 +20,7 @@ const MultiValueCell: React.FC<IMultiValueCellProps> = ({
   joinWith,
   limit,
 }) => {
-  const { display, title, truncated } = formatMultiValueCell(value, {
+  const { display, title } = formatMultiValueCell(value, {
     splitPattern,
     joinWith,
     limit,
@@ -31,7 +31,7 @@ const MultiValueCell: React.FC<IMultiValueCellProps> = ({
   }
 
   return (
-    <span className={className} title={truncated ? title : undefined}>
+    <span className={className} title={title || undefined}>
       {display}
     </span>
   );

@@ -14,13 +14,14 @@ import { buildNpdItemDetailsMatchKey } from "../../../../../External/CommonServi
 import { fetchNpdApproverComments } from "../../../../../External/CommonServices/npdApproverCommentsService";
 import {
   canActOnPendingNpdStep,
-  getDefaultRoute,
   hasRole,
   hasSystemRole,
+  INITIATOR_ACCESS_DENIED_MESSAGE,
   isNpdApproversMasterInitiatorForBrand,
   parseViewAsRole,
 } from "../../../../../External/CommonServices/permissionService";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
+import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
 import {
   getFirstPendingApproverRole,
   isMisCoordinatorWorkflowRole,
@@ -134,6 +135,8 @@ export function useNpdRequestFormController(
   /** Snapshot after hydrate — used to persist only added/edited Item Details. */
   const itemBaselineRef = React.useRef<INpdItemDetailRow[]>([]);
   const [recordReady, setRecordReady] = React.useState(!editId);
+  const [initiatorAccessDenied, setInitiatorAccessDenied] =
+    React.useState(false);
   const [importVisible, setImportVisible] = React.useState(false);
   const [approverRemarks, setApproverRemarks] = React.useState("");
   const [auditLogs, setAuditLogs] = React.useState<INpdApproverCommentRow[]>(
@@ -146,6 +149,8 @@ export function useNpdRequestFormController(
   const pendingOfflineDraftNavigationRef = React.useRef(false);
   /** Prevents repeat deny toast/navigation for the same deep-linked request. */
   const deniedInitiatorAccessIdRef = React.useRef(0);
+  /** Request Initiator email from hydrate — used only for former-Initiator email gate. */
+  const requestInitiatorEmailRef = React.useRef("");
 
   const hasPlantSourceMaterialType = selectHasPlantSourceMaterialType(
     npdForm.generalInfo.materialType,
@@ -195,7 +200,23 @@ export function useNpdRequestFormController(
     isOpen: Boolean(editId || npdForm.requestId),
   });
   const isTabLocked = Boolean(tabLock.restriction);
-  const lockedFooterMode = isTabLocked ? "read-only" : footerMode;
+  const lockedFooterMode =
+    initiatorAccessDenied || isTabLocked ? "read-only" : footerMode;
+
+  const denyFormerInitiatorAccess = React.useCallback((): void => {
+    if (!editId || deniedInitiatorAccessIdRef.current === editId) {
+      return;
+    }
+    deniedInitiatorAccessIdRef.current = editId;
+    setInitiatorAccessDenied(true);
+    dispatch(
+      setFlashMessage({
+        severity: "error",
+        detail: INITIATOR_ACCESS_DENIED_MESSAGE,
+      }),
+    );
+    showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
+  }, [dispatch, editId, toastRef]);
   const isVerticalHead = hasSystemRole(
     access,
     Config.Roles.VerticalHead,
@@ -339,6 +360,30 @@ export function useNpdRequestFormController(
           ? result.items.map(toNpdItemDetailRow)
           : [];
         setRecordReady(true);
+
+        requestInitiatorEmailRef.current = normalizeEmail(
+          result.request.InitiatorEmail || "",
+        );
+        const appNow = store.getState().app;
+        const accessNow = selectResolvedAccess(store.getState());
+        const loginEmail = normalizeEmail(
+          appNow.userEmail || appNow.userLoginName || "",
+        );
+        // Only the request Initiator (Rework email recipient) is gated — not VH/MIS.
+        if (
+          appNow.roleStatus === "succeeded" &&
+          isDraftOrReworkStatus(result.request.Status) &&
+          loginEmail &&
+          requestInitiatorEmailRef.current &&
+          loginEmail === requestInitiatorEmailRef.current &&
+          !hasRole(accessNow.assignedRoles, Config.Roles.Admin) &&
+          !isNpdApproversMasterInitiatorForBrand(
+            accessNow,
+            result.request.Brand,
+          )
+        ) {
+          denyFormerInitiatorAccess();
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -362,22 +407,22 @@ export function useNpdRequestFormController(
       cancelled = true;
       hydrate.abort();
     };
-    // Do not depend on `access` or `isViewMode`. Access settling or the email
-    // hash applying `mode=edit` was aborting hydrate, so the denial never ran
-    // and the Rework form stayed open.
-  }, [dispatch, editId, formResetAt, initialized]);
+    // Do not depend on `access` or `isViewMode` — that aborts hydrate.
+  }, [denyFormerInitiatorAccess, dispatch, editId, formResetAt, initialized]);
 
-  // Email deep link: once the request is in memory, compare the logged-in user
-  // with the ApproversMaster Initiator for this Brand. No extra SharePoint call.
+  // Email / edit open: only the request's Initiator is gated (Rework email).
+  // VH / MIS / other roles must not see this toast when opening the form.
   React.useEffect(() => {
     if (!editId) {
       deniedInitiatorAccessIdRef.current = 0;
+      requestInitiatorEmailRef.current = "";
+      setInitiatorAccessDenied(false);
       return;
     }
     if (
       !initialized ||
-      roleStatus !== "succeeded" ||
-      npdForm.loadStatus !== "idle" ||
+      roleStatus === "loading" ||
+      npdForm.loadStatus === "loading" ||
       npdForm.requestId !== editId ||
       deniedInitiatorAccessIdRef.current === editId
     ) {
@@ -387,8 +432,13 @@ export function useNpdRequestFormController(
       return;
     }
 
-    const brand = (npdForm.generalInfo.brand ?? "").trim();
-    if (!brand) {
+    const loginEmail = normalizeEmail(userEmail || userLoginName || "");
+    const requestInitiatorEmail = requestInitiatorEmailRef.current;
+    if (
+      !loginEmail ||
+      !requestInitiatorEmail ||
+      loginEmail !== requestInitiatorEmail
+    ) {
       return;
     }
 
@@ -396,31 +446,28 @@ export function useNpdRequestFormController(
     if (hasRole(accessNow.assignedRoles, Config.Roles.Admin)) {
       return;
     }
-    if (isNpdApproversMasterInitiatorForBrand(accessNow, brand)) {
+    if (
+      isNpdApproversMasterInitiatorForBrand(
+        accessNow,
+        npdForm.generalInfo.brand ?? "",
+      )
+    ) {
       return;
     }
 
-    deniedInitiatorAccessIdRef.current = editId;
-    dispatch(
-      setFlashMessage({
-        severity: "error",
-        detail:
-          "You are no longer the Initiator for this request, so you do not have access to this record.",
-      }),
-    );
-    dispatch(resetNpdFormState());
-    navigate(getDefaultRoute(accessNow), { replace: true });
+    denyFormerInitiatorAccess();
   }, [
-    dispatch,
+    denyFormerInitiatorAccess,
     editId,
     initialized,
-    navigate,
     npdForm.generalInfo.brand,
     npdForm.loadStatus,
     npdForm.requestId,
     npdForm.requestStatus,
     roleStatus,
     stillBrandInitiator,
+    userEmail,
+    userLoginName,
   ]);
 
   React.useEffect(() => {
@@ -466,12 +513,13 @@ export function useNpdRequestFormController(
   const leaveFormForProcessing = React.useCallback(
     (
       totalUnits: number,
-      options?: { showItemProgress?: boolean },
+      options?: { showItemProgress?: boolean; submitPace?: boolean },
     ): void => {
       // Keep the user on the form until the action outcome is known.
       // Success → list page; failure → remain on form for retry.
       beginUiProcessing(dispatch, totalUnits, {
         showItemProgress: Boolean(options?.showItemProgress),
+        submitPace: Boolean(options?.submitPace),
       });
     },
     [dispatch],
@@ -513,6 +561,14 @@ export function useNpdRequestFormController(
       const includeOtherDetails = lockedFooterMode === "mis-pending";
       const actorRole = pendingRole;
       const isMisPostToSap = action === "Approve" && includeOtherDetails;
+
+      // Show Processing immediately — especially for VH, where the only SP call
+      // is the Status update and any delay before the overlay feels like a hang.
+      if (!isMisPostToSap) {
+        flushSync(() => {
+          beginUiProcessing(dispatch, 1, { showItemProgress: false });
+        });
+      }
 
       // Post to SAP: drop the loader as soon as the browser is offline and stay
       // on this form. The SAP loop will not start another line after that.
@@ -571,6 +627,9 @@ export function useNpdRequestFormController(
         .unwrap()
         .then((saved) => {
           releaseOfflineWatch();
+          if (!isMisPostToSap) {
+            finishUiProcessing(dispatch, true);
+          }
           tabLock.notifySubmitted(saved.Id, saved.Title);
           dispatch(
             setFlashMessage({
@@ -622,6 +681,10 @@ export function useNpdRequestFormController(
   });
 
   const handleSaveDraft = (): void => {
+    if (initiatorAccessDenied) {
+      showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
+      return;
+    }
     if (isTabLocked || tabLock.consumeIfRestricted()) {
       return;
     }
@@ -726,6 +789,10 @@ export function useNpdRequestFormController(
   };
 
   const handleSubmit = (): void => {
+    if (initiatorAccessDenied) {
+      showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
+      return;
+    }
     if (isTabLocked || tabLock.consumeIfRestricted()) {
       return;
     }
@@ -744,17 +811,22 @@ export function useNpdRequestFormController(
     }
 
     // Validation already required every grid row (do not drop blank lines —
-    // those must fail validation above). First Submit persists all rows.
-    // Resubmit after Rework: only newly added rows (no SharePoint Id yet).
+    // those must fail validation above). Persist only rows not yet in
+    // NPD_ItemDetails. JSON backup always keeps the full grid.
     const allItems = itemRows.map(toNpdItemDetailRecord);
     const comments = approverRemarks;
     const isResubmit = isNpdRequestIdTitle(npdForm.requestTitle || "");
-    // Persist only new lines on resubmit; JSON backup always keeps the full grid.
-    const items = isResubmit
-      ? allItems.filter((item) => !(item.sharePointId > 0))
-      : allItems;
+    const remainingItems = allItems.filter(
+      (item) => !(item.sharePointId > 0),
+    );
+    const changedExisting = (editId || npdForm.requestId)
+      ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current).changedRecords.filter(
+          (record) => record.sharePointId > 0,
+        )
+      : [];
+    const items = [...changedExisting, ...remainingItems];
     const backupItems = allItems;
-    const totalUnits = Math.max(items.length, 1);
+    const totalUnits = Math.max(remainingItems.length, 1);
 
     resetNpdSubmitOfflineLatch();
     let leftForOfflineDraft = false;
@@ -812,11 +884,14 @@ export function useNpdRequestFormController(
       const materialMasterItems = isResubmit
         ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current)
             .changedRecords
-        : items;
+        : allItems;
+      // Processing only while Material Master duplicates are checked.
+      // The item progress bar starts when rows are pushed to NPD_ItemDetails.
+      flushSync(() => {
+        leaveFormForProcessing(totalUnits, { showItemProgress: false });
+      });
+
       if (materialMasterItems.length) {
-        if (!isResubmit) {
-          beginUiProcessing(dispatch, totalUnits);
-        }
         try {
           const materialMasterDuplicates =
             await validateItemsAgainstMaterialMaster(materialMasterItems, {
@@ -831,9 +906,7 @@ export function useNpdRequestFormController(
           if (materialMasterMessage) {
             if (!leftForOfflineDraft) {
               stopOfflineWatch();
-              if (!isResubmit) {
-                finishUiProcessing(dispatch, false);
-              }
+              finishUiProcessing(dispatch, false);
               showErrorToast(toastRef, materialMasterMessage, "Validation");
             }
             return;
@@ -843,9 +916,7 @@ export function useNpdRequestFormController(
             return;
           }
           stopOfflineWatch();
-          if (!isResubmit) {
-            finishUiProcessing(dispatch, false);
-          }
+          finishUiProcessing(dispatch, false);
           showErrorToast(
             toastRef,
             toUserActionErrorMessage(
@@ -862,17 +933,17 @@ export function useNpdRequestFormController(
         return;
       }
 
-      flushSync(() => {
-        // Resubmit: progress only for newly added rows (none → Processing only).
-        leaveFormForProcessing(totalUnits, {
-          showItemProgress: !isResubmit || items.length > 0,
-        });
-      });
-
       if (!isBrowserOnline()) {
         leaveForOfflineDraft();
         return;
       }
+
+      flushSync(() => {
+        leaveFormForProcessing(totalUnits, {
+          showItemProgress: remainingItems.length > 0,
+          submitPace: true,
+        });
+      });
 
       void dispatch(submitNpdRequest({ items, backupItems, comments }))
         .unwrap()

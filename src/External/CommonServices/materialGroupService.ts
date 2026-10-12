@@ -7,7 +7,7 @@ import type {
   IMaterialGroupRequestJsonEntry,
 } from "./Interface";
 import { getLookupTitles } from "./lookupFieldUtils";
-import { bulkCreateLookups } from "./lookupService";
+import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
 import { fetchActiveLookupTypes } from "./lookupTypeService";
 import {
   addMaterialGroupAuditLog,
@@ -460,8 +460,14 @@ export async function submitMaterialGroupRequest(
     throw new Error("Please add at least one entry before submitting.");
   }
 
-  // New Material Group Submit: do not block on duplicate Code / Description
-  // (within the form or against Lookup Master). Consultant Complete still validates.
+  // Code must be unique within each Lookup Type (form batch + NPD_Lookup).
+  await assertMaterialGroupCodesUniqueInLookupTypes(
+    rawEntries.map((entry) => ({
+      lookupTypeId: Number(entry.LookupId) || 0,
+      lookupTypeTitle: entry.LookupName,
+      code: entry.Code,
+    })),
+  );
 
   const requestId =
     existingRequestId && isMgRequestIdTitle(existingRequestId)
@@ -713,6 +719,14 @@ export async function fetchGroupedMaterialGroupRequests(
     // not the current ApproversMaster assignee.
     if (isAdminView || isConsultantView) {
       if (statusEquals(status, Config.MaterialGroupStatus.Draft)) {
+        continue;
+      }
+      // Rework is Initiator-only. Consultant All / Pending must not list it.
+      if (
+        isConsultantView &&
+        (statusEquals(status, Config.MaterialGroupStatus.Rework) ||
+          statusEquals(status, "in rework"))
+      ) {
         continue;
       }
       if (
@@ -1071,8 +1085,8 @@ export interface IConsultantActionParams {
 }
 
 /**
- * No-op. Material Group no longer validates Code / Description uniqueness
- * (within the form or against Lookup Master) at any workflow stage.
+ * @deprecated Prefer assertMaterialGroupCodesUniqueInLookupTypes.
+ * Kept as a no-op for older call sites that checked global Code/Description uniqueness.
  */
 export async function assertMaterialGroupCodesAndDescriptionsAvailable(
   _codes: string[],
@@ -1096,7 +1110,58 @@ export async function assertMaterialGroupDescriptionsAvailable(
 }
 
 /**
- * Resolves LookupType for Complete entries. Code is required; duplicates are allowed.
+ * Code uniqueness within a Lookup Type (NPD_Lookup). Same Code may exist under
+ * a different Type. Empty codes are ignored.
+ */
+export async function assertMaterialGroupCodesUniqueInLookupTypes(
+  entries: ReadonlyArray<{
+    lookupTypeId: number;
+    lookupTypeTitle?: string;
+    code: string;
+  }>,
+): Promise<void> {
+  const filled = entries
+    .map((entry) => ({
+      lookupTypeId: Number(entry.lookupTypeId) || 0,
+      lookupTypeTitle: (entry.lookupTypeTitle || "").trim(),
+      code: (entry.code || "").trim(),
+    }))
+    .filter((entry) => entry.lookupTypeId > 0 && entry.code);
+
+  if (!filled.length) {
+    return;
+  }
+
+  const seenInBatch = new Set<string>();
+  for (const entry of filled) {
+    const key = `${entry.lookupTypeId}::${entry.code.toLowerCase()}`;
+    if (seenInBatch.has(key)) {
+      throw new Error(
+        `"${entry.code}" is duplicated under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
+      );
+    }
+    seenInBatch.add(key);
+  }
+
+  const existing = await fetchActiveLookups();
+  for (const entry of filled) {
+    const codeKey = entry.code.toLowerCase();
+    const exists = existing.some(
+      (item) =>
+        item.LookupTypeId === entry.lookupTypeId &&
+        item.LookupCode.trim().toLowerCase() === codeKey,
+    );
+    if (exists) {
+      throw new Error(
+        `"${entry.code}" already exists as a Lookup Code under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
+      );
+    }
+  }
+}
+
+/**
+ * Resolves LookupType for Complete entries. Code is required and must be unique
+ * within that Lookup Type (may repeat under a different Type).
  */
 async function prepareLookupMasterEntries(
   entries: IMaterialGroupRequestJsonEntry[],
@@ -1161,6 +1226,7 @@ async function prepareLookupMasterEntries(
     });
   }
 
+  await assertMaterialGroupCodesUniqueInLookupTypes(prepared);
   return prepared;
 }
 
@@ -1254,6 +1320,17 @@ export async function updateConsultantMaterialGroupAction(
       configLookupIds.push(configId);
     }
 
+  }
+
+  // Code unique within Lookup Type for every Consultant action (and on Complete sync).
+  if (rawEntries.length > 0) {
+    await assertMaterialGroupCodesUniqueInLookupTypes(
+      rawEntries.map((entry) => ({
+        lookupTypeId: Number(entry.LookupId) || 0,
+        lookupTypeTitle: entry.LookupName,
+        code: entry.Code,
+      })),
+    );
   }
 
   // Complete: sync Lookup Master BEFORE status change.

@@ -128,10 +128,13 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
       if (readOnly) {
         return;
       }
+      const misActing = Boolean(isMisCoordinatorActing);
       onRowsChange((currentRows) => {
-        const newRow = createEmptyNpdItemDetailRow(
-          Boolean(isMisCoordinatorActing),
-        );
+        const newRow = createEmptyNpdItemDetailRow(misActing);
+        // MIS Coordinator lines always appear at the top of the grid.
+        if (misActing) {
+          return [newRow, ...currentRows];
+        }
         if (!afterRowId) {
           return [...currentRows, newRow];
         }
@@ -143,7 +146,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         updated.splice(index + 1, 0, newRow);
         return updated;
       });
-      setFirst(Math.floor(rows.length / pageSize) * pageSize);
+      setFirst(misActing ? 0 : Math.floor(rows.length / pageSize) * pageSize);
     },
     [isMisCoordinatorActing, onRowsChange, pageSize, readOnly, rows.length],
   );

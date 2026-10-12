@@ -47,6 +47,7 @@ export async function sendNpdApprovalNotification(
     payload.request.Id,
     includeActionButtons,
     siteUrl,
+    payload.role,
   );
   if (includeActionButtons && !siteUrl) {
     console.error(
