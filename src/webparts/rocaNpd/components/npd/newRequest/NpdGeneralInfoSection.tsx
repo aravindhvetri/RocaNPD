@@ -109,6 +109,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           placeholder="Select Brand"
           disabled={brandLoading || readOnly}
           filter
+          className={styles.inlineField}
           onChange={(value) =>
             onBrandChange(typeof value === "string" ? value : null)
           }
@@ -121,6 +122,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           options={materialTypeOptions}
           placeholder="Select Material Type"
           disabled={readOnly}
+          className={styles.inlineField}
           onChange={(value) =>
             onMaterialTypeChange(typeof value === "string" ? value : null)
           }
@@ -139,6 +141,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           disabled={plantDisabled}
           helperText={plantHelperText}
           filter={isFinishedProducts}
+          className={styles.inlineField}
           onChange={(value) =>
             onPlantSourceChange(typeof value === "string" ? value : null)
           }

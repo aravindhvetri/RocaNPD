@@ -152,19 +152,44 @@ export function getNpdEmailIntro(
   return "An NPD request requires your attention.";
 }
 
+function resolveEmailLoginViewAs(
+  recipientRole?: string,
+  includeActionButtons?: boolean,
+): string | undefined {
+  const normalized = (recipientRole || "").trim().toLowerCase();
+  if (normalized === Config.Roles.MisCoordinator.toLowerCase()) {
+    return Config.Roles.MisCoordinator;
+  }
+  if (normalized === Config.Roles.VerticalHead.toLowerCase()) {
+    return Config.Roles.VerticalHead;
+  }
+  if (normalized === Config.Roles.Initiator.toLowerCase()) {
+    return Config.Roles.Initiator;
+  }
+  if (normalized === Config.Roles.Consultant.toLowerCase()) {
+    return Config.Roles.Consultant;
+  }
+  if (includeActionButtons) {
+    return Config.Roles.VerticalHead;
+  }
+  return undefined;
+}
+
 export function getNpdEmailLoginUrl(
   action: string,
   requestId: number,
   includeActionButtons: boolean,
   siteUrl?: string,
+  recipientRole?: string,
 ): string {
+  const viewAs = resolveEmailLoginViewAs(recipientRole, includeActionButtons);
   if (action === "Approved" || action === "Reject") {
-    return buildNpdEmailLoginUrl(requestId, "view", siteUrl);
+    return buildNpdEmailLoginUrl(requestId, "view", siteUrl, viewAs);
   }
   if (requestId && requestId > 0) {
-    return buildNpdEmailLoginUrl(requestId, "edit", siteUrl);
+    return buildNpdEmailLoginUrl(requestId, "edit", siteUrl, viewAs);
   }
-  return buildNpdPendingUrl(siteUrl);
+  return buildNpdPendingUrl(siteUrl, viewAs);
 }
 
 export function greetingNameFromEmail(email: string): string {

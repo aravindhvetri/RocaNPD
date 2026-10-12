@@ -23,6 +23,11 @@ export interface IBeginUiProcessingOptions {
    * Other actions should leave this false (Processing label only).
    */
   showItemProgress?: boolean;
+  /**
+   * Slower, even animation for Initiator Send Request / Resubmit only.
+   * Does not change how many rows are saved.
+   */
+  submitPace?: boolean;
 }
 
 /**
@@ -52,15 +57,23 @@ export function beginUiProcessing(
   }
 
   const startedAt = Date.now();
-  const durationMs = Math.min(10000, Math.max(4000, 2500 + safeTotal * 25));
-  // Hold near the end until finishUiProcessing. For small totals, hold at
-  // total-1 so the caption still climbs through each line (not stuck at 1/N).
-  const holdAt = safeTotal <= 5 ? Math.max(1, safeTotal - 1) : safeTotal - 5;
+  const submitPace = Boolean(options?.submitPace);
+  // Submit: longer, linear pace so the bar does not race to the last few
+  // lines and then sit. Other item progress keeps the existing timing.
+  const durationMs = submitPace
+    ? Math.min(50000, Math.max(9000, 6000 + safeTotal * 95))
+    : Math.min(10000, Math.max(4000, 2500 + safeTotal * 25));
+  // Hold the last line until the save actually finishes.
+  const holdAt = submitPace
+    ? Math.max(1, safeTotal - 1)
+    : safeTotal <= 5
+      ? Math.max(1, safeTotal - 1)
+      : safeTotal - 5;
   progressTimerId = window.setInterval(() => {
     const elapsed = Date.now() - startedAt;
-    const ratio = Math.min(0.9, elapsed / durationMs);
-    const eased = 1 - (1 - ratio) * (1 - ratio);
-    const percent = Math.max(3, Math.round(eased * 90));
+    const ratio = Math.min(submitPace ? 1 : 0.9, elapsed / durationMs);
+    const eased = submitPace ? ratio : 1 - (1 - ratio) * (1 - ratio);
+    const percent = Math.max(3, Math.round(eased * (submitPace ? 96 : 90)));
     const rawCurrent = Math.max(1, Math.round(eased * safeTotal));
     const current = Math.min(holdAt, rawCurrent);
     dispatch(

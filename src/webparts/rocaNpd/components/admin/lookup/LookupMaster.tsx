@@ -8,7 +8,6 @@ import type {
 } from "../../../../../External/CommonServices/Interface";
 import {
   buildImportValidationRows,
-  ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { exportLookupsToExcel, LOOKUP_IMPORT_HEADERS } from "../../../../../External/CommonServices/lookupService";
@@ -304,9 +303,10 @@ const LookupMaster: React.FC = () => {
   const handleImportFile = async (file: File): Promise<void> => {
     try {
       const result = await dispatch(previewImportLookups(file)).unwrap();
+      // Parser already builds full messages including Lookup Type + Code.
       const validationRows = buildImportValidationRows(
         result.duplicates,
-        ImportValidationMessages.duplicateLookupName,
+        "",
         result.errors,
       );
 

@@ -86,7 +86,12 @@ function parseBackupJson(raw: string): INpdItemDetailRecord[] {
       const row = entry as Record<string, unknown>;
       const asStringArray = (value: unknown): string[] =>
         Array.isArray(value)
-          ? value.map((part) => String(part ?? "").trim()).filter(Boolean)
+          ? value
+              .map((part) => String(part ?? "").trim())
+              .filter((part) => {
+                const key = part.toLowerCase();
+                return Boolean(part) && key !== "null" && key !== "undefined";
+              })
           : [];
       const weightRaw = row.weightKg;
       const weightNumber = Number(weightRaw);
@@ -259,10 +264,12 @@ export async function tryLoadNpdItemDetailsBackup(
 /**
  * Prefer backup order/content; stamp sharePointId / SAP flags from rows already
  * stored in NPD_ItemDetails so resubmit inserts only the missing lines.
+ * Soft-deleted SharePoint keys are never resurrected from backup alone.
  */
 export function mergeNpdItemDetailsWithBackup(
   storedItems: INpdItemDetailRecord[],
   backupItems: INpdItemDetailRecord[],
+  softDeletedMatchKeys?: ReadonlySet<string>,
 ): INpdItemDetailRecord[] {
   if (!backupItems.length) {
     return storedItems;
@@ -287,23 +294,39 @@ export function mergeNpdItemDetailsWithBackup(
     return undefined;
   };
 
-  const merged: INpdItemDetailRecord[] = backupItems.map((backupItem) => {
+  const merged: INpdItemDetailRecord[] = [];
+  for (const backupItem of backupItems) {
+    const key = buildNpdItemDetailsMatchKey(backupItem);
     const stored = takeStoredMatch(backupItem);
     if (!stored) {
-      return {
+      // IsDeleted=true in SharePoint — do not show from stale JSON backup.
+      if (key && softDeletedMatchKeys?.has(key)) {
+        continue;
+      }
+      merged.push({
         ...backupItem,
         sharePointId: 0,
         sapPosted: false,
-      };
+      });
+      continue;
     }
-    return {
+    merged.push({
       ...backupItem,
       sharePointId: stored.sharePointId,
       sapPosted: Boolean(stored.sapPosted),
       isMisAdded: Boolean(stored.isMisAdded || backupItem.isMisAdded),
-    };
-  });
+    });
+  }
 
   // Keep any stored rows that were not represented in the backup (should be rare).
-  return [...merged, ...unusedStored];
+  const combined = [...merged, ...unusedStored];
+  // MIS-added rows first; then remaining by SharePoint Id.
+  return combined.sort((left, right) => {
+    const leftMis = left.isMisAdded ? 0 : 1;
+    const rightMis = right.isMisAdded ? 0 : 1;
+    if (leftMis !== rightMis) {
+      return leftMis - rightMis;
+    }
+    return (left.sharePointId || 0) - (right.sharePointId || 0);
+  });
 }

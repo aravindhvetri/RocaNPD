@@ -21,7 +21,7 @@
     .p-datatable-thead > tr > th {
       background-color: $roca-color-master-table-header;
       color: $roca-color-text-inverse;
-      font-size: 0.8125rem;
+      font-size: calc(0.8125rem + 1px);
       font-weight: 400;
       padding: 0.5rem 0.5rem;
       border: none !important;
@@ -214,4 +214,13 @@
   padding: 0;
   text-align: left;
   color: $roca-color-text-muted;
+}
+
+/* Plain-text cells: truncate with ellipsis; full value via native title tooltip. */
+.ellipsisText {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

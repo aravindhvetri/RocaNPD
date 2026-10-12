@@ -15,9 +15,9 @@
 | Phase 2 — SharePoint Data Structure | 22 | 15 | In Progress |
 | Phase 3 — Security & Role Management | 18 | 17 | In Progress |
 | Phase 4 — Admin Module | 87 | 82 | In Progress |
-| Phase 5 — NPD Initiator Module | 53 | 52 | In Progress |
+| Phase 5 — NPD Initiator Module | 54 | 53 | In Progress |
 | Phase 6 — NPD Vertical Head Module | 23 | 23 | Complete |
-| Phase 7 — NPD MIS Coordinator Module | 26 | 26 | Complete |
+| Phase 7 — NPD MIS Coordinator Module | 27 | 27 | Complete |
 | Phase 8 — Material Group Initiator Module | 22 | 22 | Complete |
 | Phase 9 — Material Group Consultant Module | 22 | 22 | Complete |
 | Phase 10 — Workflow Automation | 19 | 17 | In Progress |
@@ -28,9 +28,9 @@
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **440** | **340** | **In Progress** |
+| **TOTAL** | **442** | **342** | **In Progress** |
 
-**Last Updated:** 09 October 2026
+**Last Updated:** 12 October 2026
 
 ---
 
@@ -378,6 +378,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0526** Block Initiator Submit when Item Details Material Code / Description already exist in `NPD_MaterialMaster` (trim + lowercase); MIS Post to SAP uses the same check (`excludeRequestId` for retries)
 - [x] **T-0526a** Show Processing loader during Material Master duplicate validation; after pass, restore Submit line-item progress bar (`showItemProgress`) — Pending/Draft destination must not mount a second LoaderOverlay that hides progress
 - [x] **T-0526b** Draft / Rework open shows rows already in `NPD_ItemDetails` plus JSON backup rows that were not inserted. Opening the form does not insert them. Resubmit inserts only the missing rows and does not create duplicates. Save Draft does not insert those backup-only rows
+- [x] **T-0526c** Submit writes the full Item Details grid to the `NPD_Request` attachment first. Network drop moves the request to Draft, stops further `NPD_ItemDetails` inserts, and does not resume when the network returns. The next Send Request inserts only rows not already in `NPD_ItemDetails`. Draft Products count is the saved list count (not the attachment). Progress bar shows remaining rows only
 - [x] **T-0501c** NPD/MG Drafts visible only in Initiator module lists — not Admin / VH / MIS / Consultant All Requests
 - [x] **T-0524** Validate Roca Global Code when applicable — Toast on Submit
 - [x] **T-0525** Validate at least one item row on submit — Toast on Submit
@@ -445,7 +446,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0718** Fix MIS Rework/Reject: update `NPD_Request` Status/WorkFlowJSON + write Approver Comments; no Item-added overlay
 - [x] **T-0719** Highlight only MIS Coordinator-added rows in NPD Item Details (yellow background `#fefce8` + amber accent `#eab308`); persist across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
 - [x] **T-0720** Other Details: show only in MIS Coordinator module (`?as=`) until Approved; after Post to SAP / Approved show in all modules; dual-role VH+MIS must not see Other Details in VH module
-- [x] **T-0721** NPD Item Details: preserve original add order (Id ascending); MIS-added rows must not jump to top (MG keeps latest-first)
+- [x] **T-0721** NPD Item Details: MIS Coordinator-added rows display first in the DataTable; remaining Initiator rows keep Id ascending order
+- [x] **T-0721a** NPD Item Details soft-delete via `IsDeleted=true` (no recycle); all Item Details fetches filter `IsDeleted=false` so deleted lines never reappear for VH / Initiator / MIS
 
 ---
 
@@ -721,6 +723,8 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 07 Oct 2026 | Excel import: no silent numeric extract; reject special chars with row/field messages; Lookup template download preserves Library formatting | T-0498c, T-0498d, T-0517a |
 | 07 Oct 2026 | Item Details Bulk Delete when &gt;2 rows; MG Code+Description single Lookup check; Import validation columns S.NO + Error only | T-0515a, T-0811d, T-0498e |
 | 09 Oct 2026 | Draft / Rework shows unsaved JSON backup rows without inserting them; Resubmit inserts only the missing rows. Post to SAP stops on network loss, stays on the form, and retries only `SAP=false` lines | T-0526b, T-1107a |
+| 11 Oct 2026 | Submit network drop: stop Item Details inserts immediately, do not auto-resume, retry only remaining list rows; Draft Products = saved `NPD_ItemDetails` count; progress bar = remaining only | T-0526c |
+| 12 Oct 2026 | MIS Item Details rows display first; Item Details soft-delete via IsDeleted + filter active rows on fetch/resubmit | T-0721, T-0721a |
 
 ---
 

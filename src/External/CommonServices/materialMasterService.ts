@@ -3,6 +3,7 @@ import {
   FieldLabels,
   MaterialMasterItemTypes,
   MaterialMasterUi,
+  SharePointMutateBatchSize,
 } from "./Config";
 import type { IMaterialMasterRow, INpdItemDetailRecord, ISelectOption } from "./Interface";
 import { fetchActiveLookups } from "./lookupService";
@@ -1230,8 +1231,8 @@ export async function insertMaterialMasterFromNpdItems(params: {
     }),
   );
 
-  // SharePoint batch has practical size limits — insert in chunks.
-  const chunkSize = 50;
+  // SharePoint batch has practical size limits — insert in chunks of 100.
+  const chunkSize = SharePointMutateBatchSize;
   for (let index = 0; index < payloads.length; index += chunkSize) {
     const chunk = payloads.slice(index, index + chunkSize);
     await SPServices.batchMutate({

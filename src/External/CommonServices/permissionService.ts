@@ -565,12 +565,29 @@ export function canViewRequest(
     statusLower === "in rework";
 
   // Draft / Rework stay with the Initiator — never on VH / MIS lists.
-  if (
-    request.module === "npd" &&
-    (isDraftStatus || isReworkStatus) &&
-    (role === VerticalHead || role === MisCoordinator)
-  ) {
-    return false;
+  // Also hide blank Status / workflow-only Rework (Status field missing after action).
+  if (request.module === "npd" && (role === VerticalHead || role === MisCoordinator)) {
+    if (isDraftStatus || isReworkStatus) {
+      return false;
+    }
+    const statusLowerBlank = !(request.status || "").trim();
+    if (statusLowerBlank) {
+      return false;
+    }
+    const steps = request.workflowSteps ?? [];
+    const hasReworkStep = steps.some(
+      (step) =>
+        (step.Status || "").trim().toLowerCase() ===
+        Config.WorkflowStepStatus.Rework.toLowerCase(),
+    );
+    const hasPending = steps.some(
+      (step) =>
+        (step.Status || "").trim().toLowerCase() ===
+        Config.WorkflowStepStatus.Pending.toLowerCase(),
+    );
+    if (hasReworkStep && !hasPending) {
+      return false;
+    }
   }
 
   // Stage visibility uses the request already loaded (status + WorkFlowJSON).
@@ -668,6 +685,41 @@ export function canActOnPendingNpdStep(
   return false;
 }
 
+export const INITIATOR_ACCESS_DENIED_MESSAGE =
+  "You are no longer the Initiator for this request, so you do not have access to this record.";
+
+/**
+ * True when ApproversMaster (already loaded at login) has this user as
+ * Initiator for `system`. When `brand` is set, that Brand lookup must match.
+ * Does not apply MG↔NPD brand fallback.
+ */
+export function isApproversMasterInitiatorForBrand(
+  access: IResolvedUserAccess,
+  brand: string | undefined,
+  system: string,
+): boolean {
+  const systemKey = system.trim().toLowerCase();
+  if (!systemKey) {
+    return false;
+  }
+
+  const brandKey = normalizeBrandTitle(brand);
+  return access.assignments.some((assignment) => {
+    if (assignment.role !== Initiator) {
+      return false;
+    }
+    if ((assignment.system ?? "").trim().toLowerCase() !== systemKey) {
+      return false;
+    }
+    if (!brandKey) {
+      return true;
+    }
+    return assignment.brands.some(
+      (entry) => normalizeBrandTitle(entry) === brandKey,
+    );
+  });
+}
+
 /**
  * True when ApproversMaster has this user as NPD Initiator for the brand.
  * Uses in-memory `access.assignments` only (no SharePoint calls).
@@ -677,23 +729,11 @@ export function isNpdApproversMasterInitiatorForBrand(
   access: IResolvedUserAccess,
   brand?: string,
 ): boolean {
-  const brandKey = normalizeBrandTitle(brand);
-  if (!brandKey) {
-    return false;
-  }
-
-  const npdKey = ApproverSystems.NewProductDevelopment.toLowerCase();
-  return access.assignments.some((assignment) => {
-    if (assignment.role !== Initiator) {
-      return false;
-    }
-    if ((assignment.system ?? "").trim().toLowerCase() !== npdKey) {
-      return false;
-    }
-    return assignment.brands.some(
-      (entry) => normalizeBrandTitle(entry) === brandKey,
-    );
-  });
+  return isApproversMasterInitiatorForBrand(
+    access,
+    brand,
+    ApproverSystems.NewProductDevelopment,
+  );
 }
 
 export function canActOnNpdBrand(

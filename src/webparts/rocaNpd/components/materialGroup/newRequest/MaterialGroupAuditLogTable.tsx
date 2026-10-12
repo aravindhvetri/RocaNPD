@@ -148,7 +148,12 @@ const MaterialGroupAuditLogTable: React.FC<IMaterialGroupAuditLogTableProps> = (
         header: "Action",
         style: { width: "10rem", minWidth: "9rem" },
         body: (row) => (
-          <span className={styles.actionText}>{row.status || "—"}</span>
+          <span
+            className={styles.actionText}
+            title={row.status?.trim() ? row.status : undefined}
+          >
+            {row.status || "—"}
+          </span>
         ),
       },
       {

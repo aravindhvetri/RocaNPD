@@ -8,7 +8,6 @@ import {
   buildMissingImportHeadersError,
   findBestHeaderRowIndex,
   findColumnIndex,
-  appendImportNoSpecialCharactersErrors,
   importDigitsOnlyError,
   importNumericOnlyError,
   parseImportNumericValue,
@@ -248,8 +247,10 @@ function resolveColumnIndex(headerRow: string[], column: IImportColumn): number 
 }
 
 function splitCellValues(value: string): string[] {
+  // Match Item Details persist separator ("; ") — do not split on commas inside
+  // Lookup names such as "Vitreous china WC, Basins, Ur".
   return value
-    .split(/[;,\n]/)
+    .split(/;|\n/)
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
@@ -504,14 +505,9 @@ export async function parseNpdItemDetailsImportFile(
             errors.push(formatError);
             return;
           }
-        } else if (
-          appendImportNoSpecialCharactersErrors(errors, excelRowNumber, [
-            { raw, fieldLabel: column.header },
-          ])
-        ) {
-          // Still validate remaining columns on this row — do not short-circuit the row.
-          return;
         }
+        // Roca Global Code / Material Code / Material Description / HSN Code
+        // accept special characters — no special-character import check.
         if (column.maxLength && raw.length > column.maxLength) {
           errors.push(
             `Row ${excelRowNumber}: ${column.header} must be ${column.maxLength} characters or fewer.`,

@@ -11,9 +11,10 @@
 }
 
 .fullScreen {
-  position: absolute;
+  /* Fixed + above PrimeDialog masks so Import loader stays visible for any size. */
+  position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 110010;
   min-height: 100%;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);

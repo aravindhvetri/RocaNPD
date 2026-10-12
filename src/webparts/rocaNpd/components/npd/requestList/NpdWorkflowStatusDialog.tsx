@@ -44,12 +44,13 @@ const NpdWorkflowStatusDialog: React.FC<INpdWorkflowStatusDialogProps> = ({
                 key={row.key}
                 className={row.isHighlighted ? styles.currentRow : undefined}
               >
-                <td>{row.role}</td>
-                <td>{row.name}</td>
-                <td>{row.workflowRole}</td>
+                <td title={row.role || undefined}>{row.role}</td>
+                <td title={row.name || undefined}>{row.name}</td>
+                <td title={row.workflowRole || undefined}>{row.workflowRole}</td>
                 <td>
                   <span
                     className={`${styles.statusPill} ${statusClass(row.statusLabel)}`}
+                    title={row.statusLabel || undefined}
                   >
                     {row.statusLabel}
                   </span>

@@ -27,7 +27,7 @@ const MaterialGroupApproverRemarks: React.FC<
         id="mgApproverRemarks"
         label={label}
         required={required}
-        rows={5}
+        rows={4}
         value={value}
         disabled={disabled}
         placeholder={placeholder}

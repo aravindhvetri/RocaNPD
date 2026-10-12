@@ -129,7 +129,7 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
       }
     }
 
-    // New Material Group Submit: Code / Description duplicates are allowed.
+    // Code uniqueness within Lookup Type is enforced in materialGroupService.submit.
 
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);
     const comments =

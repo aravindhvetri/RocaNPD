@@ -16,7 +16,7 @@
 | D — Security & Roles | 31 | 30 | 1 |
 | E — UI / UX / Theme | 41 | 35 | 6 |
 | F — Admin Module | 73 | 70 | 3 |
-| G — NPD Module | 95 | 94 | 1 |
+| G — NPD Module | 97 | 96 | 1 |
 | H — Material Group Module | 41 | 41 | 0 |
 | I — Workflow & Automation | 20 | 18 | 2 |
 | J — SAP Integration | 19 | 10 | 9 |
@@ -26,9 +26,9 @@
 | N — Testing | 26 | 0 | 26 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 22 | 0 | 22 |
-| **TOTAL** | **530** | **395** | **135** |
+| **TOTAL** | **532** | **397** | **135** |
 
-**Last Updated:** 09 October 2026
+**Last Updated:** 12 October 2026
 
 ---
 
@@ -459,6 +459,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G26h** Initiator Submit blocked when Material Code / Description already exists in Material Master (toast); MIS Post to SAP uses the same rule
 - [x] **CHK-G26i** Processing loader shown while Material Master duplicate validation runs; after pass, Submit line-item progress bar (`n / total`) appears as usual (Pending page does not cover it with a second overlay)
 - [x] **CHK-G26j** Draft / Rework shows Item Details already saved in `NPD_ItemDetails` and the remaining rows from the JSON backup. Opening the form does not insert them. Resubmit inserts only the missing rows and does not create duplicates
+- [x] **CHK-G26k** After a Submit network drop: request stays Draft; remaining `NPD_ItemDetails` inserts stop and do not continue when the network returns; the next Send Request inserts only unsaved rows; Draft Products shows the saved list count (not attachment rows); the form still shows attachment + list comparison; progress bar counts remaining rows only
 - [x] **CHK-G27** Roca Global Code validated when applicable — validation Toast on Submit
 - [x] **CHK-G28** At least one item row required on submit — validation Toast on Submit
 
@@ -485,7 +486,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G37c** MIS Post to SAP / Approve blocked until every Item Details row has required fields filled (same rule as Initiator Submit)
 - [x] **CHK-G37d** MIS Profit Center is mandatory — empty value blocks Rework, Reject, and Post to SAP (error toast; also enforced in workflow thunk)
 - [x] **CHK-G37a** Newly added Item Details rows by MIS Coordinator highlighted in yellow (`#fefce8`) with amber border (`#eab308`); persists across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
-- [x] **CHK-G37b** NPD Item Details keep original add order (SharePoint Id ascending); MIS-added rows stay at the end — not latest-first (MG lists keep latest-first)
+- [x] **CHK-G37b** NPD Item Details: MIS Coordinator-added rows appear first in the DataTable; remaining rows keep SharePoint Id ascending order
+- [x] **CHK-G37g** Deleting an Item Details row sets `IsDeleted=true` (soft-delete). Fetches for the form, VH/MIS views, and Products count exclude `IsDeleted=true`. Soft-deleted MIS rows do not reappear after Initiator Resubmit
 - [x] **CHK-G38** Other Details section displays all SAP fields
 - [x] **CHK-G38a** Other Details visible only in MIS Coordinator module (`?as=`) before Approved; dual-role VH+MIS must not see it in VH module; after Approved/Post to SAP visible in all modules (Initiator, VH, MIS)
 - [x] **CHK-G39** Storage Location auto-populated from ROCA `PlantMaster`
@@ -859,6 +861,8 @@ Use this table to sign off each phase only when all related checklist items are 
 | 07 Oct 2026 | Excel import rejects invalid numeric/special-char cells (no silent extract); Library template download preserves formatting | CHK-B31d, CHK-B31e, CHK-F09l, CHK-G18a |
 | 07 Oct 2026 | Item Details Bulk Delete only when &gt;2 rows; MG Code+Description one Lookup fetch + combined message; Import validation S.NO + Error only | CHK-G16c, CHK-H11d, CHK-B31f |
 | 09 Oct 2026 | Draft / Rework shows unsaved JSON backup rows without inserting them; Resubmit inserts only the missing rows. Post to SAP stops on network loss, stays on the form, and retries only SAP=false lines | CHK-G26j, CHK-J19 |
+| 11 Oct 2026 | Submit network drop stops Item Details inserts (no auto-resume); retry inserts remaining rows only; Draft Products = saved list count; progress = remaining | CHK-G26k |
+| 12 Oct 2026 | MIS Item Details rows first in DataTable; soft-delete IsDeleted + filter so deleted rows never reappear for VH | CHK-G37b, CHK-G37g |
 
 ---
 

@@ -36,6 +36,9 @@
     color: $roca-color-text-primary;
     border-bottom: 1px solid $roca-color-border-light;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   tbody tr:last-child td {

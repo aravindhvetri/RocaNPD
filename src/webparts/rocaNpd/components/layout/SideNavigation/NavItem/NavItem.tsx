@@ -59,7 +59,9 @@ const NavItem: React.FC<INavItemProps> = ({ item, onNavigate }) => {
         className={`${item.icon} ${styles.icon} ${iconToneClass[tone]}`}
         aria-hidden="true"
       />
-      <span className={styles.label}>{item.label}</span>
+      <span className={styles.label} title={item.label}>
+        {item.label}
+      </span>
     </NavLink>
   );
 };

@@ -49,7 +49,7 @@ const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
       <div className={styles.primaryActions}>
         {showSaveDraft ? (
           <Button
-            label="Save Draft"
+            label="Save as Draft"
             variant="secondary"
             icon="pi pi-save"
             size="sm"

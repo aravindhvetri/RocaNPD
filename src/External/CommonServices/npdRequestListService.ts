@@ -2,6 +2,7 @@ import { ApproverSystems, Config, RequestStatus } from "./Config";
 import type {
   INpdRequestGeneralInfo,
   INpdRequestListItem,
+  INpdWorkflowStepJson,
   IResolvedUserAccess,
 } from "./Interface";
 import { isNpdRequestIdTitle } from "./npdRequestIdService";
@@ -23,6 +24,8 @@ import {
   parseViewAsRole,
 } from "./permissionService";
 import type { NavViewRole } from "./navigationConfig";
+import { getActiveRecordFilters, SOFT_DELETE_FIELD } from "./softDelete";
+import { isDeletedYesFlag } from "./lookupFieldUtils";
 import SPServices from "./SPServices";
 
 const ITEM_FIELDS = Config.FieldNames.NpdItemDetails;
@@ -52,9 +55,13 @@ function getLookupId(value: unknown): number {
 async function fetchItemSummaries(): Promise<Map<number, IItemSummary>> {
   const rows = (await SPServices.SPReadItems({
     Listname: Config.ListNames.NpdItemDetails,
-    Select: ["Id", ITEM_FIELDS.MaterialDescription, ITEM_FIELDS.RequestGeneralInfoId].join(
-      ",",
-    ),
+    Select: [
+      "Id",
+      ITEM_FIELDS.MaterialDescription,
+      ITEM_FIELDS.RequestGeneralInfoId,
+      ITEM_FIELDS.IsDeleted,
+    ].join(","),
+    Filter: getActiveRecordFilters(),
     Orderby: "Id",
     Orderbydecorasc: true,
     Topcount: 5000,
@@ -62,6 +69,9 @@ async function fetchItemSummaries(): Promise<Map<number, IItemSummary>> {
 
   const summaries = new Map<number, IItemSummary>();
   rows.forEach((row) => {
+    if (isDeletedYesFlag(row[SOFT_DELETE_FIELD] ?? row.IsDeleted)) {
+      return;
+    }
     const requestId = getLookupId(row[ITEM_FIELDS.RequestGeneralInfoId]);
     if (!requestId) {
       return;
@@ -95,8 +105,45 @@ function toListItem(
   return {
     ...item,
     ProjectName: projectName.trim(),
+    // Draft Products = rows actually stored in NPD_ItemDetails, never the
+    // JSON backup attachment count (backup can still hold unsaved lines).
     ProductCount: summary?.count ?? 0,
   };
+}
+
+/**
+ * VH / MIS All Requests must not show Initiator-owned Draft / Rework rows.
+ * Also treats workflow-indicated Rework (and blank Status) as Initiator-only so
+ * a missing/cleared Status field cannot leave the row visible after Rework.
+ */
+export function isNpdHiddenFromApproverAllRequests(
+  status: string,
+  workflowSteps: readonly INpdWorkflowStepJson[] = [],
+): boolean {
+  const statusLower = (status || "").trim().toLowerCase();
+  if (!statusLower) {
+    return true;
+  }
+  if (statusLower === RequestStatus.Draft.toLowerCase()) {
+    return true;
+  }
+  if (
+    statusLower === RequestStatus.Rework.toLowerCase() ||
+    statusLower === "in rework"
+  ) {
+    return true;
+  }
+
+  const hasReworkStep = workflowSteps.some(
+    (step) =>
+      (step.Status || "").trim().toLowerCase() ===
+      Config.WorkflowStepStatus.Rework.toLowerCase(),
+  );
+  if (!hasReworkStep) {
+    return false;
+  }
+
+  return !getFirstPendingApproverRole(workflowSteps).trim();
 }
 
 export async function fetchNpdDashboardItems(
@@ -113,21 +160,19 @@ export async function fetchNpdDashboardItems(
   return requests
     .filter((item) => {
       const role = scopedRole;
-      const statusLower = item.Status.trim().toLowerCase();
       // Drafts belong only on Initiator lists (All / Draft-Rework), never Admin / VH / MIS.
       if (
         role &&
         role !== Config.Roles.Initiator &&
-        statusLower === RequestStatus.Draft.toLowerCase()
+        item.Status.trim().toLowerCase() === RequestStatus.Draft.toLowerCase()
       ) {
         return false;
       }
-      // Rework is Initiator-only — hide from VH / MIS All Requests.
+      // Rework (and blank Status / workflow Rework) — Initiator-only for VH / MIS.
       if (
         (role === Config.Roles.VerticalHead ||
           role === Config.Roles.MisCoordinator) &&
-        (statusLower === RequestStatus.Rework.toLowerCase() ||
-          statusLower === "in rework")
+        isNpdHiddenFromApproverAllRequests(item.Status, item.WorkflowSteps)
       ) {
         return false;
       }

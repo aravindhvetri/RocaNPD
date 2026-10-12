@@ -208,6 +208,8 @@
 }
 
 .requestId {
+  display: block;
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -217,6 +219,9 @@
   font-family: "Poppins", sans-serif;
   cursor: pointer;
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &:hover {
     color: $roca-color-text-link-hover;

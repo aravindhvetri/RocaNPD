@@ -67,7 +67,13 @@ const MaterialMasterTable: React.FC<IMaterialMasterTableProps> = ({
             return renderUserCell(row.Initiator, row.InitiatorEmail);
           }
           const text = String(row[column.field] ?? "").trim();
-          return text ? text : <EmptyDash />;
+          return text ? (
+            <span className={styles.cellText} title={text}>
+              {text}
+            </span>
+          ) : (
+            <EmptyDash />
+          );
         },
       })),
     [columns],

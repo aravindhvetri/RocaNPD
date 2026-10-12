@@ -39,7 +39,9 @@ const NavPrimaryAction: React.FC<INavPrimaryActionProps> = ({
       <span className={styles.iconWrap}>
         <i className={`${item.icon} ${styles.icon}`} aria-hidden="true" />
       </span>
-      <span className={styles.label}>{item.label}</span>
+      <span className={styles.label} title={item.label}>
+        {item.label}
+      </span>
     </NavLink>
   );
 };
