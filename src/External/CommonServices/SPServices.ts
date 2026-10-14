@@ -27,6 +27,7 @@ import type { WebPartContext } from "@microsoft/sp-webpart-base";
 import {
   IFilter,
   IListItems,
+  ICamlListItems,
   IListItemUsingId,
   IAddList,
   IUpdateList,
@@ -52,6 +53,7 @@ import {
   IRemoveFiles,
   IAzureUsers,
 } from "./ISPServicesProps";
+import { SharePointMutateBatchSize } from "./Config";
 import { MSGraphClient } from "@microsoft/sp-http";
 import * as moment from "moment";
 
@@ -151,6 +153,194 @@ const SPReadItems = async (params: IListItems): Promise<[]> => {
     .orderBy(params.Orderby || "ID", params.Orderbydecorasc)()) as [];
 };
 
+/**
+ * Fetches list items with a single CAML ViewXml query (no OData $skip paging).
+ * Prefer this for large catalog loads (e.g. Material Master) instead of many
+ * 50-row REST pages.
+ */
+const SPReadItemsByCaml = async (
+  params: ICamlListItems,
+): Promise<Record<string, unknown>[]> => {
+  const list = getSP().web.lists.getByTitle(params.Listname) as {
+    getItemsByCAMLQuery?: (
+      query: { ViewXml: string },
+      ...expansions: string[]
+    ) => Promise<unknown>;
+  };
+
+  if (typeof list.getItemsByCAMLQuery !== "function") {
+    throw new Error(
+      "CAML list queries are not available in this SharePoint runtime.",
+    );
+  }
+
+  const expansions = (params.Expand || [])
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+
+  const result = await list.getItemsByCAMLQuery(
+    { ViewXml: params.ViewXml },
+    ...expansions,
+  );
+
+  if (Array.isArray(result)) {
+    return result as Record<string, unknown>[];
+  }
+
+  if (result && typeof result === "object") {
+    const record = result as Record<string, unknown>;
+    if (Array.isArray(record.value)) {
+      return record.value as Record<string, unknown>[];
+    }
+    if (Array.isArray(record.results)) {
+      return record.results as Record<string, unknown>[];
+    }
+  }
+
+  return [];
+};
+
+/**
+ * Fetches all matching list items in pages of `PageSize` (default 50).
+ * Uses getPaged()/getNext() when the PnP runtime provides them; otherwise pages
+ * by Id in the same 50-row batches (SharePoint list items reject $skip).
+ */
+const SPReadItemsPaged = async (
+  params: IListItems & { PageSize?: number },
+): Promise<Record<string, unknown>[]> => {
+  const pageSize =
+    Number(params.PageSize) > 0
+      ? Number(params.PageSize)
+      : Number(params.Topcount) > 0
+        ? Number(params.Topcount)
+        : 50;
+
+  const filterValue: string = formatFilterValue(
+    params.Filter || [],
+    params.FilterCondition ? params.FilterCondition : "",
+  );
+  const selectFields = String(params.Select || "*")
+    .split(",")
+    .map((field) => field.trim())
+    .filter(Boolean);
+  const expandFields = String(params.Expand || "")
+    .split(",")
+    .map((field) => field.trim())
+    .filter(Boolean);
+  const orderAscending = params.Orderbydecorasc !== false;
+
+  const buildQuery = (extraFilter?: string): any => {
+    let query: any = getSP()
+      .web.lists.getByTitle(params.Listname)
+      .items.select(...selectFields);
+
+    const filters: string[] = [];
+    if (filterValue) {
+      filters.push(`(${filterValue})`);
+    }
+    if (extraFilter) {
+      filters.push(extraFilter);
+    }
+    if (filters.length) {
+      query = query.filter(filters.join(" and "));
+    }
+    if (expandFields.length) {
+      query = query.expand(...expandFields);
+    }
+    if (params.Orderby) {
+      query = query.orderBy(params.Orderby, orderAscending);
+    }
+    return query.top(pageSize);
+  };
+
+  const all: Record<string, unknown>[] = [];
+  const seenIds = new Set<number>();
+
+  const pushRows = (rows: unknown): number => {
+    if (!Array.isArray(rows) || !rows.length) {
+      return 0;
+    }
+    let added = 0;
+    (rows as Record<string, unknown>[]).forEach((row) => {
+      const id = Number(row?.Id ?? row?.ID);
+      if (Number.isFinite(id) && id > 0) {
+        if (seenIds.has(id)) {
+          return;
+        }
+        seenIds.add(id);
+      }
+      all.push(row);
+      added += 1;
+    });
+    return added;
+  };
+
+  const firstQuery = buildQuery();
+
+  // Classic getPaged / getNext (user-provided pattern).
+  if (typeof firstQuery.getPaged === "function") {
+    let page = await firstQuery.getPaged();
+    pushRows(page?.results);
+    let guard = 0;
+    while (page?.hasNext && typeof page.getNext === "function" && guard < 10000) {
+      guard += 1;
+      page = await page.getNext();
+      const added = pushRows(page?.results);
+      if (added === 0) {
+        break;
+      }
+    }
+    return all;
+  }
+
+  // PnP v4: SharePoint items cannot use $skip. Walk by Id ascending in pageSize batches.
+  // Always page ascending by Id so continuation (Id gt lastId) is reliable regardless of
+  // the caller's preferred display order.
+  {
+    let lastId = 0;
+    for (let guard = 0; guard < 10000; guard += 1) {
+      const idFilter = lastId > 0 ? `Id gt ${lastId}` : undefined;
+      let query: any = getSP()
+        .web.lists.getByTitle(params.Listname)
+        .items.select(...selectFields);
+
+      const filters: string[] = [];
+      if (filterValue) {
+        filters.push(`(${filterValue})`);
+      }
+      if (idFilter) {
+        filters.push(idFilter);
+      }
+      if (filters.length) {
+        query = query.filter(filters.join(" and "));
+      }
+      if (expandFields.length) {
+        query = query.expand(...expandFields);
+      }
+      query = query.orderBy("ID", true).top(pageSize);
+
+      const page = (await query()) as Record<string, unknown>[];
+      if (!Array.isArray(page) || page.length === 0) {
+        break;
+      }
+      const added = pushRows(page);
+      const nextLastId = Number(
+        page[page.length - 1]?.Id ?? page[page.length - 1]?.ID,
+      );
+      if (
+        added === 0 ||
+        !Number.isFinite(nextLastId) ||
+        nextLastId === lastId ||
+        page.length < pageSize
+      ) {
+        break;
+      }
+      lastId = nextLastId;
+    }
+    return all;
+  }
+};
+
 const SPReadItemUsingId = async (params: IListItemUsingId): Promise<[]> => {
   let query = getSP()
     .web.lists.getByTitle(params.Listname)
@@ -246,51 +436,65 @@ const SPDetailsListGroupItems = async (params: IDetailsListGroup) => {
   return varGroup;
 };
 
+const MUTATE_BATCH_SIZE = SharePointMutateBatchSize;
+
+async function runBatchedChunks<T>(
+  rows: T[],
+  runChunk: (chunk: T[]) => Promise<void>,
+): Promise<void> {
+  if (!rows.length) {
+    return;
+  }
+  for (let start = 0; start < rows.length; start += MUTATE_BATCH_SIZE) {
+    await runChunk(rows.slice(start, start + MUTATE_BATCH_SIZE));
+  }
+}
+
 const batchInsert = async (params: {
   ListName: string;
   responseData: any[];
 }): Promise<void> => {
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  for (const data of params.responseData) {
-    list.items.add(data);
-  }
-
-  await execute();
+  await runBatchedChunks(params.responseData || [], async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    for (const data of chunk) {
+      list.items.add(data);
+    }
+    await execute();
+  });
 };
 
 const batchUpdate = async (params: {
   ListName: string;
   responseData: any[];
 }): Promise<void> => {
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  for (const data of params.responseData) {
-    const itemId = Number(data.ID ?? data.Id ?? data.id);
-    const rest = { ...data };
-    delete rest.ID;
-    delete rest.Id;
-    delete rest.id;
-    list.items.getById(itemId).update(rest);
-  }
-
-  await execute();
+  await runBatchedChunks(params.responseData || [], async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    for (const data of chunk) {
+      const itemId = Number(data.ID ?? data.Id ?? data.id);
+      const rest = { ...data };
+      delete rest.ID;
+      delete rest.Id;
+      delete rest.id;
+      list.items.getById(itemId).update(rest);
+    }
+    await execute();
+  });
 };
 
 const batchDelete = async (params: {
   ListName: string;
   responseData: any[];
 }): Promise<void> => {
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  for (const data of params.responseData) {
-    list.items.getById(data.ID).recycle();
-  }
-
-  await execute();
+  await runBatchedChunks(params.responseData || [], async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    for (const data of chunk) {
+      list.items.getById(data.ID).recycle();
+    }
+    await execute();
+  });
 };
 
 const batchMutate = async (params: {
@@ -307,25 +511,39 @@ const batchMutate = async (params: {
     return;
   }
 
-  const [batchedWeb, execute] = getSP().web.batched();
-  const list = batchedWeb.lists.getByTitle(params.ListName);
-
-  toDelete.forEach((row) => {
-    list.items.getById(Number(row.ID)).recycle();
-  });
-  toUpdate.forEach((row) => {
-    const id = Number(row.ID ?? row.Id ?? row.id);
-    const rest = { ...row };
-    delete rest.ID;
-    delete rest.Id;
-    delete rest.id;
-    list.items.getById(id).update(rest);
-  });
-  toInsert.forEach((data) => {
-    list.items.add(data);
+  // Deletes and updates first (full sets, chunked), then inserts — keeps
+  // Lookup import / Item Details resubmit at 100 ops per $batch.
+  await runBatchedChunks(toDelete, async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    chunk.forEach((row) => {
+      list.items.getById(Number(row.ID)).recycle();
+    });
+    await execute();
   });
 
-  await execute();
+  await runBatchedChunks(toUpdate, async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    chunk.forEach((row) => {
+      const id = Number(row.ID ?? row.Id ?? row.id);
+      const rest = { ...row };
+      delete rest.ID;
+      delete rest.Id;
+      delete rest.id;
+      list.items.getById(id).update(rest);
+    });
+    await execute();
+  });
+
+  await runBatchedChunks(toInsert, async (chunk) => {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    chunk.forEach((data) => {
+      list.items.add(data);
+    });
+    await execute();
+  });
 };
 
 const formatInputs = (data: IListItems): IListItems => {
@@ -859,6 +1077,8 @@ export default {
   SPUpdateItem,
   SPDeleteItem,
   SPReadItems,
+  SPReadItemsByCaml,
+  SPReadItemsPaged,
   SPDetailsListGroupItems,
   SPGetChoices,
   SPAddAttachments,

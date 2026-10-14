@@ -108,10 +108,12 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
         sortable: true,
         ...columnSize("8.25rem"),
         body: (row) =>
-          isNpdRequestIdTitle(row.Title) ? (
+          // Request ID is assigned only when Status moves to Pending.
+          !isDraftNpdStatus(row.Status) && isNpdRequestIdTitle(row.Title) ? (
             <button
               type="button"
               className={styles.requestId}
+              title={row.Title.trim()}
               onClick={() => (canEditRow(row) ? handleEdit(row) : handleView(row))}
             >
               {row.Title.trim()}
@@ -176,7 +178,12 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
           return (
             <span className={styles.currentApprover}>
               {renderSharePointUserPersona(approver.email, approver.name)}
-              <span className={styles.currentApproverName}>{approver.name}</span>
+              <span
+                className={styles.currentApproverName}
+                title={approver.name || undefined}
+              >
+                {approver.name}
+              </span>
             </span>
           );
         },

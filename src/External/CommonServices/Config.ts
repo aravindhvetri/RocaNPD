@@ -11,6 +11,7 @@ export const ListNames = {
   MaterialGroupConfig: "NPD_MaterialGroupConfig",
   MaterialGroupRequests: "NPD_MaterialGroupRequests",
   MaterialGroupAuditLogs: "NPD_MaterialGroupAuditLogs",
+  MaterialMaster: "NPD_MaterialMaster",
 } as const;
 
 export const RocaMasterListNames = {
@@ -61,13 +62,23 @@ export const NpdMisPlantCodes = {
 
 /** MIS Other Details — Valuation Class display values (saved to NPD_Request). */
 export const NpdValuationClasses = {
-  FinishedProduct: "Finished Product - 6000",
-  TradedDomestic: "Traded Goods & Domestic - 5000",
-  TradedImported: "Traded Goods & Imported - 5100",
+  FinishedProduct: "6000",
+  TradedDomestic: "5000",
+  TradedImported: "5100",
 } as const;
 
 /** MIS Other Details — Class Type is always this value. */
 export const NpdMisClassTypeDefault = "001";
+
+/**
+ * Material Master creation API (`createZMatMast`).
+ * Development URL is the client QAS endpoint. Production stays empty until the client provides it.
+ */
+export const SapMaterialMasterApi = {
+  DevelopmentUrl:
+    "https://qasqr.parrywarevendorportal.com/vendorcreation/zMatMast/createZMatMast",
+  ProductionUrl: "",
+} as const;
 
 /** Lookup Type Title used for Profit Center dropdown options. */
 export const NpdMisLookupTypes = {
@@ -134,8 +145,13 @@ export const TemplateTypes = {
 } as const;
 
 export const NpdRequestIdFormat = {
+  /**
+   * New format: `{BrandCode}-YYYY-MM-DD-#####` (BrandCode from ROCA BrandMaster).
+   * Legacy `NPD-YYYY-###` titles remain recognized for existing requests.
+   */
   Prefix: "NPD-",
-  PadLength: 3,
+  PadLength: 5,
+  BrandCodeField: "BrandCode",
 } as const;
 
 export const MgRequestIdFormat = {
@@ -144,9 +160,37 @@ export const MgRequestIdFormat = {
 } as const;
 
 export const NpdItemImport = {
-  MaxRows: 200,
   MultiValueSeparator: "; ",
 } as const;
+
+/**
+ * Attachment on NPD_Request used to recover Item Details after a mid-save
+ * network failure. Cleared after a successful Save Draft / Submit.
+ */
+export const NpdItemDetailsBackup = {
+  FileName: "NpdItemDetailsBackup.json",
+} as const;
+
+export const MaterialMasterItemTypes = {
+  Existing: "Old",
+  New: "New",
+} as const;
+
+export const MaterialMasterUi = {
+  /** DataTable page size (client-side only). */
+  PageSize: 50,
+  /**
+   * Max rows per SharePoint CAML catalog request (list view threshold).
+   * UI still pages at {@link PageSize}; filters run on the fetched set.
+   */
+  CatalogFetchRowLimit: 5000,
+} as const;
+
+/**
+ * Max items per SharePoint `$batch` mutate (add/update/delete).
+ * Used by Lookup import, Item Details submit/resubmit, and Material Master inserts.
+ */
+export const SharePointMutateBatchSize = 100;
 
 export const ThemeColors = {
   Primary: "#1d4e56",
@@ -252,6 +296,10 @@ export const FieldNames = {
     Weight: "Weight",
     UOM: "UOM",
     MinQty: "MinQty",
+    /** Yes/No. True after this line has been accepted by the SAP Material Master API. */
+    SAP: "SAP",
+    /** Yes/No soft-delete. Active Item Details queries use IsDeleted = false. */
+    IsDeleted: "IsDeleted",
     RequestGeneralInfo: "RequestGeneralInfo",
     RequestGeneralInfoId: "RequestGeneralInfoId",
   },
@@ -282,6 +330,44 @@ export const FieldNames = {
     Status: "Status",
     Initiator: "Initiator",
     InitiatorId: "InitiatorId",
+    /** Material Master catalog columns on the same list. */
+    MaterialCode: "MaterialCode",
+    MaterialType: "MaterialType",
+    MaterialDescription: "MaterialDescription",
+    BrandCode: "BrandCode",
+    Brand: "Brand",
+    ProductGroupMG2Code: "ProductGroupMG2Code",
+    ProductGroupMG2: "ProductGroupMG2",
+    ProductCategoryMG3Code: "ProductCategoryMG3Code",
+    ProductCategoryMG3: "ProductCategoryMG3",
+    ProductTypeMG4Code: "ProductTypeMG4Code",
+    ProductTypeMG4: "ProductTypeMG4",
+    ProductSourceMG5Code: "ProductSourceMG5Code",
+    ProductSourceMG5: "ProductSourceMG5",
+    ColorMG1ACode: "ColorMG1ACode",
+    ColorMG1A: "ColorMG1A",
+    ProductRangeMGP2ACode: "ProductRangeMGP2ACode",
+    ProductRangeMGP2A: "ProductRangeMGP2A",
+    ProductSubCategoryMGP3ACode: "ProductSubCategoryMGP3ACode",
+    ProductSubCategoryMGP3A: "ProductSubCategoryMGP3A",
+    MaterialGroupCode: "MaterialGroupCode",
+    MaterialGroup: "MaterialGroup",
+    ExtMaterialGroupCode: "ExtMaterialGroupCode",
+    ExtMaterialGroup: "ExtMaterialGroup",
+    ProductSegmentCode: "ProductSegmentCode",
+    ProductSegment: "ProductSegment",
+    TaxClassificationCode: "TaxClassificationCode",
+    TaxClassification: "TaxClassification",
+    ClassPCSCode: "ClassPCSCode",
+    ClassPCS: "ClassPCS",
+    HSNCode: "HSNCode",
+    Weight: "Weight",
+    UOMCode: "UOMCode",
+    UOM: "UOM",
+    MinQty: "MinQty",
+    ItemType: "ItemType",
+    NPDRequest: "NPDRequest",
+    NPDRequestId: "NPDRequestId",
   },
   MaterialGroupAuditLogs: {
     Title: "Title",
@@ -411,6 +497,8 @@ export const TextInputRules = {
   DisallowedCharacters: /[^a-zA-Z0-9\s]/,
   /** Strip helper — /g required for String.replace. */
   DisallowedCharactersGlobal: /[^a-zA-Z0-9\s]/g,
+  /** Digits only (e.g. Min. Qty/Box Qty stored as Single Line of Text). */
+  NonDigitsGlobal: /[^0-9]/g,
   SpecialCharactersNotAllowedSuffix: "cannot contain special characters.",
 } as const;
 
@@ -425,6 +513,9 @@ export const Config = {
   NpdRequestIdFormat,
   MgRequestIdFormat,
   NpdItemImport,
+  NpdItemDetailsBackup,
+  MaterialMasterItemTypes,
+  MaterialMasterUi,
   ThemeColors,
   NpdEmail,
   NpdApproverMail,
@@ -452,6 +543,7 @@ export const Config = {
   NpdMisPlantCodes,
   NpdValuationClasses,
   NpdMisClassTypeDefault,
+  SapMaterialMasterApi,
   NpdMisLookupTypes,
   NpdRocaGlobalCodeBrands,
 
@@ -487,7 +579,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.2",
+  AppVersion: "V1.9",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

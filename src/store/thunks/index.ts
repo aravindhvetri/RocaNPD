@@ -55,3 +55,5 @@ export {
 } from "./npdRequestThunks";
 
 export { initializeApp } from "./appThunks";
+
+export { fetchMaterialMasterCatalogThunk } from "../slices/materialMasterSlice";

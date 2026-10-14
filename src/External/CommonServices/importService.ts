@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { Config } from "./Config";
+import { containsSpecialCharacters } from "./textInputSanitize";
 
 function ensureSheetRange(sheet: XLSX.WorkSheet): void {
   const cellAddresses = Object.keys(sheet).filter((key) =>
@@ -323,10 +324,17 @@ export interface IImportValidationRow {
 export const ImportValidationMessages = {
   duplicateLookupType: "Duplicate Lookup Type Name",
   duplicateLookupName: "Duplicate Lookup Name under this Type",
-  duplicateLookupCode: "Duplicate Lookup Code",
+  /** Prefer row-specific messages from parseLookupImportFile (includes Lookup Type). */
+  duplicateLookupCode: "Duplicate Lookup Code under this Lookup Type",
   duplicateNpdItemDetails: "Already exists",
 } as const;
 
+/**
+ * Builds rows for the Import validation dialog.
+ * When `duplicateMessage` is empty, each duplicate string is shown as-is
+ * (used when parsers already include Lookup Type / Code detail).
+ * When provided, the message is prefixed and the detail is appended.
+ */
 export function buildImportValidationRows(
   duplicates: string[],
   duplicateMessage: string,
@@ -335,7 +343,9 @@ export function buildImportValidationRows(
   const rows: IImportValidationRow[] = duplicates.map((name, index) => ({
     serialNo: index + 1,
     recordName: name,
-    validationError: duplicateMessage,
+    validationError: duplicateMessage.trim()
+      ? `${duplicateMessage}: ${name}`
+      : name,
   }));
 
   errors.forEach((message) => {
@@ -347,4 +357,110 @@ export function buildImportValidationRows(
   });
 
   return rows;
+}
+
+/**
+ * Shared Excel import rules — never silently strip or partially extract values.
+ * Returns an error message, or null when the cell is empty / valid.
+ */
+export function importDigitsOnlyError(
+  raw: string,
+  fieldLabel: string,
+  rowNumber: number,
+): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^\d+$/.test(trimmed)) {
+    return `Row ${rowNumber}: ${fieldLabel} contains an invalid value. Only numbers are allowed.`;
+  }
+  return null;
+}
+
+/** Non-negative number; commas allowed as thousand separators only. */
+export function importNumericOnlyError(
+  raw: string,
+  fieldLabel: string,
+  rowNumber: number,
+): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/[^0-9.,]/.test(trimmed)) {
+    return `Row ${rowNumber}: ${fieldLabel} contains an invalid value. Only numbers are allowed.`;
+  }
+  const normalized = trimmed.replace(/,/g, "");
+  if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized)) {
+    return `Row ${rowNumber}: ${fieldLabel} contains an invalid value. Only numbers are allowed.`;
+  }
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return `Row ${rowNumber}: ${fieldLabel} contains an invalid value. Only numbers are allowed.`;
+  }
+  return null;
+}
+
+export function parseImportNumericValue(raw: string): number {
+  return Number(String(raw ?? "").trim().replace(/,/g, ""));
+}
+
+export function importNoSpecialCharactersError(
+  raw: string,
+  fieldLabel: string,
+  rowNumber: number,
+): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (containsSpecialCharacters(trimmed)) {
+    return `Row ${rowNumber}: ${fieldLabel} contains an invalid special character. Only letters, numbers, and spaces are allowed.`;
+  }
+  return null;
+}
+
+/**
+ * Shared Excel import rule: check every text field for special characters and
+ * append an error for each invalid field. Never stops after the first failure.
+ * @returns true when at least one field failed.
+ */
+export function appendImportNoSpecialCharactersErrors(
+  errors: string[],
+  rowNumber: number,
+  fields: ReadonlyArray<{ raw: string; fieldLabel: string }>,
+): boolean {
+  let hasError = false;
+  fields.forEach((field) => {
+    const message = importNoSpecialCharactersError(
+      field.raw,
+      field.fieldLabel,
+      rowNumber,
+    );
+    if (message) {
+      errors.push(message);
+      hasError = true;
+    }
+  });
+  return hasError;
+}
+
+/**
+ * Shared Excel import rule: append every non-null field error for the row.
+ * Use this so required / format checks do not hide later field failures.
+ * @returns true when at least one message was appended.
+ */
+export function appendImportRowFieldErrors(
+  errors: string[],
+  messages: ReadonlyArray<string | null | undefined>,
+): boolean {
+  let hasError = false;
+  messages.forEach((message) => {
+    if (message) {
+      errors.push(message);
+      hasError = true;
+    }
+  });
+  return hasError;
 }

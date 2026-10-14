@@ -7,6 +7,7 @@ import {
   exportToExcel,
 } from "../../../../../External/CommonServices/exportService";
 import type { INpdRequestListItemRow } from "../../../../../External/CommonServices/Interface";
+import { isNpdHiddenFromApproverAllRequests } from "../../../../../External/CommonServices/npdRequestListService";
 import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import { normalizeEmail } from "../../../../../External/CommonServices/personFieldUtils";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
@@ -61,11 +62,20 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
   const scopedItems = React.useMemo(() => {
     let items = dashboardItems;
     // Drafts stay on Initiator All Requests only — never Admin / VH / MIS All.
+    // Rework is Initiator-only (VH / MIS must not see Rework they sent back).
     if (variant === "all" && !isInitiatorModuleView) {
       items = items.filter((item) => !isDraftNpdStatus(item.Status));
+      if (!isAdminModuleView) {
+        items = items.filter(
+          (item) =>
+            !isNpdHiddenFromApproverAllRequests(
+              item.Status,
+              item.WorkflowSteps,
+            ),
+        );
+      }
     }
     if (variant === "approved") {
-      // VH Approved includes Pending-with-MIS after VH Approve; others stay fully Approved only.
       items = items.filter((item) => isNpdApprovedListItem(item, viewAs));
     }
     return items;
@@ -103,7 +113,11 @@ const NpdRequestDashboard: React.FC<{ variant: NpdRequestDashboardVariant }> = (
           fileName: buildExportFileName("NPD_All_Requests"),
           sheetName: "All Requests",
           columns: [
-            { header: FieldLabels.RequestId, value: (row) => row.Title },
+            {
+              header: FieldLabels.RequestId,
+              value: (row) =>
+                isDraftNpdStatus(row.Status) ? "" : row.Title,
+            },
             { header: FieldLabels.BrandMg1, value: (row) => row.Brand },
             { header: FieldLabels.MaterialType, value: (row) => row.MaterialType },
             { header: FieldLabels.Plant, value: (row) => row.Plant },

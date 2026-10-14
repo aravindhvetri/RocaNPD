@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
+import { flushSync } from "react-dom";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type {
   INpdItemDetailsImportParseResult,
@@ -8,7 +9,6 @@ import type {
 } from "../../../../../External/CommonServices/Interface";
 import {
   buildImportValidationRows,
-  ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { parseNpdItemDetailsImportFile, getNpdItemDetailsRequiredHeaders } from "../../../../../External/CommonServices/npdItemDetailsImportService";
@@ -16,8 +16,12 @@ import {
   downloadTemplateFile,
   fetchTemplateByType,
 } from "../../../../../External/CommonServices/templateService";
-import { ImportDialog, ImportValidationDialog } from "../../common/importExport";
-import { showErrorToast, showSuccessToast } from "../../common/controls";
+import {
+  awaitUiPaint,
+  ImportDialog,
+  ImportValidationDialog,
+} from "../../common/importExport";
+import { LoaderOverlay, showErrorToast, showSuccessToast } from "../../common/controls";
 import {
   isEmptyItemDetailRow,
   toNpdItemDetailRecord,
@@ -76,7 +80,13 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
     );
     onRowsChange((current) => {
       const keepExisting = current.filter((row) => !isEmptyItemDetailRow(row));
-      return keepExisting.length ? [...keepExisting, ...importedRows] : importedRows;
+      if (!keepExisting.length) {
+        return importedRows;
+      }
+      // MIS imports stay at the top of the Item Details grid.
+      return isMisCoordinatorActing
+        ? [...importedRows, ...keepExisting]
+        : [...keepExisting, ...importedRows];
     });
     showSuccessToast(
       toastRef,
@@ -87,12 +97,17 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
     setPreview(null);
     setValidationRows([]);
     setValidationVisible(false);
-    onHide();
   };
 
   const handleImport = async (file: File): Promise<void> => {
-    setImporting(true);
+    flushSync(() => {
+      setImporting(true);
+    });
     try {
+      // Let LoaderOverlay paint before spreadsheet parse / row apply.
+      // Critical for small files that would otherwise finish in the same tick.
+      await awaitUiPaint();
+
       const result = await parseNpdItemDetailsImportFile(
         file,
         rows.filter((row) => !isEmptyItemDetailRow(row)).map(toNpdItemDetailRecord),
@@ -102,31 +117,38 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
 
       if (result.duplicates.length || result.errors.length) {
         setPreview(result);
+        // Duplicate strings already name the field(s). Pass them as errors so
+        // the Validation Error column shows that text, not a generic label.
         setValidationRows(
-          buildImportValidationRows(
-            result.duplicates,
-            ImportValidationMessages.duplicateNpdItemDetails,
-            result.errors,
-          ),
+          buildImportValidationRows([], "", [
+            ...result.duplicates,
+            ...result.errors,
+          ]),
         );
         setValidationVisible(true);
-        onHide();
         return;
       }
 
       applyRecords(result);
+      // Yield after grid apply so the loader stays until React can commit rows.
+      await awaitUiPaint();
     } catch (error) {
       showErrorToast(
         toastRef,
         error instanceof Error ? error.message : "Failed to import Item Details.",
       );
     } finally {
+      // Close Import dialog only after work finishes so small imports cannot
+      // leave a stuck dialog mask from closing mid-busy.
+      onHide();
       setImporting(false);
     }
   };
 
   return (
     <>
+      {/* Survives ImportDialog hide (validation / success) for any row count. */}
+      <LoaderOverlay visible={importing} label="Processing" />
       <ImportDialog
         visible={visible}
         title="Import Item Details"
@@ -167,8 +189,18 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
           setPreview(null);
         }}
         onProceed={async () => {
-          if (preview?.toCreate.length) {
+          if (!preview?.toCreate.length) {
+            return;
+          }
+          flushSync(() => {
+            setImporting(true);
+          });
+          try {
+            await awaitUiPaint();
             applyRecords(preview);
+            await awaitUiPaint();
+          } finally {
+            setImporting(false);
           }
         }}
       />

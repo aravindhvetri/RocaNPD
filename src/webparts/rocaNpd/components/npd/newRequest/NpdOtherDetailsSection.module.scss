@@ -8,24 +8,19 @@
   padding: 0.75rem 1rem 0.5rem;
 }
 
-.fieldGrid {
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.6fr);
+  gap: 0.75rem 1.25rem;
+  align-items: stretch;
+  margin-bottom: 0.5rem;
+}
+
+.leftFields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem 1.25rem;
   align-items: start;
-  margin-bottom: 0.5rem;
-
-  :global(.field) {
-    margin-bottom: 0 !important;
-    gap: 0.375rem;
-  }
-
-  :global(.label) {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: $roca-color-text-secondary;
-    font-family: "Poppins", sans-serif;
-  }
 
   :global(.p-dropdown),
   :global(.p-multiselect) {
@@ -33,7 +28,7 @@
     min-height: 2.25rem;
     height: 2.25rem;
     border-radius: $roca-radius-sm;
-    font-size: 0.8125rem;
+    font-size: calc(0.8125rem + 1px);
     font-family: "Poppins", sans-serif;
     display: flex;
     align-items: center;
@@ -46,7 +41,7 @@
     flex: 1 1 auto;
     min-width: 0;
     padding: 0.4375rem 0.75rem;
-    font-size: 0.8125rem;
+    font-size: calc(0.8125rem + 1px);
     line-height: 1.25;
     font-family: "Poppins", sans-serif;
     color: $roca-color-text-primary;
@@ -84,7 +79,7 @@
     padding: 0.4375rem 0.75rem;
     box-sizing: border-box;
     border-radius: $roca-radius-sm;
-    font-size: 0.8125rem;
+    font-size: calc(0.8125rem + 1px);
     font-family: "Poppins", sans-serif;
     background-color: $roca-color-bg-surface;
     border: 1px solid $roca-color-input-border;
@@ -98,16 +93,71 @@
   }
 }
 
-.spanTwo {
-  grid-column: span 2;
+.classTypeFullRow {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.materialExtensionPane {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.materialExtensionField {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 100%;
+  margin-bottom: 0 !important;
+  gap: 0.375rem;
+
+  > div {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  :global(textarea.p-inputtextarea) {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 10.5rem;
+    height: 100% !important;
+    box-sizing: border-box;
+    padding: 0.5rem 0.75rem;
+    border-radius: $roca-radius-sm;
+    font-size: calc(0.8125rem + 1px);
+    font-family: "Poppins", sans-serif;
+    line-height: 1.4;
+    color: $roca-color-text-primary;
+    background-color: $roca-color-bg-surface;
+    border: 1px solid $roca-color-input-border;
+    resize: none;
+  }
+
+  :global(textarea.p-inputtextarea:disabled),
+  :global(textarea.p-inputtextarea.p-disabled) {
+    opacity: 1;
+    background: $roca-color-bg-subtle;
+    color: $roca-color-text-primary;
+  }
 }
 
 @media (max-width: 992px) {
-  .fieldGrid {
+  .layout {
     grid-template-columns: 1fr;
   }
 
-  .spanTwo {
-    grid-column: span 1;
+  .leftFields {
+    grid-template-columns: 1fr;
+  }
+
+  .materialExtensionField {
+    :global(textarea.p-inputtextarea) {
+      min-height: 7rem;
+      height: auto !important;
+    }
   }
 }

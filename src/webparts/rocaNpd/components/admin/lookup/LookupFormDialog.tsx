@@ -4,7 +4,6 @@ import type {
   ILookup,
   ILookupType,
 } from "../../../../../External/CommonServices/Interface";
-import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
 import {
   Button,
   Dialog,
@@ -138,9 +137,7 @@ const LookupFormDialog: React.FC<ILookupFormDialogProps> = ({
           disabled={saving}
           maxLength={255}
           className={styles.formField}
-          onChange={(value) =>
-            setLookupCode(sanitizeAlphanumericTextInput(value))
-          }
+          onChange={setLookupCode}
         />
         <InputText
           id="lookupName"
@@ -151,9 +148,7 @@ const LookupFormDialog: React.FC<ILookupFormDialogProps> = ({
           disabled={saving}
           maxLength={255}
           className={styles.formField}
-          onChange={(value) =>
-            setLookupName(sanitizeAlphanumericTextInput(value))
-          }
+          onChange={setLookupName}
         />
       </div>
     </Dialog>

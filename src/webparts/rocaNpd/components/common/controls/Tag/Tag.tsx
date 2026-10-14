@@ -16,6 +16,7 @@ const Tag: React.FC<ITagProps> = ({
     rounded={rounded}
     icon={icon}
     className={`${styles.tag} ${className ?? ""}`}
+    title={value?.trim() ? value : undefined}
   />
 );
 

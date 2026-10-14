@@ -1,9 +1,12 @@
 import * as React from "react";
 import { Dropdown as PrimeDropdown } from "primereact/dropdown";
+import { leadingSpaceInputGuards } from "../../../../../../External/CommonServices/textInputSanitize";
 import { getAppRootElement } from "../../appRootTarget";
 import ControlField from "../ControlField/ControlField";
 import type { IDropdownProps } from "./IDropdownProps";
 import styles from "./Dropdown.module.scss";
+
+const filterInputGuards = leadingSpaceInputGuards();
 
 const Dropdown: React.FC<IDropdownProps> = ({
   id,
@@ -20,45 +23,61 @@ const Dropdown: React.FC<IDropdownProps> = ({
   placeholder = "Select",
   filter,
   showClear,
-  'data-testid': testId,
-}) => (
-  <ControlField
-    id={id}
-    label={label}
-    required={required}
-    error={error}
-    helperText={helperText}
-    className={`${styles.dropdown} ${className ?? ""}`}
-  >
-    <PrimeDropdown
-      inputId={id}
-      name={id}
-      value={value}
-      options={options}
-      optionLabel="label"
-      optionValue="value"
-      placeholder={placeholder}
-      filter={filter}
-      showClear={showClear}
-      disabled={disabled || readOnly}
-      appendTo={getAppRootElement()}
-      panelClassName={styles.panel}
-      className={`w-full ${error ? "p-invalid" : ""}`}
-      pt={{
-        input: {
-          autoComplete: "off",
-        },
-        filterInput: {
-          name: `${id ?? "dropdown"}-filter`,
-          autoComplete: "off",
-          autoCorrect: "off",
-          spellCheck: false,
-        },
-      }}
-      data-testid={testId}
-      onChange={(e) => onChange(e.value ?? null)}
-    />
-  </ControlField>
-);
+  "data-testid": testId,
+}) => {
+  const selectedLabel = React.useMemo(() => {
+    if (value === null || value === undefined || value === "") {
+      return "";
+    }
+    const matched = options.find(
+      (option) => String(option.value) === String(value),
+    );
+    return String(matched?.label ?? value).trim();
+  }, [options, value]);
+
+  return (
+    <ControlField
+      id={id}
+      label={label}
+      required={required}
+      error={error}
+      helperText={helperText}
+      className={`${styles.dropdown} ${className ?? ""}`}
+    >
+      <PrimeDropdown
+        inputId={id}
+        name={id}
+        value={value}
+        options={options}
+        optionLabel="label"
+        optionValue="value"
+        placeholder={placeholder}
+        filter={filter}
+        showClear={showClear}
+        disabled={disabled || readOnly}
+        appendTo={getAppRootElement()}
+        panelClassName={styles.panel}
+        className={`w-full ${error ? "p-invalid" : ""}`}
+        title={selectedLabel || undefined}
+        pt={{
+          input: {
+            autoComplete: "off",
+            title: selectedLabel || undefined,
+          },
+          filterInput: {
+            name: `${id ?? "dropdown"}-filter`,
+            autoComplete: "off",
+            autoCorrect: "off",
+            spellCheck: false,
+            onKeyDown: filterInputGuards.onKeyDown,
+            onPaste: filterInputGuards.onPaste,
+          },
+        }}
+        data-testid={testId}
+        onChange={(e) => onChange(e.value ?? null)}
+      />
+    </ControlField>
+  );
+};
 
 export default Dropdown;

@@ -14,6 +14,11 @@ import type {
   IRequestViewScope,
   IResolvedUserAccess,
 } from "./Interface";
+import {
+  getFirstPendingApproverRole,
+  getRejectedApproverRole,
+  workflowRoleIncludesEmail,
+} from "./npdWorkflowJsonService";
 import { normalizeEmail } from "./personFieldUtils";
 
 const {
@@ -551,6 +556,85 @@ export function canViewRequest(
   currentUserEmail: string,
   viewRole?: UserRole | NavViewRole | null,
 ): boolean {
+  const role = parseViewAsRole(viewRole ?? undefined);
+  const statusLower = (request.status || "").trim().toLowerCase();
+  const isDraftStatus =
+    statusLower === Config.RequestStatus.Draft.toLowerCase();
+  const isReworkStatus =
+    statusLower === Config.RequestStatus.Rework.toLowerCase() ||
+    statusLower === "in rework";
+
+  // Draft / Rework stay with the Initiator — never on VH / MIS lists.
+  // Also hide blank Status / workflow-only Rework (Status field missing after action).
+  if (request.module === "npd" && (role === VerticalHead || role === MisCoordinator)) {
+    if (isDraftStatus || isReworkStatus) {
+      return false;
+    }
+    const statusLowerBlank = !(request.status || "").trim();
+    if (statusLowerBlank) {
+      return false;
+    }
+    const steps = request.workflowSteps ?? [];
+    const hasReworkStep = steps.some(
+      (step) =>
+        (step.Status || "").trim().toLowerCase() ===
+        Config.WorkflowStepStatus.Rework.toLowerCase(),
+    );
+    const hasPending = steps.some(
+      (step) =>
+        (step.Status || "").trim().toLowerCase() ===
+        Config.WorkflowStepStatus.Pending.toLowerCase(),
+    );
+    if (hasReworkStep && !hasPending) {
+      return false;
+    }
+  }
+
+  // Stage visibility uses the request already loaded (status + WorkFlowJSON).
+  // Pending with VH: VH only. Pending with MIS: MIS only.
+  // VH Reject: Initiator + VH. MIS Reject: everyone. Rework: Initiator only.
+  if (request.module === "npd" && request.workflowSteps) {
+    const stageRole = resolveNpdListStageRole(access, role);
+    if (
+      stageRole &&
+      !isNpdStageVisibleToApprover(stageRole, request)
+    ) {
+      return false;
+    }
+  }
+
+  // VH / MIS visibility is brand/role scoped from ApproversMaster (getNpdViewScope),
+  // not the previous person's email frozen on WorkFlowJSON — so a new VH/MIS for the
+  // same brand still sees historical Approved / Rejected / Pending records.
+  // Consultant (NPD) still uses WorkFlowJSON person match when steps exist.
+  if (request.module === "npd" && request.workflowSteps) {
+    if (role === Consultant) {
+      return workflowRoleIncludesEmail(
+        request.workflowSteps,
+        Consultant,
+        currentUserEmail,
+      );
+    }
+  }
+
+  if (request.module === "mg" && role === Consultant) {
+    const status = (request.status || "").trim().toLowerCase();
+    const isHistorical =
+      status === Config.MaterialGroupStatus.Completed.toLowerCase() ||
+      status === Config.MaterialGroupStatus.Rejected.toLowerCase();
+    if (isHistorical) {
+      const login = normalizeEmail(currentUserEmail);
+      if (!login) {
+        return false;
+      }
+      const actors = (request.historicalActorEmails || [])
+        .map((email) => normalizeEmail(email))
+        .filter(Boolean);
+      // No recorded consultant actor → hide from new assignees (safe default).
+      return actors.includes(login);
+    }
+  }
+
   const scope =
     request.module === "npd"
       ? getNpdViewScope(access, viewRole)
@@ -599,6 +683,57 @@ export function canActOnPendingNpdStep(
   }
 
   return false;
+}
+
+export const INITIATOR_ACCESS_DENIED_MESSAGE =
+  "You are no longer the Initiator for this request, so you do not have access to this record.";
+
+/**
+ * True when ApproversMaster (already loaded at login) has this user as
+ * Initiator for `system`. When `brand` is set, that Brand lookup must match.
+ * Does not apply MG↔NPD brand fallback.
+ */
+export function isApproversMasterInitiatorForBrand(
+  access: IResolvedUserAccess,
+  brand: string | undefined,
+  system: string,
+): boolean {
+  const systemKey = system.trim().toLowerCase();
+  if (!systemKey) {
+    return false;
+  }
+
+  const brandKey = normalizeBrandTitle(brand);
+  return access.assignments.some((assignment) => {
+    if (assignment.role !== Initiator) {
+      return false;
+    }
+    if ((assignment.system ?? "").trim().toLowerCase() !== systemKey) {
+      return false;
+    }
+    if (!brandKey) {
+      return true;
+    }
+    return assignment.brands.some(
+      (entry) => normalizeBrandTitle(entry) === brandKey,
+    );
+  });
+}
+
+/**
+ * True when ApproversMaster has this user as NPD Initiator for the brand.
+ * Uses in-memory `access.assignments` only (no SharePoint calls).
+ * Does not apply MG↔NPD brand fallback — NPD System Initiator rows only.
+ */
+export function isNpdApproversMasterInitiatorForBrand(
+  access: IResolvedUserAccess,
+  brand?: string,
+): boolean {
+  return isApproversMasterInitiatorForBrand(
+    access,
+    brand,
+    ApproverSystems.NewProductDevelopment,
+  );
 }
 
 export function canActOnNpdBrand(
@@ -665,6 +800,68 @@ function uniqueTitles(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean))).sort((left, right) =>
     left.localeCompare(right),
   );
+}
+
+/**
+ * Which approver list this user is browsing. `?as=` wins.
+ * A single-role user without `?as=` still uses that role.
+ */
+function resolveNpdListStageRole(
+  access: IResolvedUserAccess,
+  viewRole: UserRole | null | undefined,
+): typeof VerticalHead | typeof MisCoordinator | "" {
+  if (viewRole === VerticalHead || viewRole === MisCoordinator) {
+    return viewRole;
+  }
+  if (viewRole) {
+    return "";
+  }
+
+  const isMis = hasSystemRole(
+    access,
+    MisCoordinator,
+    ApproverSystems.NewProductDevelopment,
+  );
+  const isVh = hasSystemRole(
+    access,
+    VerticalHead,
+    ApproverSystems.NewProductDevelopment,
+  );
+  if (isMis && !isVh) {
+    return MisCoordinator;
+  }
+  if (isVh && !isMis) {
+    return VerticalHead;
+  }
+  return "";
+}
+
+function isNpdStageVisibleToApprover(
+  stageRole: typeof VerticalHead | typeof MisCoordinator,
+  request: IRequestAccessInput,
+): boolean {
+  const steps = request.workflowSteps ?? [];
+  const status = (request.status || "").trim().toLowerCase();
+  const pendingRole = getFirstPendingApproverRole(steps).trim().toLowerCase();
+  const rejectedRole = getRejectedApproverRole(steps).trim().toLowerCase();
+  const vh = VerticalHead.toLowerCase();
+  const mis = MisCoordinator.toLowerCase();
+  const isPending = status === Config.RequestStatus.Pending.toLowerCase();
+  const isRejected = status === Config.RequestStatus.Rejected.toLowerCase();
+
+  if (stageRole === MisCoordinator) {
+    // Still with Vertical Head, or rejected by Vertical Head — not MIS yet.
+    if (isPending && pendingRole === vh) {
+      return false;
+    }
+    if (isRejected && rejectedRole !== mis) {
+      return false;
+    }
+  }
+
+  // Vertical Head keeps Pending-with-MIS on All Requests and Approved Requests.
+  // The Pending queue is limited to the Vertical Head step separately.
+  return true;
 }
 
 function emailsMatch(left?: string, right?: string): boolean {

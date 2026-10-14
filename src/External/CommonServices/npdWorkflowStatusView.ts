@@ -156,7 +156,7 @@ function resolveWorkflowStatusLabel(
     status.toLowerCase() === "rework" ||
     status.toLowerCase() === "in rework"
   ) {
-    return WorkflowStepStatus.Pending;
+    return WorkflowStepStatus.Rework;
   }
 
   return status;

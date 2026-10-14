@@ -102,25 +102,33 @@ export function buildNpdRequestFormUrl(
 }
 
 /**
- * Builds a Login URL for email notifications that is resilient to Outlook SafeLinks
+ * Builds a Login URL for Outlook email notifications that is resilient to SafeLinks
  * stripping hash fragments. Encodes the entire hash route as a single `npdRoute`
- * query parameter on the explicit SitePages/RocaNPD.aspx page.
+ * query parameter on the site URL (not SitePages/RocaNPD.aspx).
  *
- * This prevents SharePoint from interpreting `id=…` as a SitePages item lookup
- * when SafeLinks flattens hash parameters into server query parameters.
+ * Recipients may not have `RocaNPD.aspx` during login. After they sign in, they
+ * return to the site URL with `npdRoute`, and MainComponent restores the hash.
+ * In-app navigation and ApproverMail action buttons are unchanged.
  */
 export function buildNpdEmailLoginUrl(
   requestId: number,
   mode: "view" | "edit" = "edit",
   contextSiteUrl?: string,
+  viewAs?: string,
 ): string {
   const siteUrl = resolveNpdWebAbsoluteUrl(contextSiteUrl).replace(/\/+$/, "");
   if (!siteUrl) {
     return "";
   }
-  const pageUrl = `${siteUrl}/${Config.NpdApproverMail.SitePagesFolder}/RocaNPD.aspx`;
-  const hashRoute = `${Config.Routes.NpdNew}?id=${requestId}&mode=${mode}&from=all`;
-  return `${pageUrl}?npdRoute=${encodeURIComponent(hashRoute)}`;
+  const query = new URLSearchParams();
+  query.set("id", String(requestId));
+  query.set("mode", mode);
+  query.set("from", "all");
+  if (viewAs) {
+    query.set(Config.NpdFormQuery.ViewAs, viewAs);
+  }
+  const hashRoute = `${Config.Routes.NpdNew}?${query.toString()}`;
+  return `${siteUrl}?npdRoute=${encodeURIComponent(hashRoute)}`;
 }
 
 /**
@@ -138,12 +146,32 @@ export function buildNpdEmailActionUrl(
   return `${getNpdApproverMailPageUrl(contextSiteUrl)}?${query.toString()}`;
 }
 
-export function buildNpdPendingUrl(contextSiteUrl?: string): string {
-  return buildNpdHashUrl(Config.Routes.NpdPending, contextSiteUrl);
+function buildNpdEmailRouteUrl(
+  hashPathAndQuery: string,
+  contextSiteUrl?: string,
+): string {
+  const siteUrl = resolveNpdWebAbsoluteUrl(contextSiteUrl).replace(/\/+$/, "");
+  if (!siteUrl) {
+    return "";
+  }
+  const path = hashPathAndQuery.startsWith("/")
+    ? hashPathAndQuery
+    : `/${hashPathAndQuery}`;
+  return `${siteUrl}?npdRoute=${encodeURIComponent(path)}`;
+}
+
+export function buildNpdPendingUrl(
+  contextSiteUrl?: string,
+  viewAs?: string,
+): string {
+  const path = viewAs
+    ? `${Config.Routes.NpdPending}?${Config.NpdFormQuery.ViewAs}=${encodeURIComponent(viewAs)}`
+    : Config.Routes.NpdPending;
+  return buildNpdEmailRouteUrl(path, contextSiteUrl);
 }
 
 export function buildNpdDraftReworkUrl(contextSiteUrl?: string): string {
-  return buildNpdHashUrl(Config.Routes.NpdDraftRework, contextSiteUrl);
+  return buildNpdEmailRouteUrl(Config.Routes.NpdDraftRework, contextSiteUrl);
 }
 
 export function parseNpdApproverMailAction(

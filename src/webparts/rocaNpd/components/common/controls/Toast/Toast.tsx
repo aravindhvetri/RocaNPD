@@ -4,6 +4,9 @@ import { getAppRootElement } from "../../appRootTarget";
 import type { IToastMessage } from "./IToastProps";
 import styles from "./Toast.module.scss";
 
+/** Default toast visibility for all shared toast helpers (PrimeReact `life` is ms). */
+export const DEFAULT_TOAST_LIFE_MS = 3000;
+
 const Toast = React.forwardRef<PrimeToast>((_, ref) => (
   <PrimeToast
     ref={ref}
@@ -23,7 +26,7 @@ export const showToast = (
     severity: message.severity,
     summary: message.summary,
     detail: message.detail,
-    life: message.life ?? 4000,
+    life: message.life ?? DEFAULT_TOAST_LIFE_MS,
     className: message.className,
   });
 };

@@ -5,6 +5,7 @@ import {
   type MultiSelect as PrimeMultiSelectType,
 } from "primereact/multiselect";
 import { getAppRootElement } from "../../appRootTarget";
+import { leadingSpaceInputGuards } from "../../../../../../External/CommonServices/textInputSanitize";
 import ControlField from "../ControlField/ControlField";
 import type { IDropdownOption } from "../Dropdown/IDropdownProps";
 import type { IMultiSelectProps } from "./IMultiSelectProps";
@@ -21,6 +22,8 @@ function readTriggerWidth(host: HTMLElement | null): number {
   }
   return Math.round(trigger.getBoundingClientRect().width);
 }
+
+const filterInputGuards = leadingSpaceInputGuards();
 
 const MultiSelect: React.FC<IMultiSelectProps> = ({
   id,
@@ -104,6 +107,19 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
     );
   }, []);
 
+  const selectedLabelTitle = React.useMemo(() => {
+    if (!value?.length) {
+      return "";
+    }
+    const labels = value.map((entry) => {
+      const matched = options.find(
+        (option) => String(option.value) === String(entry),
+      );
+      return String(matched?.label ?? entry).trim();
+    });
+    return labels.filter(Boolean).join(", ");
+  }, [options, value]);
+
   const panelClasses = [
     styles.panel,
     panelToken,
@@ -150,7 +166,14 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
           emptyMessage={emptyMessage}
           itemTemplate={itemTemplate}
           onShow={syncOverlayToTrigger}
+          title={selectedLabelTitle || undefined}
           pt={{
+            root: {
+              title: selectedLabelTitle || undefined,
+            },
+            label: {
+              title: selectedLabelTitle || undefined,
+            },
             input: {
               autoComplete: "off",
             },
@@ -159,6 +182,8 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
               autoComplete: "off",
               autoCorrect: "off",
               spellCheck: false,
+              onKeyDown: filterInputGuards.onKeyDown,
+              onPaste: filterInputGuards.onPaste,
             },
           }}
           data-testid={testId}

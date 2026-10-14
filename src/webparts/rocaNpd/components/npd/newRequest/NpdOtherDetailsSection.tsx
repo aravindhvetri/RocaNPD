@@ -4,8 +4,8 @@ import type {
   INpdOtherDetails,
   ISelectOption,
 } from "../../../../../External/CommonServices/Interface";
-import { InputText, MultiSelect } from "../../common/controls";
-import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
+import { InputText, InputTextarea, MultiSelect } from "../../common/controls";
+import { stripLeadingSpaces } from "../../../../../External/CommonServices/textInputSanitize";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
 import styles from "./NpdOtherDetailsSection.module.scss";
 
@@ -55,74 +55,82 @@ const NpdOtherDetailsSection: React.FC<INpdOtherDetailsSectionProps> = ({
       className={styles.panel}
       bodyClassName={styles.body}
     >
-      <div className={styles.fieldGrid}>
-        <InputText
-          id="npdMisPlantCode"
-          label={FieldLabels.PlantCode}
-          value={details.plantCode}
-          disabled
-          onChange={() => undefined}
-        />
-        <InputText
-          id="npdMisStorageLocation"
-          label={FieldLabels.StorageLocation}
-          value={details.storageLocation}
-          disabled
-          onChange={() => undefined}
-        />
-        <MultiSelect
-          id="npdMisProfitCenter"
-          label={FieldLabels.ProfitCenter}
-          value={profitValue}
-          options={profitOptions}
-          placeholder="Select Profit Center"
-          filter={!readOnly && !loading}
-          display="comma"
-          selectAll={false}
-          selectionLimit={1}
-          disabled={readOnly || loading}
-          readOnly={readOnly}
-          onChange={(value) => {
-            const next = value.map((entry) => String(entry)).slice(-1);
-            onProfitCenterChange(next[0] || "");
-          }}
-        />
-        <InputText
-          id="npdMisMrpGroup"
-          label={FieldLabels.MRPGroup}
-          value={details.mrpGroup}
-          disabled
-          onChange={() => undefined}
-        />
-        <InputText
-          id="npdMisMrpController"
-          label={FieldLabels.MRPController}
-          value={details.mrpController}
-          disabled
-          onChange={() => undefined}
-        />
-        <InputText
-          id="npdMisValuationClass"
-          label={FieldLabels.ValuationClass}
-          value={details.valuationClass}
-          disabled
-          onChange={() => undefined}
-        />
-        <InputText
-          id="npdMisClassType"
-          label={FieldLabels.ClassType}
-          value={details.classType}
-          disabled
-          onChange={() => undefined}
-        />
-        <div className={styles.spanTwo}>
+      <div className={styles.layout}>
+        <div className={styles.leftFields}>
           <InputText
+            id="npdMisPlantCode"
+            label={FieldLabels.PlantCode}
+            value={details.plantCode}
+            disabled
+            onChange={() => undefined}
+          />
+          <InputText
+            id="npdMisStorageLocation"
+            label={FieldLabels.StorageLocation}
+            value={details.storageLocation}
+            disabled
+            onChange={() => undefined}
+          />
+          <MultiSelect
+            id="npdMisProfitCenter"
+            label={FieldLabels.ProfitCenter}
+            required
+            value={profitValue}
+            options={profitOptions}
+            placeholder="Select Profit Center"
+            filter={!readOnly && !loading}
+            display="comma"
+            selectAll={false}
+            selectionLimit={1}
+            disabled={readOnly || loading}
+            readOnly={readOnly}
+            onChange={(value) => {
+              const next = value.map((entry) => String(entry)).slice(-1);
+              onProfitCenterChange(next[0] || "");
+            }}
+          />
+          <InputText
+            id="npdMisMrpGroup"
+            label={FieldLabels.MRPGroup}
+            value={details.mrpGroup}
+            disabled
+            onChange={() => undefined}
+          />
+          <InputText
+            id="npdMisMrpController"
+            label={FieldLabels.MRPController}
+            value={details.mrpController}
+            disabled
+            onChange={() => undefined}
+          />
+          <InputText
+            id="npdMisValuationClass"
+            label={FieldLabels.ValuationClass}
+            value={details.valuationClass}
+            disabled
+            onChange={() => undefined}
+          />
+          <div className={styles.classTypeFullRow}>
+            <InputText
+              id="npdMisClassType"
+              label={FieldLabels.ClassType}
+              value={details.classType}
+              disabled
+              onChange={() => undefined}
+            />
+          </div>
+        </div>
+
+        <div className={styles.materialExtensionPane}>
+          <InputTextarea
             id="npdMisMaterialExtension"
             label={FieldLabels.MaterialExtension}
             value={details.materialExtension}
             disabled={readOnly || loading}
+            rows={8}
+            className={styles.materialExtensionField}
             onChange={(value) =>
-              onMaterialExtensionChange(sanitizeAlphanumericTextInput(value))
+              onMaterialExtensionChange(stripLeadingSpaces(value))
             }
           />
         </div>

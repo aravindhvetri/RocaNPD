@@ -7,10 +7,8 @@ import type {
 } from "./Interface";
 import {
   assertRequiredImportHeaders,
-  extractColumnValues,
   findBestHeaderRowIndex,
   findColumnIndex,
-  partitionImportValues,
   readSpreadsheetRows,
 } from "./importService";
 import { validateLookupTypeDeleteAllowed } from "./dependencyValidationService";
@@ -160,17 +158,51 @@ export async function parseLookupTypeImportFile(
   assertRequiredImportHeaders(headerRow, [...LOOKUP_TYPE_IMPORT_HEADERS]);
   const columnIndex = findColumnIndex(headerRow, FieldLabels.LookupTypeName);
 
-  const values = extractColumnValues(rows, columnIndex, headerRowIndex);
+  const existingLower = new Set(
+    existingItems.map((item) => item.Title.trim().toLowerCase()),
+  );
+  const seenInFile = new Set<string>();
+  const toCreate: string[] = [];
+  const duplicates: string[] = [];
+  const errors: string[] = [];
 
-  if (!values.length) {
-    throw new Error("The uploaded file does not contain any lookup type names.");
+  for (
+    let rowIndex = headerRowIndex + 1;
+    rowIndex < rows.length;
+    rowIndex++
+  ) {
+    const row = rows[rowIndex];
+    if (!row) {
+      continue;
+    }
+
+    const title = String(row[columnIndex] ?? "").trim();
+    if (!title) {
+      continue;
+    }
+
+    const excelRowNumber = rowIndex + 1;
+    // Lookup Type allows special characters — length / required only.
+    if (title.length > 255) {
+      errors.push(
+        `Row ${excelRowNumber}: ${FieldLabels.LookupTypeName} must be 255 characters or less.`,
+      );
+      continue;
+    }
+
+    const lower = title.toLowerCase();
+    if (existingLower.has(lower) || seenInFile.has(lower)) {
+      duplicates.push(title);
+      continue;
+    }
+
+    seenInFile.add(lower);
+    toCreate.push(title);
   }
 
-  const existingTitles = existingItems.map((item) => item.Title);
-  const { toCreate, duplicates, errors } = partitionImportValues(
-    values,
-    existingTitles,
-  );
+  if (!toCreate.length && !duplicates.length && !errors.length) {
+    throw new Error("The uploaded file does not contain any lookup type names.");
+  }
 
   return { toCreate, duplicates, errors };
 }

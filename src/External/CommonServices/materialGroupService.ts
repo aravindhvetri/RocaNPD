@@ -6,10 +6,6 @@ import type {
   IMaterialGroupHydratePayload,
   IMaterialGroupRequestJsonEntry,
 } from "./Interface";
-import {
-  collectMaterialGroupDescriptions,
-  findDuplicateMaterialGroupDescription,
-} from "./materialGroupValidation";
 import { getLookupTitles } from "./lookupFieldUtils";
 import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
 import { fetchActiveLookupTypes } from "./lookupTypeService";
@@ -17,6 +13,7 @@ import {
   addMaterialGroupAuditLog,
   fetchLatestMaterialGroupAuditComment,
   fetchMaterialGroupAuditLogs,
+  fetchMgTerminalConsultantEmailsByRequestId,
 } from "./materialGroupAuditLogService";
 import {
   generateNextMgRequestId,
@@ -41,11 +38,7 @@ const REQUESTS_LIST = (): string => Config.ListNames.MaterialGroupRequests;
 
 /** Normalize master names for fuzzy match (e.g. "Color(MGP1A)" vs "Color (MGP1A)"). */
 function normalizeMasterKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[()]/g, "")
-    .trim();
+  return value.toLowerCase().replace(/\s+/g, "").replace(/[()]/g, "").trim();
 }
 
 /** Read one RequestsJSON row — supports PascalCase / camelCase keys. */
@@ -87,8 +80,9 @@ function parseRequestsJson(raw: unknown): IMaterialGroupRequestJsonEntry[] {
   }
 
   return parsed
-    .filter((item): item is Record<string, unknown> =>
-      Boolean(item) && typeof item === "object",
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
     )
     .map(normalizeRequestsJsonEntry);
 }
@@ -182,9 +176,7 @@ export async function fetchMaterialGroupConfigs(): Promise<
       if (rf) {
         if (Array.isArray(rf) && rf.length > 0) {
           relatedFieldId = Number(rf[0].Id ?? rf[0].ID ?? relatedFieldId);
-          relatedFieldTitle = String(
-            rf[0].Title ?? relatedFieldTitle,
-          ).trim();
+          relatedFieldTitle = String(rf[0].Title ?? relatedFieldTitle).trim();
         } else if (Array.isArray(rf.results) && rf.results.length > 0) {
           relatedFieldId = Number(
             rf.results[0].Id ?? rf.results[0].ID ?? relatedFieldId,
@@ -312,7 +304,9 @@ async function saveOrUpdateMaterialGroupRecord(
     MaterialGroupConfigId: { results: configLookupIds },
   };
 
-  const tryWrite = async (payload: Record<string, unknown>): Promise<number> => {
+  const tryWrite = async (
+    payload: Record<string, unknown>,
+  ): Promise<number> => {
     if (id && id > 0) {
       await SPServices.SPUpdateItem({
         Listname: REQUESTS_LIST(),
@@ -327,10 +321,7 @@ async function saveOrUpdateMaterialGroupRecord(
       RequestJSON: payload,
     });
     const newId = Number(
-      created?.data?.Id ??
-        created?.data?.ID ??
-        created?.Id ??
-        created?.ID,
+      created?.data?.Id ?? created?.data?.ID ?? created?.Id ?? created?.ID,
     );
     if (!newId) {
       throw new Error("Item was created but ID could not be read.");
@@ -363,7 +354,8 @@ export interface ISaveMaterialGroupDraftParams {
 export async function saveMaterialGroupDraft(
   params: ISaveMaterialGroupDraftParams,
 ): Promise<{ id: number; guid: string }> {
-  const { id, selectedConfigIds, entriesByConfigId, actorEmail, actorId } = params;
+  const { id, selectedConfigIds, entriesByConfigId, actorEmail, actorId } =
+    params;
 
   let initiatorId = actorId;
   if (actorEmail && !initiatorId) {
@@ -378,11 +370,12 @@ export async function saveMaterialGroupDraft(
   }
 
   const configs = await fetchMaterialGroupConfigs().catch(() => []);
-  const { requestsJson, configLookupIds, rawEntries } = buildRequestsJsonAndLookupIds(
-    selectedConfigIds,
-    entriesByConfigId,
-    configs,
-  );
+  const { requestsJson, configLookupIds, rawEntries } =
+    buildRequestsJsonAndLookupIds(
+      selectedConfigIds,
+      entriesByConfigId,
+      configs,
+    );
 
   if (!selectedConfigIds.length) {
     throw new Error("Please select at least one master category to configure.");
@@ -453,26 +446,24 @@ export async function submitMaterialGroupRequest(
   }
 
   const configs = await fetchMaterialGroupConfigs().catch(() => []);
-  const { requestsJson, configLookupIds, rawEntries } = buildRequestsJsonAndLookupIds(
-    selectedConfigIds,
-    entriesByConfigId,
-    configs,
-  );
+  const { requestsJson, configLookupIds, rawEntries } =
+    buildRequestsJsonAndLookupIds(
+      selectedConfigIds,
+      entriesByConfigId,
+      configs,
+    );
 
   if (!rawEntries.length) {
     throw new Error("Please add at least one entry before submitting.");
   }
 
-  const withinFormDuplicate = findDuplicateMaterialGroupDescription(
-    selectedConfigIds,
-    entriesByConfigId,
-  );
-  if (withinFormDuplicate) {
-    throw new Error(withinFormDuplicate);
-  }
-
-  await assertMaterialGroupDescriptionsAvailable(
-    collectMaterialGroupDescriptions(selectedConfigIds, entriesByConfigId),
+  // Code must be unique within each Lookup Type (form batch + NPD_Lookup).
+  await assertMaterialGroupCodesUniqueInLookupTypes(
+    rawEntries.map((entry) => ({
+      lookupTypeId: Number(entry.LookupId) || 0,
+      lookupTypeTitle: entry.LookupName,
+      code: entry.Code,
+    })),
   );
 
   const requestId =
@@ -513,7 +504,10 @@ export async function submitMaterialGroupRequest(
       actionVia: "System",
     });
   } catch (auditErr) {
-    console.warn("Failed to record Initiator audit log for Material Group:", auditErr);
+    console.warn(
+      "Failed to record Initiator audit log for Material Group:",
+      auditErr,
+    );
   }
 
   // Dispatch email notification to Consultant asynchronously
@@ -547,9 +541,11 @@ function statusEquals(actual: string, expected: string): boolean {
   return actual.trim().toLowerCase() === expected.trim().toLowerCase();
 }
 
-function resolveItemOwnerEmail(
-  item: Record<string, unknown>,
-): { name: string; email: string; userId: number } {
+function resolveItemOwnerEmail(item: Record<string, unknown>): {
+  name: string;
+  email: string;
+  userId: number;
+} {
   const initiatorEmails = extractPersonEmails(item.Initiator);
   const authorEmails = extractPersonEmails(item.Author);
   const initiator = item.Initiator as
@@ -674,10 +670,14 @@ export async function fetchGroupedMaterialGroupRequests(
     })) as Record<string, unknown>[];
   } catch (error) {
     // Fallback without person Expand if site schema differs
-    console.warn("MG list fetch with Expand failed, retrying minimal select:", error);
+    console.warn(
+      "MG list fetch with Expand failed, retrying minimal select:",
+      error,
+    );
     rawItems = (await SPServices.SPReadItems({
       Listname: REQUESTS_LIST(),
-      Select: "Id,Title,RequestsJSON,Status,Created,Modified,AuthorId,InitiatorId",
+      Select:
+        "Id,Title,RequestsJSON,Status,Created,Modified,AuthorId,InitiatorId",
       Orderby: "Modified",
       Orderbydecorasc: false,
       Topcount: 5000,
@@ -685,6 +685,11 @@ export async function fetchGroupedMaterialGroupRequests(
   }
 
   const consultantInfo = await fetchConsultantApproverInfo().catch(() => null);
+  const terminalConsultantEmails = isConsultantView
+    ? await fetchMgTerminalConsultantEmailsByRequestId().catch(
+        () => new Map<number, string[]>(),
+      )
+    : new Map<number, string[]>();
   const parsedRequests: IMaterialGroupGroupedRequest[] = [];
 
   for (const item of rawItems) {
@@ -716,9 +721,32 @@ export async function fetchGroupedMaterialGroupRequests(
 
     // Role filtering — scoped by active nav role (`?as=`).
     // Admin / Consultant: never show Draft. Initiator: own requests only (incl. Draft).
+    // Consultant Completed/Rejected: only the consultant who actioned (audit log),
+    // not the current ApproversMaster assignee.
     if (isAdminView || isConsultantView) {
       if (statusEquals(status, Config.MaterialGroupStatus.Draft)) {
         continue;
+      }
+      // Rework is Initiator-only. Consultant All / Pending must not list it.
+      if (
+        isConsultantView &&
+        (statusEquals(status, Config.MaterialGroupStatus.Rework) ||
+          statusEquals(status, "in rework"))
+      ) {
+        continue;
+      }
+      if (
+        isConsultantView &&
+        (statusEquals(status, Config.MaterialGroupStatus.Completed) ||
+          statusEquals(status, Config.MaterialGroupStatus.Rejected))
+      ) {
+        const actors = terminalConsultantEmails.get(id) || [];
+        if (
+          !normalizedUserEmail ||
+          !actors.some((email) => email === normalizedUserEmail)
+        ) {
+          continue;
+        }
       }
     } else {
       const isOwner = isOwnedByCurrentUser(
@@ -811,9 +839,7 @@ export async function fetchMaterialGroupRequestById(
 
   let rawItem: Record<string, unknown> | null = null;
 
-  const normalizeItem = (
-    byIdRaw: unknown,
-  ): Record<string, unknown> | null => {
+  const normalizeItem = (byIdRaw: unknown): Record<string, unknown> | null => {
     const byId = Array.isArray(byIdRaw)
       ? (byIdRaw[0] as Record<string, unknown> | undefined)
       : (byIdRaw as Record<string, unknown> | undefined);
@@ -823,7 +849,9 @@ export async function fetchMaterialGroupRequestById(
     return null;
   };
 
-  const readById = async (id: number): Promise<Record<string, unknown> | null> => {
+  const readById = async (
+    id: number,
+  ): Promise<Record<string, unknown> | null> => {
     // Prefer people Expand so Initiator email is available for Rework notifications
     try {
       const item = normalizeItem(
@@ -895,10 +923,7 @@ export async function fetchMaterialGroupRequestById(
           return items[0];
         }
       } catch (error) {
-        console.warn(
-          `MG filter by ${attempt.FilterKey} failed:`,
-          error,
-        );
+        console.warn(`MG filter by ${attempt.FilterKey} failed:`, error);
       }
     }
 
@@ -968,8 +993,7 @@ export async function fetchMaterialGroupRequestById(
   const author = rawItem.Author as
     | { Title?: string; EMail?: string; Email?: string }
     | undefined;
-  const initiatorName =
-    String(initiator?.Title || author?.Title || "").trim();
+  const initiatorName = String(initiator?.Title || author?.Title || "").trim();
   const initiatorEmail =
     ownerEmails[0] ||
     String(
@@ -1063,42 +1087,83 @@ export interface IConsultantActionParams {
 }
 
 /**
- * Description must be unique within the request and against NPD_Lookup Title
- * (LookupName), same family of rule as Lookup Code uniqueness.
+ * @deprecated Prefer assertMaterialGroupCodesUniqueInLookupTypes.
+ * Kept as a no-op for older call sites that checked global Code/Description uniqueness.
  */
+export async function assertMaterialGroupCodesAndDescriptionsAvailable(
+  _codes: string[],
+  _descriptions: string[],
+): Promise<void> {
+  return;
+}
+
+/** @deprecated Prefer assertMaterialGroupCodesAndDescriptionsAvailable. */
+export async function assertMaterialGroupCodesAvailable(
+  codes: string[],
+): Promise<void> {
+  await assertMaterialGroupCodesAndDescriptionsAvailable(codes, []);
+}
+
+/** @deprecated Prefer assertMaterialGroupCodesAndDescriptionsAvailable. */
 export async function assertMaterialGroupDescriptionsAvailable(
   descriptions: string[],
 ): Promise<void> {
-  const trimmed = descriptions
-    .map((value) => value.trim())
-    .filter((value) => Boolean(value));
-
-  const batchTitles = new Set<string>();
-  for (const description of trimmed) {
-    const key = description.toLowerCase();
-    if (batchTitles.has(key)) {
-      throw new Error(`"${description}" already exists.`);
-    }
-    batchTitles.add(key);
-  }
-
-  const existing = await fetchActiveLookups().catch(() => []);
-  const existingTitles = new Set(
-    existing
-      .map((item) => item.LookupName.trim().toLowerCase())
-      .filter((value) => Boolean(value)),
-  );
-
-  for (const description of trimmed) {
-    if (existingTitles.has(description.toLowerCase())) {
-      throw new Error(`"${description}" already exists.`);
-    }
-  }
+  await assertMaterialGroupCodesAndDescriptionsAvailable([], descriptions);
 }
 
 /**
- * Resolves LookupType + validates uniqueness for Complete entries.
- * Throws before any SharePoint write when Code is missing or already exists.
+ * Code uniqueness within a Lookup Type (NPD_Lookup). Same Code may exist under
+ * a different Type. Empty codes are ignored.
+ */
+export async function assertMaterialGroupCodesUniqueInLookupTypes(
+  entries: ReadonlyArray<{
+    lookupTypeId: number;
+    lookupTypeTitle?: string;
+    code: string;
+  }>,
+): Promise<void> {
+  const filled = entries
+    .map((entry) => ({
+      lookupTypeId: Number(entry.lookupTypeId) || 0,
+      lookupTypeTitle: (entry.lookupTypeTitle || "").trim(),
+      code: (entry.code || "").trim(),
+    }))
+    .filter((entry) => entry.lookupTypeId > 0 && entry.code);
+
+  if (!filled.length) {
+    return;
+  }
+
+  const seenInBatch = new Set<string>();
+  for (const entry of filled) {
+    const key = `${entry.lookupTypeId}::${entry.code.toLowerCase()}`;
+    if (seenInBatch.has(key)) {
+      throw new Error(
+        `"${entry.code}" is duplicated under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
+      );
+    }
+    seenInBatch.add(key);
+  }
+
+  // const existing = await fetchActiveLookups();
+  // for (const entry of filled) {
+  //   const codeKey = entry.code.toLowerCase();
+  //   const exists = existing.some(
+  //     (item) =>
+  //       item.LookupTypeId === entry.lookupTypeId &&
+  //       item.LookupCode.trim().toLowerCase() === codeKey,
+  //   );
+  //   if (exists) {
+  //     throw new Error(
+  //       `"${entry.code}" already exists as a Lookup Code under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
+  //     );
+  //   }
+  // }
+}
+
+/**
+ * Resolves LookupType for Complete entries. Code is required and must be unique
+ * within that Lookup Type (may repeat under a different Type).
  */
 async function prepareLookupMasterEntries(
   entries: IMaterialGroupRequestJsonEntry[],
@@ -1121,17 +1186,6 @@ async function prepareLookupMasterEntries(
   const typeByTitle = new Map(
     lookupTypes.map((t) => [t.Title.trim().toLowerCase(), t]),
   );
-  const existing = await fetchActiveLookups().catch(() => []);
-  const existingCodes = new Set(
-    existing.map((item) => item.LookupCode.trim().toLowerCase()),
-  );
-  const existingTitles = new Set(
-    existing
-      .map((item) => item.LookupName.trim().toLowerCase())
-      .filter((value) => Boolean(value)),
-  );
-  const batchCodes = new Set<string>();
-  const batchTitles = new Set<string>();
   const prepared: Array<{
     lookupTypeId: number;
     lookupTypeTitle: string;
@@ -1166,27 +1220,15 @@ async function prepareLookupMasterEntries(
       );
     }
 
-    const codeKey = code.toLowerCase();
-    if (existingCodes.has(codeKey) || batchCodes.has(codeKey)) {
-      throw new Error(`"${code}" already exists as a Lookup Code.`);
-    }
-
-    const name = description || code;
-    const nameKey = name.toLowerCase();
-    if (existingTitles.has(nameKey) || batchTitles.has(nameKey)) {
-      throw new Error(`"${name}" already exists.`);
-    }
-
-    batchCodes.add(codeKey);
-    batchTitles.add(nameKey);
     prepared.push({
       lookupTypeId,
       lookupTypeTitle: resolvedType.Title || lookupName,
-      name,
+      name: description || code,
       code,
     });
   }
 
+  await assertMaterialGroupCodesUniqueInLookupTypes(prepared);
   return prepared;
 }
 
@@ -1241,7 +1283,9 @@ export async function updateConsultantMaterialGroupAction(
   const rawEntries: IMaterialGroupRequestJsonEntry[] = [];
   const configLookupIds: number[] = [];
   if (params.entriesByConfigId) {
-    for (const [configIdStr, rows] of Object.entries(params.entriesByConfigId)) {
+    for (const [configIdStr, rows] of Object.entries(
+      params.entriesByConfigId,
+    )) {
       const configId = Number(configIdStr);
       const cfg = configMap.get(configId);
       const relatedLookupTypeId =
@@ -1251,14 +1295,25 @@ export async function updateConsultantMaterialGroupAction(
       const lookupName =
         cfg?.relatedFieldTitle || cfg?.title || `Master (${configId})`;
 
-      let hasRow = false;
-      for (const row of rows) {
+      if (!rows.length) {
+        throw new Error(`Please add at least one entry for ${lookupName}.`);
+      }
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
         const code = (row.code || "").trim();
         const description = (row.description || "").trim();
-        if (!code && !description) {
-          continue;
+        if (!description) {
+          throw new Error(
+            `Description is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+          );
         }
-        hasRow = true;
+        // Consultant: Code is mandatory for Complete / Rework / Reject.
+        if (!code) {
+          throw new Error(
+            `Code is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+          );
+        }
         rawEntries.push({
           LookupId: String(relatedLookupTypeId),
           LookupName: lookupName,
@@ -1266,13 +1321,22 @@ export async function updateConsultantMaterialGroupAction(
           Description: description,
         });
       }
-      if (hasRow) {
-        configLookupIds.push(configId);
-      }
+      configLookupIds.push(configId);
     }
   }
 
-  // Complete: sync Lookup Master BEFORE status change so duplicates leave request Pending.
+  // Code unique within Lookup Type for every Consultant action (and on Complete sync).
+  if (rawEntries.length > 0) {
+    await assertMaterialGroupCodesUniqueInLookupTypes(
+      rawEntries.map((entry) => ({
+        lookupTypeId: Number(entry.LookupId) || 0,
+        lookupTypeTitle: entry.LookupName,
+        code: entry.Code,
+      })),
+    );
+  }
+
+  // Complete: sync Lookup Master BEFORE status change.
   if (params.action === "Completed") {
     if (!comments) {
       throw new Error("Comments are required before completing.");
@@ -1430,8 +1494,7 @@ export async function updateConsultantMaterialGroupAction(
     );
     const lastRole = getLastApproverRoleFromSequence(roleSequence);
     if (lastRole) {
-      actorIsLastApprover =
-        lastRole.toLowerCase() === auditRole.toLowerCase();
+      actorIsLastApprover = lastRole.toLowerCase() === auditRole.toLowerCase();
     }
   } catch (err) {
     console.warn(

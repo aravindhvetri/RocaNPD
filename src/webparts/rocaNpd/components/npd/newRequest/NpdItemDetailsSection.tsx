@@ -9,7 +9,6 @@ import {
 import {
   createEmptyNpdItemDetailRow,
   getVisibleNpdItemDetailFields,
-  isEmptyItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
@@ -129,10 +128,13 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
       if (readOnly) {
         return;
       }
+      const misActing = Boolean(isMisCoordinatorActing);
       onRowsChange((currentRows) => {
-        const newRow = createEmptyNpdItemDetailRow(
-          Boolean(isMisCoordinatorActing),
-        );
+        const newRow = createEmptyNpdItemDetailRow(misActing);
+        // MIS Coordinator lines always appear at the top of the grid.
+        if (misActing) {
+          return [newRow, ...currentRows];
+        }
         if (!afterRowId) {
           return [...currentRows, newRow];
         }
@@ -144,7 +146,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         updated.splice(index + 1, 0, newRow);
         return updated;
       });
-      setFirst(Math.floor(rows.length / pageSize) * pageSize);
+      setFirst(misActing ? 0 : Math.floor(rows.length / pageSize) * pageSize);
     },
     [isMisCoordinatorActing, onRowsChange, pageSize, readOnly, rows.length],
   );
@@ -190,13 +192,6 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     setFirst(0);
   }, [isMisCoordinatorActing, onRowsChange, readOnly]);
 
-  const showBulkDelete = React.useMemo(
-    () =>
-      rows.length > 1 ||
-      rows.some((row) => !isEmptyItemDetailRow(row)),
-    [rows],
-  );
-
   const handleAddRowFromActions = React.useCallback(
     (rowId: string) => {
       handleAddItem(rowId);
@@ -237,17 +232,15 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         className={styles.headerImportButton}
         onClick={onImportClick}
       />
-      {showBulkDelete ? (
-        <Button
-          label="Delete"
-          icon="pi pi-trash"
-          size="xs"
-          title="Delete all item lines"
-          aria-label="Delete all item lines"
-          className={styles.headerDeleteButton}
-          onClick={handleBulkDeleteRows}
-        />
-      ) : null}
+      <Button
+        label="Delete"
+        icon="pi pi-trash"
+        size="xs"
+        title="Delete all item lines"
+        aria-label="Delete all item lines"
+        className={styles.headerDeleteButton}
+        onClick={handleBulkDeleteRows}
+      />
     </>
   );
 

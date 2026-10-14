@@ -12,6 +12,7 @@ import {
   assertRequiredImportHeaders,
   findBestHeaderRowIndex,
   findColumnIndex,
+  appendImportRowFieldErrors,
   readSpreadsheetRows,
 } from "./importService";
 import {
@@ -130,10 +131,6 @@ async function resolveMissingLookupTypeTitles(
   });
 }
 
-function buildDuplicateKey(lookupTypeId: number, lookupName: string): string {
-  return `${lookupTypeId}::${lookupName.trim().toLowerCase()}`;
-}
-
 async function readLookupItems(
   selectFields: string,
   filterActive: boolean,
@@ -182,34 +179,26 @@ export async function fetchActiveLookups(): Promise<ILookup[]> {
   return resolveMissingLookupTypeTitles(mapped);
 }
 
-async function assertLookupNotDuplicate(
+async function assertLookupCodeUniqueInType(
   lookupTypeId: number,
-  lookupName: string,
   lookupCode: string,
   editingId?: number,
 ): Promise<void> {
-  const existing = await fetchActiveLookups();
-  const nameKey = lookupName.trim().toLowerCase();
   const codeKey = lookupCode.trim().toLowerCase();
+  if (!lookupTypeId || !codeKey) {
+    return;
+  }
 
-  const duplicateName = existing.some(
+  const existing = await fetchActiveLookups();
+  const duplicate = existing.some(
     (item) =>
       item.Id !== editingId &&
       item.LookupTypeId === lookupTypeId &&
-      item.LookupName.trim().toLowerCase() === nameKey,
-  );
-  if (duplicateName) {
-    throw new Error(`"${lookupName.trim()}" already exists.`);
-  }
-
-  const duplicateCode = existing.some(
-    (item) =>
-      item.Id !== editingId &&
       item.LookupCode.trim().toLowerCase() === codeKey,
   );
-  if (duplicateCode) {
+  if (duplicate) {
     throw new Error(
-      `"${lookupCode.trim()}" already exists as a Lookup Code.`,
+      `"${lookupCode.trim()}" already exists as a Lookup Code under this Lookup Type.`,
     );
   }
 }
@@ -219,7 +208,7 @@ export async function createLookup(
   lookupName: string,
   lookupCode: string,
 ): Promise<void> {
-  await assertLookupNotDuplicate(lookupTypeId, lookupName, lookupCode);
+  await assertLookupCodeUniqueInType(lookupTypeId, lookupCode);
   await SPServices.SPAddItem({
     Listname: LIST_NAME(),
     RequestJSON: {
@@ -237,7 +226,7 @@ export async function updateLookup(
   lookupName: string,
   lookupCode: string,
 ): Promise<void> {
-  await assertLookupNotDuplicate(lookupTypeId, lookupName, lookupCode, id);
+  await assertLookupCodeUniqueInType(lookupTypeId, lookupCode, id);
   await SPServices.SPUpdateItem({
     Listname: LIST_NAME(),
     ID: id,
@@ -270,38 +259,35 @@ export async function bulkCreateLookups(
     return;
   }
 
-  // Final SharePoint guard — do not trust Redux/list state from page load (multi-tab).
-  const existing = await fetchActiveLookups();
-  const existingCodes = new Set(
-    existing.map((item) => item.LookupCode.trim().toLowerCase()),
-  );
-  const existingNameKeys = new Set(
-    existing.map(
-      (item) =>
-        `${item.LookupTypeId}:${item.LookupName.trim().toLowerCase()}`,
-    ),
-  );
-  const batchCodes = new Set<string>();
-  const batchNameKeys = new Set<string>();
-
   for (const record of records) {
-    const codeKey = (record.lookupCode ?? "").trim().toLowerCase();
-    if (!codeKey) {
+    if (!(record.lookupCode ?? "").trim()) {
       throw new Error(`${FieldLabels.LookupCode} is required.`);
     }
-    if (existingCodes.has(codeKey) || batchCodes.has(codeKey)) {
+  }
+
+  // Code must be unique within each Lookup Type (file batch + existing list).
+  const existing = await fetchActiveLookups();
+  const seenInBatch = new Set<string>();
+  for (const record of records) {
+    const typeId = Number(record.lookupTypeId);
+    const codeKey = (record.lookupCode ?? "").trim().toLowerCase();
+    const batchKey = `${typeId}::${codeKey}`;
+    if (seenInBatch.has(batchKey)) {
       throw new Error(
-        `"${(record.lookupCode ?? "").trim()}" already exists as a Lookup Code.`,
+        `"${record.lookupCode.trim()}" is duplicated under Lookup Type "${record.lookupTypeTitle || typeId}".`,
       );
     }
-
-    const nameKey = `${record.lookupTypeId}:${record.lookupName.trim().toLowerCase()}`;
-    if (existingNameKeys.has(nameKey) || batchNameKeys.has(nameKey)) {
-      throw new Error(`"${record.lookupName.trim()}" already exists.`);
+    seenInBatch.add(batchKey);
+    const exists = existing.some(
+      (item) =>
+        item.LookupTypeId === typeId &&
+        item.LookupCode.trim().toLowerCase() === codeKey,
+    );
+    if (exists) {
+      throw new Error(
+        `"${record.lookupCode.trim()}" already exists as a Lookup Code under Lookup Type "${record.lookupTypeTitle || typeId}".`,
+      );
     }
-
-    batchCodes.add(codeKey);
-    batchNameKeys.add(nameKey);
   }
 
   await SPServices.batchInsert({
@@ -352,19 +338,17 @@ export async function parseLookupImportFile(
     lookupTypeByTitle.set(lookupType.Title.trim().toLowerCase(), lookupType);
   });
 
-  const existingKeys = new Set(
-    existingItems.map((item) =>
-      buildDuplicateKey(item.LookupTypeId, item.LookupName),
-    ),
-  );
-  const existingCodes = new Set(
-    existingItems.map((item) => item.LookupCode.trim().toLowerCase()),
-  );
-  const seenInFile = new Set<string>();
-  const seenCodesInFile = new Set<string>();
   const toCreate: ILookupImportRecord[] = [];
   const duplicates: string[] = [];
   const errors: string[] = [];
+  /** typeId::code → first Excel row that reserved that Code under the Type */
+  const seenCodesByType = new Set<string>();
+  existingItems.forEach((item) => {
+    const codeKey = item.LookupCode.trim().toLowerCase();
+    if (item.LookupTypeId > 0 && codeKey) {
+      seenCodesByType.add(`${item.LookupTypeId}::${codeKey}`);
+    }
+  });
 
   for (
     let rowIndex = headerRowIndex + 1;
@@ -379,37 +363,36 @@ export async function parseLookupImportFile(
     const lookupTypeTitle = String(row[lookupTypeColumnIndex] ?? "").trim();
     const lookupName = String(row[lookupNameColumnIndex] ?? "").trim();
     const lookupCode = String(row[lookupCodeColumnIndex] ?? "").trim();
+    const excelRowNumber = rowIndex + 1;
 
     if (!lookupTypeTitle && !lookupName && !lookupCode) {
       continue;
     }
 
-    if (!lookupTypeTitle) {
-      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupType} is required.`);
-      continue;
-    }
+    // Collect every field-level error for this row — do not stop at the first.
+    let rowHasFieldErrors = false;
 
-    if (!lookupCode) {
-      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupCode} is required.`);
-      continue;
-    }
+    // Lookup / Lookup Type allow special characters — do not block import on them.
+    rowHasFieldErrors =
+      appendImportRowFieldErrors(errors, [
+        !lookupTypeTitle
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupType} is required.`
+          : null,
+        !lookupCode
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupCode} is required.`
+          : null,
+        !lookupName
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupName} is required.`
+          : null,
+        lookupCode && lookupCode.length > 255
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupCode} must be 255 characters or less.`
+          : null,
+        lookupName && lookupName.length > 255
+          ? `Row ${excelRowNumber}: ${FieldLabels.LookupName} must be 255 characters or less.`
+          : null,
+      ]) || rowHasFieldErrors;
 
-    if (lookupCode.length > 255) {
-      errors.push(
-        `Row ${rowIndex + 1}: ${FieldLabels.LookupCode} must be 255 characters or less.`,
-      );
-      continue;
-    }
-
-    if (!lookupName) {
-      errors.push(`Row ${rowIndex + 1}: ${FieldLabels.LookupName} is required.`);
-      continue;
-    }
-
-    if (lookupName.length > 255) {
-      errors.push(
-        `Row ${rowIndex + 1}: ${FieldLabels.LookupName} must be 255 characters or less.`,
-      );
+    if (rowHasFieldErrors) {
       continue;
     }
 
@@ -417,28 +400,20 @@ export async function parseLookupImportFile(
 
     if (!lookupType) {
       errors.push(
-        `Row ${rowIndex + 1}: ${FieldLabels.LookupType} "${lookupTypeTitle}" was not found.`,
+        `Row ${excelRowNumber}: ${FieldLabels.LookupType} "${lookupTypeTitle}" was not found.`,
       );
       continue;
     }
 
-    const codeKey = lookupCode.trim().toLowerCase();
-    if (existingCodes.has(codeKey) || seenCodesInFile.has(codeKey)) {
-      errors.push(
-        `Row ${rowIndex + 1}: "${lookupCode}" already exists as a Lookup Code.`,
+    const codeKey = `${lookupType.Id}::${lookupCode.toLowerCase()}`;
+    if (seenCodesByType.has(codeKey)) {
+      duplicates.push(
+        `Row ${excelRowNumber}: Lookup Code "${lookupCode}" already exists under Lookup Type "${lookupType.Title}".`,
       );
       continue;
     }
 
-    const duplicateKey = buildDuplicateKey(lookupType.Id, lookupName);
-
-    if (existingKeys.has(duplicateKey) || seenInFile.has(duplicateKey)) {
-      duplicates.push(lookupName);
-      continue;
-    }
-
-    seenInFile.add(duplicateKey);
-    seenCodesInFile.add(codeKey);
+    seenCodesByType.add(codeKey);
     toCreate.push({
       lookupTypeId: lookupType.Id,
       lookupTypeTitle: lookupType.Title,
@@ -447,6 +422,7 @@ export async function parseLookupImportFile(
     });
   }
 
+  // Duplicates-only files still contain data — surface them in the validation dialog.
   if (!toCreate.length && !duplicates.length && !errors.length) {
     throw new Error("The uploaded file does not contain any lookup records.");
   }

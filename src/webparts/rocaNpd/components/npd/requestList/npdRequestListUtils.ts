@@ -2,7 +2,6 @@ import {
   Config,
   FieldLabels,
   RequestStatus,
-  WorkflowStepStatus,
 } from "../../../../../External/CommonServices/Config";
 import type { INpdWorkflowStepJson } from "../../../../../External/CommonServices/Interface";
 import {
@@ -237,7 +236,7 @@ export function hasVerticalHeadApprovedStep(
     return false;
   }
 
-  const approved = WorkflowStepStatus.Approved.toLowerCase();
+  const approved = "approved";
   return steps.some(
     (step) =>
       isVerticalHeadWorkflowRole(step.Role || "") &&
@@ -247,9 +246,9 @@ export function hasVerticalHeadApprovedStep(
 
 /**
  * Approved Requests list membership.
- * - Default (Initiator / MIS): request Status is Approved / Completed.
- * - Vertical Head module only: also include Pending requests where VH already
- *   approved in WorkFlowJSON (status display stays Pending with MIS Coordinator).
+ * - Initiator / MIS: header Status Approved / Completed.
+ * - Vertical Head: also Pending requests VH already approved
+ *   (status label stays Pending with MIS Coordinator).
  */
 export function isNpdApprovedListItem(
   item: {

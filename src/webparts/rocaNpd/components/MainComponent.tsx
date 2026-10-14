@@ -5,13 +5,15 @@ import {
   lockWebPartViewport,
   unlockWebPartViewport,
 } from "../../../External/CommonServices/hideSharePointChrome";
+import { resolveNpdWebAbsoluteUrl } from "../../../External/CommonServices/npdAppUrl";
 import { injectRocaPrimeOverrides } from "../../../External/CommonServices/injectRocaPrimeOverrides";
 import themeStyles from "../styles/theme.module.scss";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import {
-  clearFlashMessage,
-} from "../../../store/slices/uiSlice";
+import { clearMaterialGroupBusyState } from "../../../store/slices/materialGroupSlice";
+import { clearNpdFormBusyState } from "../../../store/slices/npdFormSlice";
+import { clearFlashMessage } from "../../../store/slices/uiSlice";
 import { initializeApp } from "../../../store/thunks/appThunks";
+import { finishUiProcessing } from "../../../store/uiProcessing";
 import type { IMainComponentProps } from "./IMainComponentProps";
 import { LoaderOverlay, Toast, showErrorToast, showSuccessToast } from "./common/controls";
 import AppShell from "./layout/AppShell/AppShell";
@@ -19,8 +21,9 @@ import AppRoutes from "./routes/AppRoutes";
 
 /**
  * Handle Outlook SafeLinks stripping hash fragments from email Login links.
- * When `npdRoute` query parameter is present, restore it as the hash route
- * before HashRouter mounts so the app navigates to the correct request.
+ * When `npdRoute` is on the site URL (NPD or Material Group emails), restore it
+ * as the hash route before HashRouter mounts so the user lands on the right page.
+ * Keeps `id` / `mode` out of the SharePoint SitePages query string.
  */
 (function handleNpdEmailRedirect(): void {
   if (typeof window === "undefined") {
@@ -28,10 +31,16 @@ import AppRoutes from "./routes/AppRoutes";
   }
   const params = new URLSearchParams(window.location.search);
   const npdRoute = params.get("npdRoute");
-  if (npdRoute) {
-    const route = npdRoute.startsWith("/") ? npdRoute : `/${npdRoute}`;
-    window.history.replaceState(null, "", `${window.location.pathname}#${route}`);
+  if (!npdRoute) {
+    return;
   }
+  const route = npdRoute.startsWith("/") ? npdRoute : `/${npdRoute}`;
+  // Restore on the site URL so Outlook login never stays on SitePages/RocaNPD.aspx.
+  const siteUrl = resolveNpdWebAbsoluteUrl().replace(/\/+$/, "");
+  const target = siteUrl
+    ? `${siteUrl}#${route}`
+    : `${window.location.pathname}#${route}`;
+  window.history.replaceState(null, "", target);
 })();
 
 const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
@@ -41,9 +50,24 @@ const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
   const initialized = useAppSelector((state) => state.app.initialized);
   const roleStatus = useAppSelector((state) => state.app.roleStatus);
   const globalProcessing = useAppSelector((state) => state.ui.globalProcessing);
+  const npdSaveStatus = useAppSelector((state) => state.npdForm.saveStatus);
+  const mgSaveStatus = useAppSelector((state) => state.materialGroup.saveStatus);
+  const mgSubmitStatus = useAppSelector(
+    (state) => state.materialGroup.submitStatus,
+  );
+  const mgConsultantStatus = useAppSelector(
+    (state) => state.materialGroup.consultantActionStatus,
+  );
   const flashMessage = useAppSelector((state) => state.ui.flashMessage);
   const isResolvingAccess = !initialized || roleStatus === "loading";
   const showItemProgress = Boolean(globalProcessing?.showItemProgress);
+  const hasBusyAction =
+    Boolean(globalProcessing) ||
+    npdSaveStatus === "saving" ||
+    npdSaveStatus === "submitting" ||
+    mgSaveStatus === "saving" ||
+    mgSubmitStatus === "submitting" ||
+    mgConsultantStatus === "saving";
 
   React.useEffect(() => {
     dispatch(initializeApp(spfxContext)).catch(() => undefined);
@@ -78,6 +102,51 @@ const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
     dispatch(clearFlashMessage());
   }, [dispatch, flashMessage]);
 
+  // Stop stuck loaders when connectivity stays down mid-action. Does not auto-resume.
+  React.useEffect(() => {
+    if (!hasBusyAction) {
+      return;
+    }
+
+    let graceTimerId = 0;
+
+    const clearBusyUi = (): void => {
+      finishUiProcessing(dispatch, false);
+      dispatch(clearNpdFormBusyState());
+      dispatch(clearMaterialGroupBusyState());
+    };
+
+    const onOffline = (): void => {
+      if (graceTimerId) {
+        window.clearTimeout(graceTimerId);
+      }
+      // Brief reconnects should not interrupt an in-flight successful request.
+      graceTimerId = window.setTimeout(() => {
+        graceTimerId = 0;
+        if (navigator.onLine === false) {
+          clearBusyUi();
+        }
+      }, 1500);
+    };
+
+    const onOnline = (): void => {
+      if (graceTimerId) {
+        window.clearTimeout(graceTimerId);
+        graceTimerId = 0;
+      }
+    };
+
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
+      if (graceTimerId) {
+        window.clearTimeout(graceTimerId);
+      }
+    };
+  }, [dispatch, hasBusyAction]);
+
   return (
     <div ref={rootRef} className={themeStyles.appRoot} data-roca-npd-root>
       <Toast ref={toastRef} />
@@ -93,7 +162,9 @@ const MainComponent: React.FC<IMainComponentProps> = ({ spfxContext }) => {
         }
         progressCaption={
           showItemProgress && globalProcessing
-            ? `${globalProcessing.current} / ${globalProcessing.total}`
+            ? globalProcessing.progressLabel
+              ? `${globalProcessing.progressLabel}: ${globalProcessing.current}/${globalProcessing.total}`
+              : `${globalProcessing.current} / ${globalProcessing.total}`
             : undefined
         }
       />

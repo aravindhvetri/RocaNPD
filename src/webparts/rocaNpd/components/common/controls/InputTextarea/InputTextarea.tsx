@@ -1,5 +1,6 @@
 import * as React from "react";
 import { InputTextarea as PrimeInputTextarea } from "primereact/inputtextarea";
+import { stripLeadingSpaces } from "../../../../../../External/CommonServices/textInputSanitize";
 import ControlField from "../ControlField/ControlField";
 import type { IInputTextareaProps } from "./IInputTextareaProps";
 
@@ -18,7 +19,7 @@ const InputTextarea: React.FC<IInputTextareaProps> = ({
   rows = 3,
   maxLength,
   autoResize,
-  'data-testid': testId,
+  "data-testid": testId,
 }) => (
   <ControlField
     id={id}
@@ -44,7 +45,7 @@ const InputTextarea: React.FC<IInputTextareaProps> = ({
       style={{ resize: "none" }}
       className={`w-full ${error ? "p-invalid" : ""}`}
       data-testid={testId}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => onChange(stripLeadingSpaces(e.target.value))}
     />
   </ControlField>
 );

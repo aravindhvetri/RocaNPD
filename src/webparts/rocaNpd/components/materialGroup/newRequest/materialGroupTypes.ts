@@ -44,6 +44,9 @@ export interface IMaterialGroupFormFooterProps {
   mode?: MaterialGroupFormMode;
   saving?: boolean;
   submitting?: boolean;
+  /** Rework keeps Resubmit and Cancel only (same as NPD). */
+  isResubmit?: boolean;
+  showSaveDraft?: boolean;
   onCancel: () => void;
   onSaveDraft?: () => void;
   onSubmit?: () => void;

@@ -191,6 +191,18 @@ export const materialGroupSlice = createSlice({
     clearMaterialGroupError: (state) => {
       state.error = null;
     },
+    /** Clears stuck save/submit/consultant loaders after a network drop. */
+    clearMaterialGroupBusyState: (state) => {
+      if (state.saveStatus === "saving") {
+        state.saveStatus = "idle";
+      }
+      if (state.submitStatus === "submitting") {
+        state.submitStatus = "idle";
+      }
+      if (state.consultantActionStatus === "saving") {
+        state.consultantActionStatus = "idle";
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -262,6 +274,10 @@ export const materialGroupSlice = createSlice({
       .addCase(
         fetchMaterialGroupRequestByGuidThunk.fulfilled,
         (state, action) => {
+          // Stale hydrate after New/create reset must not repopulate the form.
+          if (state.hydrateStatus !== "loading") {
+            return;
+          }
           state.hydrateStatus = "succeeded";
           const payload = action.payload;
           state.currentId =
@@ -333,6 +349,7 @@ export const {
   setHydratedForm,
   resetMaterialGroupForm,
   clearMaterialGroupError,
+  clearMaterialGroupBusyState,
 } = materialGroupSlice.actions;
 
 export default materialGroupSlice.reducer;

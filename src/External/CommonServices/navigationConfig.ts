@@ -419,6 +419,20 @@ export function buildNavHref(route: string, viewRole?: string | null): string {
   return `${path}?as=${encodeURIComponent(role)}`;
 }
 
+/** True for Initiator "New NPD Request" / "New Material Group" create routes. */
+export function isCreateFormRoute(route: string): boolean {
+  const path = (route || "").split("?")[0];
+  return path === Routes.NpdNew || path === Routes.MgNew;
+}
+
+/**
+ * Location state that create-form screens watch so each New click
+ * clears any previously opened request even when the path is unchanged.
+ */
+export function createFormResetNavState(): { formResetAt: number } {
+  return { formResetAt: Date.now() };
+}
+
 export function getNavPermissionKey(item: INavItemConfig): string {
   return item.permissionKey || item.id;
 }

@@ -3,7 +3,7 @@ import type {
   IMaterialGroupAuditLogPayload,
   IMaterialGroupAuditLogRow,
 } from "./Interface";
-import { extractPersonEmails } from "./personFieldUtils";
+import { extractPersonEmails, normalizeEmail } from "./personFieldUtils";
 import SPServices, { getSP } from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.MaterialGroupAuditLogs;
@@ -498,6 +498,119 @@ export async function fetchMaterialGroupAuditLogs(
       }
     }
   }
+}
+
+/**
+ * Loads Consultant emails who Completed or Rejected each Material Group request.
+ * Key = NPD_MaterialGroupRequests item Id. Used for historical list visibility
+ * when ApproversMaster Consultant changes.
+ */
+export async function fetchMgTerminalConsultantEmailsByRequestId(): Promise<
+  Map<number, string[]>
+> {
+  const result = new Map<number, string[]>();
+  const completed = Config.MaterialGroupStatus.Completed.toLowerCase();
+  const rejected = Config.MaterialGroupStatus.Rejected.toLowerCase();
+
+  const tryLoad = async (
+    select: string,
+    expand: string | undefined,
+  ): Promise<Record<string, unknown>[]> =>
+    (await SPServices.SPReadItems({
+      Listname: LIST_NAME(),
+      Select: select,
+      Expand: expand,
+      Orderby: "Id",
+      Orderbydecorasc: false,
+      Topcount: 5000,
+    })) as Record<string, unknown>[];
+
+  let rows: Record<string, unknown>[] = [];
+  try {
+    rows = await tryLoad(
+      [
+        "Id",
+        FIELDS.Title,
+        FIELDS.Comments,
+        FIELDS.Role,
+        `${FIELDS.MaterialGroupRequests}/Id`,
+        `${FIELDS.Consultant}/EMail`,
+        `${FIELDS.Consultant}/Title`,
+        "Author/EMail",
+      ].join(","),
+      `${FIELDS.MaterialGroupRequests},${FIELDS.Consultant},Author`,
+    );
+  } catch {
+    try {
+      rows = await tryLoad(
+        [
+          "Id",
+          FIELDS.Title,
+          FIELDS.Comments,
+          FIELDS.Role,
+          FIELDS.MaterialGroupRequestsId,
+          `${FIELDS.Consultant}/EMail`,
+          "Author/EMail",
+        ].join(","),
+        `${FIELDS.Consultant},Author`,
+      );
+    } catch (error) {
+      console.warn(
+        "Could not load MG audit logs for historical Consultant scope:",
+        error,
+      );
+      return result;
+    }
+  }
+
+  rows.forEach((row) => {
+    const mapped = mapAuditRow(row);
+    const status = (mapped.status || "").trim().toLowerCase();
+    if (status !== completed && status !== rejected) {
+      return;
+    }
+
+    const role = (mapped.role || "").trim().toLowerCase();
+    if (role && role !== Config.Roles.Consultant.toLowerCase()) {
+      // Prefer Consultant-role rows; still accept blank role with terminal action.
+      if (role === Config.Roles.Initiator.toLowerCase()) {
+        return;
+      }
+    }
+
+    const requestRef =
+      row[FIELDS.MaterialGroupRequests] ??
+      row.MaterialGroupRequests ??
+      row[FIELDS.MaterialGroupRequestsId] ??
+      row.MaterialGroupRequestsId;
+    let requestId = 0;
+    if (typeof requestRef === "number") {
+      requestId = requestRef;
+    } else if (requestRef && typeof requestRef === "object") {
+      requestId = Number(
+        (requestRef as { Id?: number; ID?: number }).Id ??
+          (requestRef as { Id?: number; ID?: number }).ID,
+      );
+    } else {
+      requestId = Number(requestRef);
+    }
+    if (!Number.isFinite(requestId) || requestId <= 0) {
+      return;
+    }
+
+    const email = normalizeEmail(mapped.actionedByEmail || "");
+    if (!email) {
+      return;
+    }
+
+    const existing = result.get(requestId) || [];
+    if (!existing.includes(email)) {
+      existing.push(email);
+      result.set(requestId, existing);
+    }
+  });
+
+  return result;
 }
 
 /**

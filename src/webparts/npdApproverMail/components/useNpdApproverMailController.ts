@@ -13,6 +13,10 @@ import {
   fetchNpdGeneralInfoById,
 } from "../../../External/CommonServices/npdRequestGeneralInfoService";
 import {
+  raceWithBrowserOffline,
+  toUserActionErrorMessage,
+} from "../../../External/CommonServices/networkConnectivity";
+import {
   getFirstPendingApproverRole,
   resolveActorWorkflowRole,
   userCanActOnPendingWorkflow,
@@ -41,10 +45,10 @@ const MSG_NO_ACTION_REQUIRED =
 const MSG_NOT_IN_WORKFLOW = "You are not part of this request workflow.";
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-  return "Unable to process this approval action.";
+  return toUserActionErrorMessage(
+    error,
+    "Unable to process this approval action.",
+  );
 }
 
 function defaultComments(action: NpdWorkflowAction): string {
@@ -295,17 +299,19 @@ export function useNpdApproverMailController(
         ) || getFirstPendingApproverRole(loaded.WorkflowSteps);
 
       setViewState("submitting");
-      void applyNpdWorkflowAction({
-        requestId: loaded.Id,
-        action: nextAction,
-        comments: commentText.trim() || defaultComments(nextAction),
-        actorEmail,
-        actorRole,
-        actorUserId: userId,
-        access,
-        siteUrl: context.pageContext.web.absoluteUrl,
-        actionVia: "Mail",
-      })
+      void raceWithBrowserOffline(
+        applyNpdWorkflowAction({
+          requestId: loaded.Id,
+          action: nextAction,
+          comments: commentText.trim() || defaultComments(nextAction),
+          actorEmail,
+          actorRole,
+          actorUserId: userId,
+          access,
+          siteUrl: context.pageContext.web.absoluteUrl,
+          actionVia: "Mail",
+        }),
+      )
         .then((saved) => {
           isSubmittedRef.current = true;
           setRequest(saved);

@@ -13,8 +13,13 @@ export interface IGlobalProcessingState {
   current: number;
   total: number;
   percent: number;
-  /** When true, show item progress (Initiator draft/submit only). */
+  /** When true, show item progress (Initiator draft/submit or SAP posting). */
   showItemProgress: boolean;
+  /**
+   * Optional caption label. When set, UI shows `{label}: {current}/{total}`
+   * (e.g. `SAP Datas: 10/100`). Otherwise `{current} / {total}`.
+   */
+  progressLabel?: string;
 }
 
 export interface IUiState {

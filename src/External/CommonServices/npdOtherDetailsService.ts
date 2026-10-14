@@ -236,11 +236,19 @@ export interface IBuildMisOtherDetailsParams {
   materialExtension?: string;
   /** Preserve editable fields when re-deriving auto fields. */
   existing?: Partial<INpdOtherDetails> | null;
+  /**
+   * When true, keep Profit Center / Material Extension from `existing`
+   * even when blank (already persisted on NPD_Request).
+   */
+  preserveEditableFields?: boolean;
 }
 
 /**
  * Builds Other Details values: auto fields from rules + PlantMaster + Brand Extension.
- * Keeps existing Profit Center / Material Extension when already set by MIS.
+ * Editable fields (Profit Center, Material Extension):
+ * - When `preserveEditableFields` is true, keep existing values even if blank
+ *   (NPD_Request is the source of truth after MIS has saved).
+ * - Otherwise seed Material Extension from Brand Material Extension when empty.
  */
 export function buildMisOtherDetails(
   params: IBuildMisOtherDetailsParams,
@@ -255,10 +263,12 @@ export function buildMisOtherDetails(
   );
   const plantDetails = params.plantDetails;
   const existing = params.existing;
+  const preserveEditable = Boolean(params.preserveEditableFields);
 
-  const materialExtension =
-    (existing?.materialExtension || "").trim() ||
-    (params.materialExtension || "").trim();
+  const existingMaterialExtension = (existing?.materialExtension ?? "").trim();
+  const materialExtension = preserveEditable
+    ? existingMaterialExtension
+    : existingMaterialExtension || (params.materialExtension || "").trim();
 
   return {
     plantCode,
@@ -297,6 +307,11 @@ export function mapOtherDetailsFromRequest(
   };
 }
 
+/**
+ * True when Other Details were previously written to NPD_Request
+ * (any non-empty persisted field). Used so cleared Material Extension
+ * is not re-filled from Brand Material Extension on reload.
+ */
 export function otherDetailsHaveSavedValues(
   details: INpdOtherDetails | null | undefined,
 ): boolean {

@@ -2,9 +2,9 @@ import { Config, FieldLabels } from "./Config";
 import { lookupTitlesInclude } from "./lookupFieldUtils";
 import {
   buildMgDraftReworkUrl,
-  buildMgHashUrl,
+  buildMgEmailLoginUrl,
+  buildMgConsultantEmailLoginUrl,
   buildMgRejectedViewUrl,
-  buildMgRequestFormUrl,
   buildMgReworkEditUrl,
 } from "./mgAppUrl";
 import { getRocaLogoInlineAttachment } from "./npdEmailLogo";
@@ -286,10 +286,7 @@ export async function sendMaterialGroupSubmitNotification(
   }
 
   const greetingName = greetingNameFromEmail(consultantEmails[0]);
-  const loginUrl = buildMgRequestFormUrl(
-    params.requestListItemId,
-    "consultant-edit",
-  );
+  const loginUrl = buildMgConsultantEmailLoginUrl(params.requestListItemId);
   const subject = `${params.requestId} — Approval Required`;
   const body = buildMaterialGroupEmailHtml({
     greetingName,
@@ -341,13 +338,13 @@ export async function sendMaterialGroupInitiatorNotification(
   const loginUrl = isRework
     ? buildMgReworkEditUrl(params.requestListItemId)
     : isCompleted
-      ? buildMgHashUrl(Config.Routes.MgCompleted)
+      ? buildMgEmailLoginUrl(Config.Routes.MgCompleted)
       : buildMgRejectedViewUrl(params.requestListItemId);
   const fallbackListUrl = isRework
     ? buildMgDraftReworkUrl()
     : isCompleted
-      ? buildMgHashUrl(Config.Routes.MgCompleted)
-      : buildMgHashUrl(Config.Routes.MgAll);
+      ? buildMgEmailLoginUrl(Config.Routes.MgCompleted)
+      : buildMgEmailLoginUrl(Config.Routes.MgAll);
 
   const subject = `${params.requestId} — ${
     isCompleted ? "Completed" : params.action

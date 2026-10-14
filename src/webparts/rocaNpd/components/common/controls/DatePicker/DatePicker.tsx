@@ -18,6 +18,7 @@ const DatePicker: React.FC<IDatePickerProps> = ({
   placeholder,
   showTime,
   dateFormat = "dd/mm/yy",
+  panelClassName,
   'data-testid': testId,
 }) => (
   <ControlField
@@ -37,6 +38,7 @@ const DatePicker: React.FC<IDatePickerProps> = ({
       disabled={disabled}
       readOnlyInput={readOnly}
       className={`w-full ${error ? "p-invalid" : ""}`}
+      panelClassName={panelClassName}
       appendTo={getAppRootElement()}
       data-testid={testId}
       onChange={(e) => onChange((e.value as Date) ?? null)}

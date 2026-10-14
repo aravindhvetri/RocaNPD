@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
-import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config } from "../../../../../External/CommonServices/Config";
 import type {
   ILookupImportParseResult,
   ILookupRow,
@@ -8,7 +8,6 @@ import type {
 } from "../../../../../External/CommonServices/Interface";
 import {
   buildImportValidationRows,
-  ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { exportLookupsToExcel, LOOKUP_IMPORT_HEADERS } from "../../../../../External/CommonServices/lookupService";
@@ -304,9 +303,10 @@ const LookupMaster: React.FC = () => {
   const handleImportFile = async (file: File): Promise<void> => {
     try {
       const result = await dispatch(previewImportLookups(file)).unwrap();
+      // Parser already builds full messages including Lookup Type + Code.
       const validationRows = buildImportValidationRows(
         result.duplicates,
-        ImportValidationMessages.duplicateLookupName,
+        "",
         result.errors,
       );
 
@@ -422,7 +422,6 @@ const LookupMaster: React.FC = () => {
       <ImportValidationDialog
         visible={importValidationVisible}
         sectionTitle="Import Lookup Master"
-        recordColumnHeader={FieldLabels.LookupName}
         validationRows={importValidationRows}
         canProceed={Boolean(importPreview?.toCreate.length)}
         proceeding={isSaving}

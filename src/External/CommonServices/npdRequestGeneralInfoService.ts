@@ -8,7 +8,15 @@ import type {
   NpdWorkflowAction,
 } from "./Interface";
 import { addNpdApproverComment, resolveApproverUserIds } from "./npdApproverCommentsService";
-import { saveNpdItemDetailsBatch } from "./npdItemDetailsService";
+import {
+  buildNpdItemDetailsMatchKey,
+  tryLoadNpdItemDetailsBackup,
+  upsertNpdItemDetailsBackupAttachment,
+} from "./npdItemDetailsBackupService";
+import {
+  fetchNpdItemDetailsByRequestId,
+  saveNpdItemDetailsBatch,
+} from "./npdItemDetailsService";
 import { generateNextNpdRequestId, isNpdRequestIdTitle } from "./npdRequestIdService";
 import {
   sendNpdApprovalNotification,
@@ -24,6 +32,8 @@ import {
   buildNpdDraftWorkflowJson,
   getFirstPendingApproverRole,
   getPendingApproverEmails,
+  isMisCoordinatorWorkflowRole,
+  isVerticalHeadWorkflowRole,
   parseWorkflowJson,
   resolveActorWorkflowRole,
   resolveRequestStatusAfterAction,
@@ -31,6 +41,45 @@ import {
   userCanActOnPendingWorkflow,
 } from "./npdWorkflowJsonService";
 import { canActOnPendingNpdStep } from "./permissionService";
+import { validateItemsAgainstMaterialMaster } from "./materialMasterService";
+import {
+  isBrowserOnline,
+  NETWORK_OFFLINE_MESSAGE,
+} from "./networkConnectivity";
+
+/**
+ * Set when Submit is abandoned because the browser went offline.
+ * The in-flight SharePoint call may still be pending; this stops it from
+ * promoting the request to Pending after connectivity returns.
+ */
+let activeNpdSubmitToken = 0;
+let cancelledNpdSubmitToken = 0;
+let npdSubmitOfflineLatch = false;
+
+/** Call at the start of a new Submit click so a previous offline cancel does not stick. */
+export function resetNpdSubmitOfflineLatch(): void {
+  npdSubmitOfflineLatch = false;
+}
+
+/** UI detected offline. Do not wait for the hung SharePoint call to settle. */
+export function cancelInFlightNpdSubmit(): void {
+  npdSubmitOfflineLatch = true;
+  cancelledNpdSubmitToken = activeNpdSubmitToken;
+}
+
+function beginNpdSubmitToken(): number {
+  if (npdSubmitOfflineLatch || !isBrowserOnline()) {
+    throw new Error(NETWORK_OFFLINE_MESSAGE);
+  }
+  activeNpdSubmitToken += 1;
+  return activeNpdSubmitToken;
+}
+
+function isNpdSubmitCancelled(token: number): boolean {
+  return token > 0 && cancelledNpdSubmitToken === token;
+}
+import { isDeletedYesFlag } from "./lookupFieldUtils";
+import { postNpdItemsToSap } from "./sapMaterialMasterService";
 import {
   getActiveRecordCreatePayload,
   getActiveRecordFilters,
@@ -73,7 +122,7 @@ const EXPAND_FIELDS = "Author,Initiator";
 
 /** Minimal select when Other Details columns are not yet provisioned. */
 const SELECT_FIELDS_CORE =
-  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail";
+  "Id,Title,Brand,MaterialType,Plant,Status,IsDeleted,WorkFlowJSON,Created,Modified,Author/Id,Author/Title,Author/EMail,Initiator/Id,Initiator/Title,Initiator/EMail";
 
 function getNumericId(value: unknown): number {
   const id = Number(value);
@@ -153,7 +202,7 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     MaterialType: String(item[FIELDS.MaterialType] ?? ""),
     Plant: String(item[FIELDS.Plant] ?? ""),
     Status: String(item[FIELDS.Status] ?? ""),
-    IsDeleted: Boolean(item[SOFT_DELETE_FIELD]),
+    IsDeleted: isDeletedYesFlag(item[SOFT_DELETE_FIELD]),
     WorkFlowJSON: workflowJson,
     WorkflowSteps: parseWorkflowJson(item[FIELDS.WorkFlowJSON] ?? workflowJson),
     AuthorEmail: getAuthorEmail(item),
@@ -197,11 +246,9 @@ export function isDraftOrReworkStatus(status: string): boolean {
   );
 }
 
-function resolveSavedStatus(existingStatus?: string | null): string {
-  if (existingStatus && isDraftOrReworkStatus(existingStatus)) {
-    return existingStatus.trim();
-  }
-
+function resolveDraftSaveStatus(): string {
+  // Save Draft always stores Draft — including after VH/MIS Rework — so the
+  // request stays with the Initiator until they click Resubmit / Submit.
   return RequestStatus.Draft;
 }
 
@@ -241,6 +288,29 @@ async function resolveInitiatorSiteUserId(
   }
 }
 
+/**
+ * Writes the Item Details JSON backup unless a larger recovery file is already
+ * attached. A partial Draft (only the rows saved before a network drop) must
+ * not replace that file.
+ */
+async function writeItemDetailsBackupIfNotSmaller(
+  requestId: number,
+  formItems: INpdItemDetailRecord[],
+): Promise<void> {
+  if (!(requestId > 0)) {
+    return;
+  }
+
+  const existing = await tryLoadNpdItemDetailsBackup(requestId).catch(
+    () => null,
+  );
+  if (existing && existing.length > formItems.length) {
+    return;
+  }
+
+  await upsertNpdItemDetailsBackupAttachment(requestId, formItems);
+}
+
 async function persistHeaderAndItems(
   payload: INpdDraftSavePayload,
   workflowJson: string,
@@ -249,7 +319,70 @@ async function persistHeaderAndItems(
   items: INpdItemDetailRecord[],
   initiatorEmail: string,
   initiatorUserId?: number,
+  itemSave?: {
+    partial?: boolean;
+    deletedSharePointIds?: number[];
+    /**
+     * Full Item Details grid for JSON backup (all rows). Defaults to `items`
+     * when omitted (new Draft saves already send the full set).
+     */
+    backupItems?: INpdItemDetailRecord[];
+    onDraftRetained?: (draft: {
+      requestId: number;
+      requestTitle: string;
+    }) => void;
+  },
 ): Promise<INpdRequestGeneralInfo> {
+  const isNewRequest = !(payload.id && payload.id > 0);
+  const requestId = await upsertNpdRequestHeader(
+    payload,
+    workflowJson,
+    status,
+    title,
+    initiatorEmail,
+    initiatorUserId,
+  );
+
+  const requestTitle =
+    (title || "").trim() ||
+    (payload.existingTitle || "").trim() ||
+    String(requestId);
+  itemSave?.onDraftRetained?.({ requestId, requestTitle });
+
+  const backupItems = itemSave?.backupItems ?? items;
+  // Backup before Item Details writes. Do not replace a larger recovery file
+  // with the shorter set currently shown on a partial Draft.
+  await writeItemDetailsBackupIfNotSmaller(requestId, backupItems);
+
+  try {
+    await saveNpdItemDetailsBatch(requestId, items, {
+      isNewRequest,
+      partial: Boolean(itemSave?.partial),
+      deletedSharePointIds: itemSave?.deletedSharePointIds,
+    });
+  } catch (error) {
+    const wrapped =
+      error instanceof Error ? error : new Error(String(error));
+    const draftMeta = wrapped as Error & {
+      npdDraftRequestId?: number;
+      npdDraftRequestTitle?: string;
+    };
+    draftMeta.npdDraftRequestId = requestId;
+    draftMeta.npdDraftRequestTitle = requestTitle;
+    throw wrapped;
+  }
+
+  return fetchNpdGeneralInfoById(requestId);
+}
+
+async function upsertNpdRequestHeader(
+  payload: INpdDraftSavePayload,
+  workflowJson: string,
+  status: string,
+  title: string,
+  initiatorEmail: string,
+  initiatorUserId?: number,
+): Promise<number> {
   const requestJson = buildItemPayload(payload, workflowJson, status, title);
   const initiatorId = await resolveInitiatorSiteUserId(
     initiatorEmail,
@@ -259,7 +392,6 @@ async function persistHeaderAndItems(
     requestJson[FIELDS.InitiatorId] = initiatorId;
   }
 
-  const isNewRequest = !(payload.id && payload.id > 0);
   let requestId = payload.id && payload.id > 0 ? payload.id : 0;
 
   if (requestId) {
@@ -268,22 +400,23 @@ async function persistHeaderAndItems(
       ID: requestId,
       RequestJSON: requestJson,
     });
-  } else {
-    const created = await SPServices.SPAddItem({
-      Listname: LIST_NAME(),
-      RequestJSON: {
-        ...requestJson,
-        ...getActiveRecordCreatePayload(),
-      },
-    });
-    requestId = getAddedItemId(created);
-    if (!requestId) {
-      throw new Error("The request was saved but its SharePoint ID could not be read.");
-    }
+    return requestId;
   }
 
-  await saveNpdItemDetailsBatch(requestId, items, isNewRequest);
-  return fetchNpdGeneralInfoById(requestId);
+  const created = await SPServices.SPAddItem({
+    Listname: LIST_NAME(),
+    RequestJSON: {
+      ...requestJson,
+      ...getActiveRecordCreatePayload(),
+    },
+  });
+  requestId = getAddedItemId(created);
+  if (!requestId) {
+    throw new Error(
+      "The request was saved but its SharePoint ID could not be read.",
+    );
+  }
+  return requestId;
 }
 
 export async function saveNpdGeneralInfoDraft(
@@ -292,15 +425,43 @@ export async function saveNpdGeneralInfoDraft(
   initiatorEmail: string,
   contextSiteUrl?: string,
   initiatorUserId?: number,
+  itemSave?: {
+    partial?: boolean;
+    deletedSharePointIds?: number[];
+    backupItems?: INpdItemDetailRecord[];
+    onDraftRetained?: (draft: {
+      requestId: number;
+      requestTitle: string;
+    }) => void;
+  },
 ): Promise<INpdRequestGeneralInfo> {
-  const workflowSteps = await buildNpdDraftWorkflowJson(
-    payload.brand.trim(),
-    initiatorEmail,
-    contextSiteUrl,
-    { enforceApprovers: false },
-  );
-  const workflowJson = stringifyWorkflowJson(workflowSteps);
-  const status = resolveSavedStatus(payload.existingStatus);
+  const isExisting = Boolean(payload.id && payload.id > 0);
+  let workflowJson = "";
+
+  // Existing Draft/Rework: keep WorkFlowJSON — skip ApproversMaster rebuild.
+  if (isExisting && payload.id) {
+    try {
+      const existing = await fetchNpdGeneralInfoById(payload.id);
+      workflowJson = (existing.WorkFlowJSON || "").trim();
+      if (!workflowJson && existing.WorkflowSteps?.length) {
+        workflowJson = stringifyWorkflowJson(existing.WorkflowSteps);
+      }
+    } catch {
+      workflowJson = "";
+    }
+  }
+
+  if (!workflowJson) {
+    const workflowSteps = await buildNpdDraftWorkflowJson(
+      payload.brand.trim(),
+      initiatorEmail,
+      contextSiteUrl,
+      { enforceApprovers: false },
+    );
+    workflowJson = stringifyWorkflowJson(workflowSteps);
+  }
+
+  const status = resolveDraftSaveStatus();
   const title =
     payload.existingTitle && isNpdRequestIdTitle(payload.existingTitle)
       ? payload.existingTitle.trim()
@@ -314,6 +475,14 @@ export async function saveNpdGeneralInfoDraft(
     items,
     initiatorEmail,
     initiatorUserId,
+    {
+      partial: isExisting ? itemSave?.partial !== false : undefined,
+      deletedSharePointIds: isExisting
+        ? itemSave?.deletedSharePointIds
+        : undefined,
+      backupItems: itemSave?.backupItems ?? items,
+      onDraftRetained: itemSave?.onDraftRetained,
+    },
   );
 }
 
@@ -324,7 +493,19 @@ export async function submitNpdRequest(
   contextSiteUrl?: string,
   initiatorComments?: string,
   initiatorUserId?: number,
+  onDraftRetained?: (draft: { requestId: number; requestTitle: string }) => void,
+  /** Full Item Details grid for JSON backup (all rows, including already-saved). */
+  backupItems?: INpdItemDetailRecord[],
 ): Promise<INpdRequestGeneralInfo> {
+  const submitToken = beginNpdSubmitToken();
+  const stopIfOffline = (): void => {
+    if (isNpdSubmitCancelled(submitToken) || !isBrowserOnline()) {
+      throw new Error(NETWORK_OFFLINE_MESSAGE);
+    }
+  };
+
+  // --- Validation only (no NPD_Request / Item Details writes) ---
+  // Vertical Head must be validated before any request insert / Pending update.
   const workflowSteps = applySubmitWorkflowStatuses(
     await buildNpdDraftWorkflowJson(
       payload.brand.trim(),
@@ -333,35 +514,228 @@ export async function submitNpdRequest(
       { enforceApprovers: true },
     ),
   );
+  stopIfOffline();
+  const hasVerticalHead = workflowSteps.some(
+    (step) =>
+      isVerticalHeadWorkflowRole(step.Role) &&
+      Boolean((step.UserEmail || "").trim()),
+  );
+  if (!hasVerticalHead) {
+    throw new Error("Vertical Head is not configured for this brand.");
+  }
+
+  const isResubmit = isNpdRequestIdTitle(payload.existingTitle || "");
+  // Material Master duplicate check runs once in the Initiator UI before Submit.
+  // Do not repeat the SharePoint lookup here.
+
   const workflowJson = stringifyWorkflowJson(workflowSteps);
   const requestIdTitle =
     payload.existingTitle && isNpdRequestIdTitle(payload.existingTitle)
       ? payload.existingTitle.trim()
-      : await generateNextNpdRequestId();
+      : await generateNextNpdRequestId(payload.brand.trim(), contextSiteUrl);
 
-  const saved = await persistHeaderAndItems(
-    payload,
-    workflowJson,
-    RequestStatus.Pending,
-    requestIdTitle,
-    items,
-    initiatorEmail,
-    initiatorUserId,
-  );
+  // Hold as Draft/Rework while Item Details save. Never Pending until items finish.
+  let holdingStatus: string = RequestStatus.Draft;
+  if (payload.id && payload.id > 0) {
+    if (isResubmit) {
+      // Resubmit: use in-memory status — skip an extra NPD_Request read.
+      const currentLower = (payload.existingStatus || "").trim().toLowerCase();
+      if (
+        currentLower === RequestStatus.Rework.toLowerCase() ||
+        currentLower === "in rework"
+      ) {
+        holdingStatus = RequestStatus.Rework;
+      } else {
+        holdingStatus = RequestStatus.Draft;
+      }
+    } else {
+      try {
+        const existing = await fetchNpdGeneralInfoById(payload.id);
+        const current = (existing.Status || "").trim();
+        const currentLower = current.toLowerCase();
+        if (
+          currentLower === RequestStatus.Rework.toLowerCase() ||
+          currentLower === "in rework"
+        ) {
+          holdingStatus = RequestStatus.Rework;
+        } else if (currentLower === RequestStatus.Draft.toLowerCase()) {
+          holdingStatus = RequestStatus.Draft;
+        }
+      } catch {
+        holdingStatus = RequestStatus.Draft;
+      }
+    }
+  }
 
-  const isRework =
-    (payload.existingStatus || "").trim().toLowerCase() === "rework" ||
-    (payload.existingStatus || "").trim().toLowerCase() === "in rework";
-  const auditAction = isRework ? "Resubmit" : "Initiated";
-  const auditComments =
-    (initiatorComments || "").trim() ||
-    (isRework ? "Request resubmitted" : "Request initiated");
+  // Keep Title empty while holding as Draft. Request ID is written only when
+  // Status becomes Pending (Phase 3). Resubmit already has a Request ID.
+  const holdingTitle = isResubmit ? requestIdTitle : "";
+  let requestId = 0;
 
   try {
-    const userIds = await resolveApproverUserIds(
-      0,
+    // Phase 1: header as Draft/Rework (not Pending).
+    requestId = await upsertNpdRequestHeader(
+      payload,
+      workflowJson,
+      holdingStatus,
+      holdingTitle,
       initiatorEmail,
+      initiatorUserId,
     );
+    // Bind immediately so an offline race still knows which Draft to reopen.
+    onDraftRetained?.({
+      requestId,
+      requestTitle: holdingTitle,
+    });
+
+    const formBackup =
+      backupItems && backupItems.length ? backupItems : items;
+    // Always refresh the attachment from the current form so deleted lines
+    // are removed from JSON and cannot be re-inserted later.
+    await upsertNpdItemDetailsBackupAttachment(requestId, formBackup);
+    stopIfOffline();
+
+    // Phase 2: soft-delete rows removed from the form; insert current rows
+    // that are not already active. Keys of rows being soft-deleted do not
+    // block a replacement line with the same Material Code.
+    const storedItems = await fetchNpdItemDetailsByRequestId(requestId);
+    stopIfOffline();
+    const formKeepIds = new Set(
+      formBackup.map((row) => row.sharePointId).filter((id) => id > 0),
+    );
+    const softDeleteIds = storedItems
+      .map((row) => row.sharePointId)
+      .filter((id) => id > 0 && !formKeepIds.has(id));
+    const softDeleteIdSet = new Set(softDeleteIds);
+    const storedKeys = new Set(
+      storedItems
+        .filter((row) => !softDeleteIdSet.has(row.sharePointId))
+        .map((row) => buildNpdItemDetailsMatchKey(row))
+        .filter(Boolean),
+    );
+    const remainingToInsert = items.filter((row) => {
+      if (row.sharePointId > 0) {
+        return !softDeleteIdSet.has(row.sharePointId);
+      }
+      const key = buildNpdItemDetailsMatchKey(row);
+      return !key || !storedKeys.has(key);
+    });
+
+    const shouldAbortSubmit = (): boolean =>
+      isNpdSubmitCancelled(submitToken) || !isBrowserOnline();
+
+    if (remainingToInsert.length || softDeleteIds.length) {
+      await saveNpdItemDetailsBatch(requestId, remainingToInsert, {
+        partial: true,
+        deletedSharePointIds: softDeleteIds,
+        shouldAbort: shouldAbortSubmit,
+      });
+    }
+    stopIfOffline();
+
+    // Promote to Pending only while still online. A dropped connection keeps
+    // Draft/Rework and must not notify the Vertical Head.
+    if (!isBrowserOnline() || isNpdSubmitCancelled(submitToken)) {
+      throw new Error(NETWORK_OFFLINE_MESSAGE);
+    }
+
+    // Phase 3: promote to Pending only after full item persist.
+    await SPServices.SPUpdateItem({
+      Listname: LIST_NAME(),
+      ID: requestId,
+      RequestJSON: {
+        [FIELDS.Status]: RequestStatus.Pending,
+        [FIELDS.Title]: requestIdTitle,
+        [FIELDS.WorkFlowJSON]: workflowJson,
+      },
+    });
+
+    if (!isBrowserOnline()) {
+      throw new Error(NETWORK_OFFLINE_MESSAGE);
+    }
+  } catch (error) {
+    if (requestId > 0) {
+      const offlineNow =
+        !isBrowserOnline() || isNpdSubmitCancelled(submitToken);
+      // While offline this update cannot finish and would keep Submit on
+      // Processing until the network returns. Header is already Draft/Rework
+      // unless phase 3 wrote Pending — fire the revert without awaiting it.
+      const revertStatus = SPServices.SPUpdateItem({
+        Listname: LIST_NAME(),
+        ID: requestId,
+        RequestJSON: {
+          [FIELDS.Status]: holdingStatus,
+          // Clear any Request ID written before Pending for first-time submit.
+          ...(!isResubmit ? { [FIELDS.Title]: "" } : {}),
+        },
+      }).catch(() => undefined);
+      if (!offlineNow) {
+        try {
+          await revertStatus;
+        } catch {
+          // Best effort — keep original error for the user.
+        }
+      }
+      onDraftRetained?.({
+        requestId,
+        requestTitle: holdingTitle,
+      });
+      const wrapped =
+        error instanceof Error ? error : new Error(String(error));
+      const draftMeta = wrapped as Error & {
+        npdDraftRequestId?: number;
+        npdDraftRequestTitle?: string;
+      };
+      draftMeta.npdDraftRequestId = requestId;
+      draftMeta.npdDraftRequestTitle = holdingTitle;
+      throw wrapped;
+    }
+    throw error;
+  }
+
+  // Prefer a fresh header read so approval email gets Submitted Date (Created).
+  // Resubmit still avoids depending on in-memory blanks when the read fails.
+  let saved: INpdRequestGeneralInfo;
+  try {
+    saved = await fetchNpdGeneralInfoById(requestId);
+  } catch {
+    if (!isResubmit) {
+      throw new Error("The request was submitted but could not be reloaded.");
+    }
+    saved = {
+      Id: requestId,
+      Title: requestIdTitle,
+      Brand: payload.brand.trim(),
+      MaterialType: payload.materialType.trim(),
+      Plant: (payload.plantSource || "").trim(),
+      Status: RequestStatus.Pending,
+      IsDeleted: false,
+      WorkFlowJSON: workflowJson,
+      WorkflowSteps: workflowSteps,
+      AuthorEmail: initiatorEmail,
+      AuthorTitle: "",
+      InitiatorEmail: initiatorEmail,
+      InitiatorId: initiatorUserId || 0,
+      Created: new Date().toISOString(),
+      Modified: new Date().toISOString(),
+      PlantCode: "",
+      StorageLocation: "",
+      ProfitCenter: "",
+      MRPGroup: "",
+      MRPController: "",
+      ValuationClass: "",
+      ClassType: "",
+      MaterialExtension: "",
+    };
+  }
+
+  const auditAction = isResubmit ? "Resubmit" : "Initiated";
+  const auditComments =
+    (initiatorComments || "").trim() ||
+    (isResubmit ? "Request resubmitted" : "Request initiated");
+
+  try {
+    const userIds = await resolveApproverUserIds(0, initiatorEmail);
     await addNpdApproverComment({
       requestId: saved.Id,
       requestTitle: saved.Title,
@@ -382,9 +756,10 @@ export async function submitNpdRequest(
   try {
     await sendNpdApprovalNotification({
       request: saved,
-      action: isRework ? "Resubmitted" : "Submitted",
+      action: isResubmit ? "Resubmitted" : "Submitted",
       to: pendingEmails,
       includeActionButtons: shouldIncludeNpdEmailActions(pendingRole),
+      role: pendingRole,
       siteUrl: contextSiteUrl,
     });
   } catch {
@@ -435,8 +810,37 @@ export async function applyNpdWorkflowAction(params: {
   /** Current NPD web absolute URL for ApproverMail email links. */
   siteUrl?: string;
   actionVia?: "System" | "Mail" | string;
+  /** When true with items, only mutate those rows (+ deletedItemIds). */
+  itemSavePartial?: boolean;
+  /** SharePoint Item Details Ids removed from the grid (partial save). */
+  deletedItemIds?: number[];
+  /**
+   * MIS Post to SAP: Material Master duplicate check only for these rows
+   * (newly added / updated). Empty array skips the check. When omitted,
+   * falls back to `items` for callers that do not pass a diff.
+   */
+  materialMasterCheckItems?: INpdItemDetailRecord[];
+  /**
+   * In-memory request already loaded on the form. When provided (and Id matches),
+   * skips the blocking NPD_Request re-read before the status update.
+   */
+  existingRequest?: INpdRequestGeneralInfo;
+  /**
+   * MIS Post to SAP progress: report after each successful SAP API call
+   * (including 0/total at loop start); finish when the SAP batch ends.
+   */
+  sapProgress?: {
+    onProgress?: (posted: number, total: number) => void;
+    onFinish?: (success: boolean) => void;
+  };
 }): Promise<INpdRequestGeneralInfo> {
-  const request = await fetchNpdGeneralInfoById(params.requestId);
+  const request =
+    params.existingRequest &&
+    params.existingRequest.Id === params.requestId &&
+    (params.existingRequest.WorkflowSteps?.length ||
+      (params.existingRequest.WorkFlowJSON || "").trim())
+      ? params.existingRequest
+      : await fetchNpdGeneralInfoById(params.requestId);
   const actorRole =
     resolveActorWorkflowRole(
       request.WorkflowSteps,
@@ -464,6 +868,20 @@ export async function applyNpdWorkflowAction(params: {
     throw new Error("You do not have a pending approval action on this request.");
   }
 
+  const isMisPostToSap =
+    params.action === "Approve" && isMisCoordinatorWorkflowRole(actorRole);
+  const isVerticalHeadActor = isVerticalHeadWorkflowRole(actorRole);
+  const isMisReject =
+    params.action === "Reject" && isMisCoordinatorWorkflowRole(actorRole);
+  const isMisRework =
+    params.action === "Rework" && isMisCoordinatorWorkflowRole(actorRole);
+
+  // VH (any action) and MIS Reject: status/workflow only — never touch Item Details.
+  const itemsToPersist =
+    isVerticalHeadActor || isMisReject ? undefined : params.items;
+  const itemSavePartial =
+    Boolean(params.itemSavePartial) || isMisRework;
+
   const actionStatus =
     params.action === "Approve"
       ? RequestStatus.Approved
@@ -481,6 +899,75 @@ export async function applyNpdWorkflowAction(params: {
     params.action,
     updatedSteps,
   );
+  const willBeFinalApproval =
+    params.action === "Approve" && !getFirstPendingApproverRole(updatedSteps);
+
+  // Block Post to SAP before any status / Material Master write when duplicates exist.
+  // Only newly added / updated Item Details are checked (targeted CAML) — not every line.
+  if (isMisPostToSap) {
+    if (!params.items?.length) {
+      throw new Error("Item Details are required before posting to SAP.");
+    }
+    const itemsForCheck =
+      params.materialMasterCheckItems !== undefined
+        ? params.materialMasterCheckItems
+        : params.items;
+    if (itemsForCheck.length) {
+      const materialMasterDuplicates = await validateItemsAgainstMaterialMaster(
+        itemsForCheck,
+        { excludeRequestId: params.requestId },
+      );
+      if (materialMasterDuplicates.length) {
+        throw new Error(materialMasterDuplicates[0]);
+      }
+    }
+  }
+
+  // Final MIS Post to SAP: save items, send each unposted line to SAP,
+  // then add only the successful lines to Material Master. Approve only if every line succeeds.
+  let itemsAlreadySaved = false;
+  if (isMisPostToSap && willBeFinalApproval) {
+    if (!params.items?.length) {
+      throw new Error("Item Details are required before posting to SAP.");
+    }
+    await saveNpdItemDetailsBatch(params.requestId, params.items);
+    itemsAlreadySaved = true;
+    const storedItems = await fetchNpdItemDetailsByRequestId(params.requestId);
+    const otherDetails = params.otherDetails ?? {
+      plantCode: String(request.PlantCode ?? "").trim(),
+      storageLocation: String(request.StorageLocation ?? "").trim(),
+      profitCenter: String(request.ProfitCenter ?? "").trim(),
+      mrpGroup: String(request.MRPGroup ?? "").trim(),
+      mrpController: String(request.MRPController ?? "").trim(),
+      valuationClass: String(request.ValuationClass ?? "").trim(),
+      classType: String(request.ClassType ?? "").trim() || "001",
+      materialExtension: String(request.MaterialExtension ?? "").trim(),
+    };
+    const sapTargets = storedItems.filter(
+      (item) =>
+        Boolean(item.materialCode.trim() || item.materialDescription.trim()) &&
+        !item.sapPosted,
+    );
+    let sapBatchSucceeded = false;
+    try {
+      await postNpdItemsToSap({
+        requestId: params.requestId,
+        brand: request.Brand,
+        materialType: request.MaterialType,
+        plant: request.Plant,
+        otherDetails,
+        items: storedItems,
+        siteUrl: params.siteUrl,
+        onProgress:
+          sapTargets.length > 0 ? params.sapProgress?.onProgress : undefined,
+      });
+      sapBatchSucceeded = true;
+    } finally {
+      if (sapTargets.length > 0) {
+        params.sapProgress?.onFinish?.(sapBatchSucceeded);
+      }
+    }
+  }
 
   const updatePayload: Record<string, unknown> = {
     [FIELDS.Status]: headerStatus,
@@ -517,9 +1004,21 @@ export async function applyNpdWorkflowAction(params: {
     }
   }
 
-  if (params.items) {
+  // Status / workflow are committed. Return promptly so a later network drop
+  // cannot keep the user on the form after a successful action.
+  const committedFallback: INpdRequestGeneralInfo = {
+    ...request,
+    Status: headerStatus,
+    WorkFlowJSON: stringifyWorkflowJson(updatedSteps),
+    WorkflowSteps: updatedSteps,
+  };
+
+  if (itemsToPersist && !itemsAlreadySaved) {
     try {
-      await saveNpdItemDetailsBatch(params.requestId, params.items);
+      await saveNpdItemDetailsBatch(params.requestId, itemsToPersist, {
+        partial: itemSavePartial,
+        deletedSharePointIds: params.deletedItemIds,
+      });
     } catch (itemsError) {
       console.warn(
         "NPD Item Details save failed after workflow status update:",
@@ -528,69 +1027,98 @@ export async function applyNpdWorkflowAction(params: {
     }
   }
 
-  const userIds = await resolveApproverUserIds(
-    params.actorUserId,
-    params.actorEmail,
-  );
-
-  try {
-    await addNpdApproverComment({
-      requestId: params.requestId,
-      requestTitle: request.Title,
-      comments: params.comments,
-      role: actorRole,
-      userIds,
-      action: params.action,
-      actorEmail: params.actorEmail,
-      actionVia: params.actionVia || "System",
-    });
-  } catch (commentError) {
-    console.error(
-      "NPD Request status updated but Approver Comments write failed:",
-      commentError,
-    );
-  }
-
-  const saved = await fetchNpdGeneralInfoById(params.requestId);
-  const nextPendingRole = getFirstPendingApproverRole(saved.WorkflowSteps);
-  const isFinalApproval =
-    params.action === "Approve" && !nextPendingRole;
-
-  let recipients: string[];
-  let recipientRole: string;
-  let notificationAction: string = params.action;
-  let includeActionButtons = false;
-
-  if (params.action === "Approve") {
-    if (isFinalApproval) {
-      // Last approver in WorkflowConfiguration chain completed the request.
-      recipients = [getNpdRequestOwnerEmail(saved)];
-      recipientRole = Config.Roles.Initiator;
-      notificationAction = "Approved";
-      includeActionButtons = false;
-    } else {
-      recipients = getPendingApproverEmails(saved.WorkflowSteps);
-      recipientRole = nextPendingRole;
-      includeActionButtons = shouldIncludeNpdEmailActions(nextPendingRole);
+  // Vertical Head: only the Status/WorkFlowJSON update above is required.
+  // Do not re-read NPD_Request — navigate immediately with the committed snapshot.
+  let saved = committedFallback;
+  if (!isVerticalHeadActor) {
+    try {
+      saved = await fetchNpdGeneralInfoById(params.requestId);
+    } catch (fetchError) {
+      console.warn(
+        "NPD Request updated but reload after workflow action failed:",
+        fetchError,
+      );
     }
-  } else {
-    recipients = [getNpdRequestOwnerEmail(saved)];
-    recipientRole = Config.Roles.Initiator;
   }
 
-  try {
-    await sendNpdApprovalNotification({
-      request: saved,
-      action: notificationAction,
-      comments: params.comments,
-      role: recipientRole,
-      to: recipients,
-      includeActionButtons,
-      siteUrl: params.siteUrl,
-    });
-  } catch {
-    // Action already persisted.
-  }
+  // Comments / email must not block navigation after a successful commit.
+  void (async () => {
+    try {
+      const userIds = await resolveApproverUserIds(
+        params.actorUserId,
+        params.actorEmail,
+      );
+      await addNpdApproverComment({
+        requestId: params.requestId,
+        requestTitle: request.Title,
+        comments: params.comments,
+        role: actorRole,
+        userIds,
+        action: params.action,
+        actorEmail: params.actorEmail,
+        actionVia: params.actionVia || "System",
+      });
+    } catch (commentError) {
+      console.error(
+        "NPD Request status updated but Approver Comments write failed:",
+        commentError,
+      );
+    }
+
+    let requestForNotify = saved;
+    // VH may return before Initiator email is known — load once in background.
+    if (
+      isVerticalHeadActor &&
+      !getNpdRequestOwnerEmail(requestForNotify).trim()
+    ) {
+      try {
+        requestForNotify = await fetchNpdGeneralInfoById(params.requestId);
+      } catch {
+        // Notification best-effort only.
+      }
+    }
+
+    const nextPendingRole = getFirstPendingApproverRole(
+      requestForNotify.WorkflowSteps,
+    );
+    const isFinalApproval =
+      params.action === "Approve" && !nextPendingRole;
+
+    let recipients: string[];
+    let recipientRole: string;
+    let notificationAction: string = params.action;
+    let includeActionButtons = false;
+
+    if (params.action === "Approve") {
+      if (isFinalApproval) {
+        recipients = [getNpdRequestOwnerEmail(requestForNotify)];
+        recipientRole = Config.Roles.Initiator;
+        notificationAction = "Approved";
+        includeActionButtons = false;
+      } else {
+        recipients = getPendingApproverEmails(requestForNotify.WorkflowSteps);
+        recipientRole = nextPendingRole;
+        includeActionButtons = shouldIncludeNpdEmailActions(nextPendingRole);
+      }
+    } else {
+      recipients = [getNpdRequestOwnerEmail(requestForNotify)];
+      recipientRole = Config.Roles.Initiator;
+    }
+
+    try {
+      await sendNpdApprovalNotification({
+        request: requestForNotify,
+        action: notificationAction,
+        comments: params.comments,
+        role: recipientRole,
+        to: recipients,
+        includeActionButtons,
+        siteUrl: params.siteUrl,
+      });
+    } catch {
+      // Action already persisted.
+    }
+  })();
 
   return saved;
 }
@@ -611,7 +1139,7 @@ export async function fetchNpdGeneralInfoById(
       Listname: LIST_NAME(),
       SelectedId: id,
       Select: SELECT_FIELDS_CORE,
-      Expand: "Author",
+      Expand: "Author,Initiator",
     });
   }
 

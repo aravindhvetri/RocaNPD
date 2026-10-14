@@ -3,7 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type { IMaterialGroupGroupedRequest } from "../../../../../External/CommonServices/Interface";
-import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
+import {
+  buildNavHref,
+  createFormResetNavState,
+} from "../../../../../External/CommonServices/navigationConfig";
 import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import { matchesAnySearchField } from "../../../../../External/CommonServices/searchTextUtils";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
@@ -147,7 +150,9 @@ const MaterialGroupDashboard: React.FC<IMaterialGroupDashboardProps> = ({
   );
 
   const handleNewRequest = React.useCallback(() => {
-    navigate(buildNavHref(Config.Routes.MgNew, viewAs));
+    navigate(buildNavHref(Config.Routes.MgNew, viewAs), {
+      state: createFormResetNavState(),
+    });
   }, [navigate, viewAs]);
 
   return (

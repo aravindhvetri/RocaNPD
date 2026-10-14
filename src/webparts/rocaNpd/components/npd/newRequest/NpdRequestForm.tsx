@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
-import { useAppDispatch } from "../../../../../store/hooks";
+import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
+import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
   setNpdBrand,
   setNpdMaterialType,
@@ -23,6 +24,7 @@ import styles from "./NpdRequestForm.module.scss";
 const NpdRequestForm: React.FC = () => {
   const dispatch = useAppDispatch();
   const toastRef = React.useRef<PrimeToast>(null);
+  const globalProcessing = useAppSelector((state) => state.ui.globalProcessing);
   const {
     itemRows,
     setItemRows,
@@ -57,6 +59,14 @@ const NpdRequestForm: React.FC = () => {
     npdForm.saveStatus === "saving" || npdForm.saveStatus === "submitting";
   const isLoadingRecord = isRecordLoading;
   const { generalInfo } = npdForm;
+  // Global SAP Datas progress (MainComponent) replaces the plain form overlay.
+  const showFormLoader =
+    (isSaving ||
+      isLoadingRecord ||
+      (isBrandLoading && !npdForm.brandOptions.length) ||
+      (npdForm.lookupOptionsStatus === "loading" &&
+        !Object.keys(npdForm.lookupOptionsByType).length)) &&
+    !globalProcessing?.showItemProgress;
 
   return (
     <form
@@ -65,16 +75,7 @@ const NpdRequestForm: React.FC = () => {
       onSubmit={(event) => event.preventDefault()}
     >
       <Toast ref={toastRef} />
-      <LoaderOverlay
-        visible={
-          isSaving ||
-          isLoadingRecord ||
-          (isBrandLoading && !npdForm.brandOptions.length) ||
-          (npdForm.lookupOptionsStatus === "loading" &&
-            !Object.keys(npdForm.lookupOptionsByType).length)
-        }
-        label="Processing"
-      />
+      <LoaderOverlay visible={showFormLoader} label="Processing" />
       <h1 className={styles.title}>{formTitle}</h1>
       <div className={styles.sections}>
         <NpdGeneralInfoSection
@@ -129,8 +130,15 @@ const NpdRequestForm: React.FC = () => {
       <NpdRequestFormFooter
         mode={footerMode}
         isResubmit={
+          // Rework, or Draft saved after Rework (already has NPD Request ID).
           (npdForm.requestStatus || "").trim().toLowerCase() === "rework" ||
-          (npdForm.requestStatus || "").trim().toLowerCase() === "in rework"
+          (npdForm.requestStatus || "").trim().toLowerCase() === "in rework" ||
+          ((npdForm.requestStatus || "").trim().toLowerCase() === "draft" &&
+            isNpdRequestIdTitle(npdForm.requestTitle || ""))
+        }
+        showSaveDraft={
+          (npdForm.requestStatus || "").trim().toLowerCase() !== "rework" &&
+          (npdForm.requestStatus || "").trim().toLowerCase() !== "in rework"
         }
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}

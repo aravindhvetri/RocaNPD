@@ -8,12 +8,14 @@ import {
   buildMissingImportHeadersError,
   findBestHeaderRowIndex,
   findColumnIndex,
+  importDigitsOnlyError,
+  importNumericOnlyError,
+  parseImportNumericValue,
   readSpreadsheetWorkbook,
   validateRequiredImportHeaders,
 } from "./importService";
 import { getLookupOptionsByFieldName, lookupValuesMatch } from "./lookupOptionUtils";
 
-const MAX_ROWS = Config.NpdItemImport.MaxRows;
 const ITEM_FIELDS = FieldNames.NpdItemDetails;
 
 interface IImportColumn {
@@ -24,6 +26,8 @@ interface IImportColumn {
   required: boolean;
   maxLength?: number;
   conditional?: "rocaGlobalCode";
+  /** Digits-only text columns (still stored as Single Line of Text). */
+  textFilter?: "digits";
 }
 
 const IMPORT_COLUMNS: IImportColumn[] = [
@@ -143,6 +147,7 @@ const IMPORT_COLUMNS: IImportColumn[] = [
     field: "minQtyBoxQty",
     controlType: "text",
     required: false,
+    textFilter: "digits",
   },
 ];
 
@@ -242,8 +247,10 @@ function resolveColumnIndex(headerRow: string[], column: IImportColumn): number 
 }
 
 function splitCellValues(value: string): string[] {
+  // Match Item Details persist separator ("; ") — do not split on commas inside
+  // Lookup names such as "Vitreous china WC, Basins, Ur".
   return value
-    .split(/[;,\n]/)
+    .split(/;|\n/)
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
@@ -310,7 +317,10 @@ function normalizeUniqueText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** Collect Already exists messages for Roca Global Code / Material Code / Description. */
+/**
+ * Collect Already exists messages for Roca Global Code / Material Code /
+ * Description. One message per Excel row lists every duplicate field name.
+ */
 function collectUniqueFieldDuplicates(
   record: INpdItemDetailRecord,
   excelRowNumber: number,
@@ -319,7 +329,7 @@ function collectUniqueFieldDuplicates(
   seenMaterialCodes: Set<string>,
   seenMaterialDescriptions: Set<string>,
 ): string[] {
-  const duplicates: string[] = [];
+  const duplicateFields: string[] = [];
   const candidates: Array<{ raw: string; label: string; seen: Set<string> }> =
     [];
 
@@ -347,21 +357,24 @@ function collectUniqueFieldDuplicates(
       return;
     }
     if (seen.has(key)) {
-      duplicates.push(`${label}: ${raw.trim()}`);
+      duplicateFields.push(label);
     }
   });
 
   // Only reserve unique keys when the row itself is not a duplicate.
-  if (!duplicates.length) {
+  if (!duplicateFields.length) {
     candidates.forEach(({ raw, seen }) => {
       const key = normalizeUniqueText(raw);
       if (key) {
         seen.add(key);
       }
     });
+    return [];
   }
 
-  return duplicates.map((entry) => `Row ${excelRowNumber} — ${entry}`);
+  const fieldList = duplicateFields.join(", ");
+  const verb = duplicateFields.length === 1 ? "already exists" : "already exist";
+  return [`Row ${excelRowNumber} — ${fieldList} ${verb}`];
 }
 
 export async function parseNpdItemDetailsImportFile(
@@ -453,20 +466,10 @@ export async function parseNpdItemDetailsImportFile(
       .filter(Boolean),
   );
 
-  let dataRowCount = 0;
-
   for (let rowIndex = headerRowIndex + 1; rowIndex < dataRows.length; rowIndex++) {
     const row = dataRows[rowIndex];
     if (!row || !row.some((cell) => cell.trim())) {
       continue;
-    }
-
-    dataRowCount += 1;
-    if (dataRowCount > MAX_ROWS) {
-      errors.push(
-        `Import is limited to ${MAX_ROWS} Item Details records at once.`,
-      );
-      break;
     }
 
     const record = createEmptyRecord();
@@ -488,6 +491,23 @@ export async function parseNpdItemDetailsImportFile(
           errors.push(`Row ${excelRowNumber}: ${column.header} is required.`);
           return;
         }
+        if (!raw) {
+          (record[column.field] as string) = "";
+          return;
+        }
+        if (column.textFilter === "digits") {
+          const formatError = importDigitsOnlyError(
+            raw,
+            column.header,
+            excelRowNumber,
+          );
+          if (formatError) {
+            errors.push(formatError);
+            return;
+          }
+        }
+        // Roca Global Code / Material Code / Material Description / HSN Code
+        // accept special characters — no special-character import check.
         if (column.maxLength && raw.length > column.maxLength) {
           errors.push(
             `Row ${excelRowNumber}: ${column.header} must be ${column.maxLength} characters or fewer.`,
@@ -507,12 +527,16 @@ export async function parseNpdItemDetailsImportFile(
           record.weightKg = null;
           return;
         }
-        const numeric = Number(String(raw).replace(/,/g, ""));
-        if (!Number.isFinite(numeric) || numeric < 0) {
-          errors.push(`Row ${excelRowNumber}: ${column.header} must be a valid number.`);
+        const formatError = importNumericOnlyError(
+          raw,
+          column.header,
+          excelRowNumber,
+        );
+        if (formatError) {
+          errors.push(formatError);
           return;
         }
-        record.weightKg = numeric;
+        record.weightKg = parseImportNumericValue(raw);
         return;
       }
 

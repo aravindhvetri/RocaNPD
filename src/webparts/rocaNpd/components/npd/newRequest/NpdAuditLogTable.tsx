@@ -82,23 +82,44 @@ function normalizeKey(value: string): string {
   return (value || "").trim().toLowerCase();
 }
 
+/** True when the Audit Log row is a completed VH / MIS action (not Initiated / Pending). */
+function isCompletedApproverAuditAction(status: string): boolean {
+  const normalized = normalizeKey(status);
+  return (
+    normalized === "approved" ||
+    normalized === "approve" ||
+    normalized === "rejected" ||
+    normalized === "reject" ||
+    normalized === "rework" ||
+    normalized === "in rework"
+  );
+}
+
 /**
  * True when NPD_ApproverComments already has an action for this workflow step
  * in the current cycle (after last Initiated / Resubmit).
+ *
+ * Match by Role only — the same person can be Vertical Head and later MIS
+ * Coordinator; email-only matching incorrectly hides the MIS Pending row.
  */
 function hasCommentForPendingStep(
   rows: INpdApproverCommentRow[],
   step: INpdWorkflowStepJson,
   afterSubmitTime: number,
 ): boolean {
-  const stepEmail = normalizeKey(step.UserEmail);
   const stepRole = normalizeKey(step.Role);
+  if (!stepRole) {
+    return false;
+  }
 
   return rows.some((row) => {
     if (isInitiatorWorkflowRole(row.role || "")) {
       return false;
     }
     if (isInitiatorSubmitAction(row.status)) {
+      return false;
+    }
+    if (!isCompletedApproverAuditAction(row.status)) {
       return false;
     }
 
@@ -108,18 +129,7 @@ function hasCommentForPendingStep(
       return false;
     }
 
-    const rowEmail = normalizeKey(row.actionedByEmail || "");
-    const rowRole = normalizeKey(row.role || "");
-
-    if (stepEmail && rowEmail && stepEmail === rowEmail) {
-      return true;
-    }
-
-    if (stepRole && rowRole && stepRole === rowRole) {
-      return true;
-    }
-
-    return false;
+    return normalizeKey(row.role || "") === stepRole;
   });
 }
 
@@ -162,12 +172,11 @@ const NpdAuditLogTable: React.FC<INpdAuditLogTableProps> = ({
     const chronological = sortAuditRowsChronologically(rows);
     const normalizedStatus = (requestStatus || "").trim().toLowerCase();
 
-    // Show WorkflowJSON Pending/empty approvers while the request is still in flight
-    // (Pending or Rework). Hide on Draft / Approved / Rejected / Completed.
+    // Pending placeholders only while actually Pending with an approver.
+    // After VH/MIS Rework, Status stays Rework until Initiator Resubmit —
+    // do not show "Pending with MIS/VH" until then.
     const allowPendingPlaceholders =
-      normalizedStatus === RequestStatus.Pending.toLowerCase() ||
-      normalizedStatus === RequestStatus.Rework.toLowerCase() ||
-      normalizedStatus === "in rework";
+      normalizedStatus === RequestStatus.Pending.toLowerCase();
 
     if (!allowPendingPlaceholders || !workflowSteps.length) {
       return chronological;
@@ -220,7 +229,12 @@ const NpdAuditLogTable: React.FC<INpdAuditLogTableProps> = ({
         header: "Action",
         style: { width: "10rem", minWidth: "9rem" },
         body: (row) => (
-          <span className={styles.actionText}>{row.status || "—"}</span>
+          <span
+            className={styles.actionText}
+            title={row.status?.trim() ? row.status : undefined}
+          >
+            {row.status || "—"}
+          </span>
         ),
       },
       {

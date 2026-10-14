@@ -138,7 +138,11 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
             header: FieldLabels?.CurrentApprover,
             body: (row) => {
               if (!row.currentApproverEmail) {
-                return <span>{row.currentApprover || "—"}</span>;
+                return (
+                  <span title={row.currentApprover || undefined}>
+                    {row.currentApprover || "—"}
+                  </span>
+                );
               }
               return (
                 <span className={styles.currentApprover}>
@@ -168,6 +172,7 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
             <button
               type="button"
               className={styles.requestIdBtn}
+              title={row.requestId}
               onClick={() => (canEditRow(row) ? onEdit(row) : onView(row))}
             >
               {row.requestId}
@@ -208,7 +213,7 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
         field: "entriesCount",
         header: FieldLabels?.EntriesCount,
         sortable: true,
-        style: { width: "7rem", minWidth: "7rem" },
+        style: { width: "8rem", minWidth: "8rem" },
         body: (row) => (
           <span className={styles.entryCountBadge}>
             {row.entriesCount} {row.entriesCount === 1 ? "code" : "codes"}
@@ -217,13 +222,13 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
       },
       {
         ...personaColumn,
-        style: { width: "7.5rem", minWidth: "6.5rem" },
+        style: { width: "8.5rem", minWidth: "7.5rem" },
       },
       {
         field: "createdDate",
         header: FieldLabels?.CreatedDate,
         sortable: true,
-        style: { width: "7.5rem", minWidth: "7.5rem" },
+        style: { width: "9rem", minWidth: "9rem" },
         body: (row) => (
           <span className={styles.dateCell}>
             {formatNpdCreatedDate(row.createdDate)}

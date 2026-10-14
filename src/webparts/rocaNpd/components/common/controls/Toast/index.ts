@@ -1,5 +1,6 @@
 export {
   default as Toast,
+  DEFAULT_TOAST_LIFE_MS,
   showToast,
   showWarningToast,
   showSuccessToast,

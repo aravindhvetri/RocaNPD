@@ -58,6 +58,27 @@ const npdFormSlice = createSlice({
     clearNpdFormError(state) {
       state.error = null;
     },
+    /** Clears stuck save/submit loaders after a network drop (no auto-retry). */
+    clearNpdFormBusyState(state) {
+      state.saveStatus = "idle";
+    },
+    /**
+     * Bind SharePoint request id after a failed Submit that still created a Draft
+     * so retry updates the same record instead of inserting another.
+     */
+    bindNpdFormDraftRequest(
+      state,
+      action: PayloadAction<{ requestId: number; requestTitle?: string }>,
+    ) {
+      if (action.payload.requestId > 0) {
+        state.requestId = action.payload.requestId;
+      }
+      // Allow clearing Title (empty string) when Draft has no Request ID yet.
+      if (typeof action.payload.requestTitle === "string") {
+        state.requestTitle = action.payload.requestTitle.trim() || null;
+      }
+      state.requestStatus = "Draft";
+    },
     resetNpdFormState(state) {
       state.requestId = null;
       state.requestStatus = null;
@@ -256,6 +277,10 @@ const npdFormSlice = createSlice({
         }
       })
       .addCase(hydrateNpdRequestForm.fulfilled, (state, action) => {
+        // Stale hydrate after New/create reset must not repopulate the form.
+        if (state.loadStatus !== "loading") {
+          return;
+        }
         const request = action.payload.request;
         state.loadStatus = "idle";
         state.requestId = request.Id;
@@ -284,6 +309,11 @@ const npdFormSlice = createSlice({
         state.otherDetails = mapOtherDetailsFromRequest(request);
       })
       .addCase(hydrateNpdRequestForm.rejected, (state, action) => {
+        // A replaced email-route load aborts the previous hydrate. That abort
+        // must not flip a successful load to error, or the Initiator check never runs.
+        if (action.meta.aborted) {
+          return;
+        }
         state.loadStatus = "error";
         state.error = action.payload ?? "Failed to load the NPD request.";
       })
@@ -296,6 +326,8 @@ const npdFormSlice = createSlice({
 
 export const {
   clearNpdFormError,
+  clearNpdFormBusyState,
+  bindNpdFormDraftRequest,
   resetNpdFormState,
   setNpdBrandOptions,
   setNpdBrand,

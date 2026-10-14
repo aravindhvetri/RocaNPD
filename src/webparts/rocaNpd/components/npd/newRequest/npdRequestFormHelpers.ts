@@ -122,6 +122,89 @@ export function toPersistableItemRecords(
   return rows.filter((row) => !isEmptyItemDetailRow(row)).map(toNpdItemDetailRecord);
 }
 
+function normalizeMultiForCompare(values: string[]): string {
+  return values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join("\u0001");
+}
+
+/** Stable fingerprint of Item Details data (excludes client row id). */
+export function fingerprintNpdItemDetailRow(row: INpdItemDetailRow): string {
+  return [
+    row.sharePointId || 0,
+    row.isMisAdded ? "1" : "0",
+    row.rocaGlobalCode.trim(),
+    row.materialCode.trim(),
+    row.materialDescription.trim(),
+    normalizeMultiForCompare(row.productGroupMg2),
+    normalizeMultiForCompare(row.productCategoryMg3),
+    normalizeMultiForCompare(row.productTypeMg4),
+    normalizeMultiForCompare(row.productSourceMg5),
+    normalizeMultiForCompare(row.colorMgp1a),
+    normalizeMultiForCompare(row.productRangeMgp2a),
+    normalizeMultiForCompare(row.productSubCategoryMgp3a),
+    normalizeMultiForCompare(row.materialGroup),
+    normalizeMultiForCompare(row.extMaterialGroup),
+    normalizeMultiForCompare(row.productSegment),
+    normalizeMultiForCompare(row.taxClassification),
+    normalizeMultiForCompare(row.classNumberPcsName),
+    row.hsnCode.trim(),
+    row.weightKg === null || row.weightKg === undefined ? "" : String(row.weightKg),
+    normalizeMultiForCompare(row.uom),
+    row.minQtyBoxQty.trim(),
+  ].join("\u0002");
+}
+
+export interface INpdItemDetailsDiff {
+  changedRecords: INpdItemDetailRecord[];
+  deletedSharePointIds: number[];
+}
+
+/**
+ * New / edited Item Details vs a baseline snapshot (from hydrate).
+ * Used so Rework / Draft-after-Rework only persist what actually changed.
+ */
+export function diffNpdItemDetailRows(
+  current: INpdItemDetailRow[],
+  baseline: INpdItemDetailRow[],
+): INpdItemDetailsDiff {
+  const baselineBySpId = new Map<number, string>();
+  baseline.forEach((row) => {
+    if (row.sharePointId > 0) {
+      baselineBySpId.set(row.sharePointId, fingerprintNpdItemDetailRow(row));
+    }
+  });
+
+  const currentSpIds = new Set<number>();
+  const changedRecords: INpdItemDetailRecord[] = [];
+
+  current.forEach((row) => {
+    if (isEmptyItemDetailRow(row)) {
+      return;
+    }
+    if (row.sharePointId > 0) {
+      currentSpIds.add(row.sharePointId);
+      const prior = baselineBySpId.get(row.sharePointId);
+      if (prior === undefined || prior !== fingerprintNpdItemDetailRow(row)) {
+        changedRecords.push(toNpdItemDetailRecord(row));
+      }
+      return;
+    }
+    // New row (no SharePoint Id yet).
+    changedRecords.push(toNpdItemDetailRecord(row));
+  });
+
+  const deletedSharePointIds: number[] = [];
+  baselineBySpId.forEach((_fingerprint, sharePointId) => {
+    if (!currentSpIds.has(sharePointId)) {
+      deletedSharePointIds.push(sharePointId);
+    }
+  });
+
+  return { changedRecords, deletedSharePointIds };
+}
+
 export function canEditNpdListRow(
   row: Pick<
     INpdRequestListItemRow,

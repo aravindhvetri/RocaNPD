@@ -118,6 +118,7 @@ export function injectRocaPrimeOverrides(): void {
     }
 
     [data-roca-npd-root] .roca-master-reset-button.p-button,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only,
     [data-roca-npd-root] .roca-master-reset-button.p-button:hover,
     [data-roca-npd-root] .roca-master-reset-button.p-button:focus,
     [data-roca-npd-root] .roca-master-reset-button.p-button:focus-visible,
@@ -128,7 +129,10 @@ export function injectRocaPrimeOverrides(): void {
     [data-roca-npd-root] .roca-master-reset-button.p-button:enabled:focus-visible,
     [data-roca-npd-root] .roca-master-reset-button.p-button:enabled:active,
     [data-roca-npd-root] .roca-master-reset-button.p-button:not(:disabled):hover,
-    [data-roca-npd-root] .roca-master-reset-button.p-button:not(:disabled):active {
+    [data-roca-npd-root] .roca-master-reset-button.p-button:not(:disabled):active,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only:enabled:focus,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only:enabled:active,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only.p-focus {
       background: #40919d !important;
       background-color: #40919d !important;
       border-color: #40919d !important;
@@ -142,7 +146,10 @@ export function injectRocaPrimeOverrides(): void {
     [data-roca-npd-root] .roca-master-reset-button.p-button:hover .p-button-icon,
     [data-roca-npd-root] .roca-master-reset-button.p-button:focus .p-button-icon,
     [data-roca-npd-root] .roca-master-reset-button.p-button:active .p-button-icon,
-    [data-roca-npd-root] .roca-master-reset-button.p-button.p-focus .p-button-icon {
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-focus .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only:enabled:focus .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only:enabled:active .p-button-icon,
+    [data-roca-npd-root] .roca-master-reset-button.p-button.p-button-icon-only.p-focus .p-button-icon {
       color: #ffffff !important;
       opacity: 1 !important;
     }

@@ -6,4 +6,6 @@ export interface IDatePickerProps extends IBaseControlProps {
   placeholder?: string;
   showTime?: boolean;
   dateFormat?: string;
+  /** Optional PrimeReact Calendar panel class (e.g. compact Material Master popup). */
+  panelClassName?: string;
 }

@@ -7,6 +7,7 @@ import { selectResolvedAccess } from "../../../../store/slices/appSlice";
 import BrandMaterialExtensionMaster from "../admin/brandMaterialExtension/BrandMaterialExtensionMaster";
 import LookupMaster from "../admin/lookup/LookupMaster";
 import LookupTypeMaster from "../admin/lookupType/LookupTypeMaster";
+import MaterialMaster from "../admin/materialMaster/MaterialMaster";
 import WorkflowConfigurationMaster from "../admin/workflowConfig/WorkflowConfigurationMaster";
 import MaterialGroupDashboard from "../materialGroup/dashboard/MaterialGroupDashboard";
 import MaterialGroupRequestForm from "../materialGroup/newRequest/MaterialGroupRequestForm";
@@ -33,6 +34,7 @@ const IMPLEMENTED_ROUTES: Record<string, React.ReactElement> = {
   "/admin/lookup": <LookupMaster />,
   "/admin/brand-extension": <BrandMaterialExtensionMaster />,
   "/admin/workflow-config": <WorkflowConfigurationMaster />,
+  "/admin/material-master": <MaterialMaster />,
 };
 
 const AppRoutes: React.FC = () => {

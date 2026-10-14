@@ -1,5 +1,5 @@
-@import '../../../styles/_theme-import.scss';
-@import '../../../styles/_master-toolbar.scss';
+@import "../../../styles/_theme-import.scss";
+@import "../../../styles/_master-toolbar.scss";
 
 .page {
   padding: 0 1.25rem 1rem;
@@ -78,6 +78,8 @@
 }
 
 .requestIdBtn {
+  display: block;
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -87,6 +89,9 @@
   font-family: "Poppins", sans-serif;
   cursor: pointer;
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &:hover {
     color: darken($roca-color-primary, 10%);

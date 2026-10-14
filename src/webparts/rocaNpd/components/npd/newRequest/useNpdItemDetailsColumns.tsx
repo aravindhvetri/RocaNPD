@@ -14,7 +14,7 @@ import styles from "./NpdItemDetailsSection.module.scss";
 
 function renderColumnHeader(fieldDef: INpdItemDetailsFieldDef): React.ReactNode {
   return (
-    <span className={styles.columnTitle}>
+    <span className={styles.columnTitle} title={fieldDef.header}>
       {fieldDef.header}
       {fieldDef.required ? (
         <span className={styles.requiredMark} aria-hidden="true">
