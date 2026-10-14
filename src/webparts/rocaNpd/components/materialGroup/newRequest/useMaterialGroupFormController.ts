@@ -1,7 +1,10 @@
 import * as React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Toast as PrimeToast } from "primereact/toast";
-import { ApproverSystems, Config } from "../../../../../External/CommonServices/Config";
+import {
+  ApproverSystems,
+  Config,
+} from "../../../../../External/CommonServices/Config";
 import { buildNavHref } from "../../../../../External/CommonServices/navigationConfig";
 import {
   hasRole,
@@ -134,15 +137,20 @@ export function useMaterialGroupFormController(
       return urlMode || "edit";
     }
     return "create";
-  }, [initiatorAccessDenied, urlMode, urlId, isConsultant, mgState.currentStatus]);
+  }, [
+    initiatorAccessDenied,
+    urlMode,
+    urlId,
+    isConsultant,
+    mgState.currentStatus,
+  ]);
 
   const approverRemarksLabel = React.useMemo(
     () => getApproverRemarksLabel(appState.assignedRoles),
     [appState.assignedRoles],
   );
 
-  const showApproverRemarks =
-    mode === "consultant-edit" && isApprover;
+  const showApproverRemarks = mode === "consultant-edit" && isApprover;
 
   const [approverRemarks, setApproverRemarks] = React.useState("");
   /** Blocks double-clicks before Redux pending (e.g. during uniqueness check). */
@@ -223,9 +231,7 @@ export function useMaterialGroupFormController(
     const loginEmail = normalizeEmail(
       appState.userEmail || appState.userLoginName || "",
     );
-    const requestInitiatorEmail = normalizeEmail(
-      mgState.initiatorEmail || "",
-    );
+    const requestInitiatorEmail = normalizeEmail(mgState.initiatorEmail || "");
     if (
       !loginEmail ||
       !requestInitiatorEmail ||
@@ -386,11 +392,7 @@ export function useMaterialGroupFormController(
     }
 
     return entries;
-  }, [
-    mgState.configs,
-    mgState.entriesByConfigId,
-    mgState.selectedConfigIds,
-  ]);
+  }, [mgState.configs, mgState.entriesByConfigId, mgState.selectedConfigIds]);
 
   const validateEntries = React.useCallback(
     (isSubmitting: boolean = false): boolean => {
@@ -489,22 +491,23 @@ export function useMaterialGroupFormController(
     ],
   );
 
-  const assertCodesUniqueAgainstLookup = React.useCallback(async (): Promise<boolean> => {
-    try {
-      await assertMaterialGroupCodesUniqueInLookupTypes(
-        collectCodeUniquenessEntries(),
-      );
-      return true;
-    } catch (error: unknown) {
-      showWarningToast(
-        toastRef,
-        toUserActionErrorMessage(error) ||
-          "A Lookup Code already exists under this Lookup Type.",
-        "Validation",
-      );
-      return false;
-    }
-  }, [collectCodeUniquenessEntries, toastRef]);
+  const assertCodesUniqueAgainstLookup =
+    React.useCallback(async (): Promise<boolean> => {
+      try {
+        await assertMaterialGroupCodesUniqueInLookupTypes(
+          collectCodeUniquenessEntries(),
+        );
+        return true;
+      } catch (error: unknown) {
+        showWarningToast(
+          toastRef,
+          toUserActionErrorMessage(error) ||
+            "A Lookup Code already exists under this Lookup Type.",
+          "Validation",
+        );
+        return false;
+      }
+    }, [collectCodeUniquenessEntries, toastRef]);
 
   const handleSaveDraft = React.useCallback(() => {
     if (initiatorAccessDenied) {
@@ -631,10 +634,10 @@ export function useMaterialGroupFormController(
 
       const remarks = approverRemarks.trim();
 
-      // Complete / Rework / Reject: Code and Description required; Code unique per Lookup Type.
-      if (!validateEntries(true)) {
-        return;
-      }
+      // // Complete / Rework / Reject: Code and Description required; Code unique per Lookup Type.
+      // if (!validateEntries(true)) {
+      //   return;
+      // }
 
       try {
         assertBrowserOnline();
@@ -677,7 +680,10 @@ export function useMaterialGroupFormController(
 
       void (async () => {
         try {
-          if (!(await assertCodesUniqueAgainstLookup())) {
+          if (
+            action == "Completed" &&
+            !(await assertCodesUniqueAgainstLookup())
+          ) {
             return;
           }
 
@@ -768,8 +774,7 @@ export function useMaterialGroupFormController(
       mgState.submitStatus === "submitting" ||
       mgState.consultantActionStatus === "saving",
     isSubmitting:
-      localActionBusy === "submitting" ||
-      mgState.submitStatus === "submitting",
+      localActionBusy === "submitting" || mgState.submitStatus === "submitting",
     showApproverRemarks,
     approverRemarks,
     approverRemarksLabel,

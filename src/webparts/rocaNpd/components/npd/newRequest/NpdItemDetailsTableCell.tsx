@@ -118,31 +118,37 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
   });
 
   return (
-    <MultiSelect
-      id={id}
-      value={multiValue}
-      options={optionsWithSelected}
-      placeholder={placeholder}
-      filter={!readOnly}
-      display="comma"
-      selectAll={false}
-      selectionLimit={1}
-      readOnly={readOnly}
-      disabled={readOnly}
-      className={controlClassName}
-      panelClassName={styles.itemDetailsMultiSelectPanel}
-      onChange={(value) =>
-        handleChange(
-          value
-            .map((entry) => String(entry ?? "").trim())
-            .filter((entry) => {
-              const key = entry.toLowerCase();
-              return Boolean(entry) && key !== "null" && key !== "undefined";
-            })
-            .slice(0, 1),
-        )
-      }
-    />
+    <>
+      <span title={readOnly ? multiValue[0] : ""} style={{ cursor: "pointer" }}>
+        <MultiSelect
+          id={id}
+          value={multiValue}
+          options={optionsWithSelected}
+          placeholder={placeholder}
+          filter={!readOnly}
+          display="comma"
+          selectAll={false}
+          selectionLimit={1}
+          readOnly={readOnly}
+          disabled={readOnly}
+          className={controlClassName}
+          panelClassName={styles.itemDetailsMultiSelectPanel}
+          onChange={(value) =>
+            handleChange(
+              value
+                .map((entry) => String(entry ?? "").trim())
+                .filter((entry) => {
+                  const key = entry.toLowerCase();
+                  return (
+                    Boolean(entry) && key !== "null" && key !== "undefined"
+                  );
+                })
+                .slice(0, 1),
+            )
+          }
+        />
+      </span>
+    </>
   );
 };
 

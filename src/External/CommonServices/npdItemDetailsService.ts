@@ -1,6 +1,9 @@
 import { Config, SharePointMutateBatchSize } from "./Config";
 import type { INpdItemDetailRecord } from "./Interface";
-import { buildNpdItemDetailsMatchKey } from "./npdItemDetailsBackupService";
+import {
+  buildNpdItemDetailsMatchKey,
+  upsertNpdItemDetailsBackupAttachment,
+} from "./npdItemDetailsBackupService";
 import { isDeletedYesFlag } from "./lookupFieldUtils";
 import { NETWORK_OFFLINE_MESSAGE } from "./networkConnectivity";
 import {
@@ -154,7 +157,9 @@ function mapItem(item: Record<string, unknown>): INpdItemDetailRecord {
     productSourceMg5: splitMultiValue(item[FIELDS.ProductSourceMG5]),
     colorMgp1a: splitMultiValue(item[FIELDS.ColorMGP1A]),
     productRangeMgp2a: splitMultiValue(item[FIELDS.ProductRangeMGP2A]),
-    productSubCategoryMgp3a: splitMultiValue(item[FIELDS.ProductSubCategoryMGP3A]),
+    productSubCategoryMgp3a: splitMultiValue(
+      item[FIELDS.ProductSubCategoryMGP3A],
+    ),
     materialGroup: splitMultiValue(item[FIELDS.MaterialGroup]),
     extMaterialGroup: splitMultiValue(item[FIELDS.ExtMaterialGroup]),
     productSegment: splitMultiValue(item[FIELDS.ProductSegment]),
@@ -184,7 +189,9 @@ function readSapFlag(value: unknown): boolean {
   if (value === true || value === 1) {
     return true;
   }
-  const text = String(value ?? "").trim().toLowerCase();
+  const text = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return text === "true" || text === "yes" || text === "1";
 }
 
@@ -203,7 +210,9 @@ function toSharePointPayload(
     [FIELDS.ProductSourceMG5]: joinMultiValue(record.productSourceMg5),
     [FIELDS.ColorMGP1A]: joinMultiValue(record.colorMgp1a),
     [FIELDS.ProductRangeMGP2A]: joinMultiValue(record.productRangeMgp2a),
-    [FIELDS.ProductSubCategoryMGP3A]: joinMultiValue(record.productSubCategoryMgp3a),
+    [FIELDS.ProductSubCategoryMGP3A]: joinMultiValue(
+      record.productSubCategoryMgp3a,
+    ),
     [FIELDS.MaterialGroup]: joinMultiValue(record.materialGroup),
     [FIELDS.ExtMaterialGroup]: joinMultiValue(record.extMaterialGroup),
     [FIELDS.ProductSegment]: joinMultiValue(record.productSegment),
@@ -250,7 +259,9 @@ export async function fetchNpdItemDetailsByRequestId(
 
   return sortNpdItemDetailsForDisplay(
     rows
-      .filter((row) => !isDeletedYesFlag(row[SOFT_DELETE_FIELD] ?? row.IsDeleted))
+      .filter(
+        (row) => !isDeletedYesFlag(row[SOFT_DELETE_FIELD] ?? row.IsDeleted),
+      )
       .map(mapItem),
   );
 }
@@ -359,7 +370,9 @@ export async function saveNpdItemDetailsBatch(
       persistable.map((record) => record.sharePointId).filter((id) => id > 0),
     );
     softDeleteIds = existing
-      .filter((item) => item.sharePointId > 0 && !keepIds.has(item.sharePointId))
+      .filter(
+        (item) => item.sharePointId > 0 && !keepIds.has(item.sharePointId),
+      )
       .map((item) => item.sharePointId);
   }
 
@@ -377,7 +390,10 @@ export async function saveNpdItemDetailsBatch(
   // Save Draft and other callers keep a single batch. Submit passes
   // shouldAbort so a dropped connection cannot flush the remaining rows
   // when the browser comes back online.
+
   if (!normalized.shouldAbort) {
+    await upsertNpdItemDetailsBackupAttachment(requestId, records);
+
     await SPServices.batchMutate({
       ListName: LIST_NAME(),
       remove: [],

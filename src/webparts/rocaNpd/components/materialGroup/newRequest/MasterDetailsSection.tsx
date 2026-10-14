@@ -43,7 +43,8 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
 
       {selectedConfigIds.length === 0 ? (
         <div className={styles.emptySelectionMessage}>
-          No masters selected. Please select at least one master category above to configure entries.
+          No masters selected. Please select at least one master category above
+          to configure entries.
         </div>
       ) : (
         selectedConfigIds.map((configId) => {
@@ -75,21 +76,29 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
 
               <div
                 className={`${styles.tableContainer}${
-                  readOnly || isConsultantMode ? ` ${styles.fieldsOnlyTable}` : ""
+                  readOnly || isConsultantMode
+                    ? ` ${styles.fieldsOnlyTable}`
+                    : ""
                 }`}
               >
                 <div className={styles.columnHeaderRow}>
                   <div className={styles.colHeader}>
                     <span>Code</span>
                     {isConsultantMode ? (
-                      <span className={styles.requiredAsterisk} aria-hidden="true">
+                      <span
+                        className={styles.requiredAsterisk}
+                        aria-hidden="true"
+                      >
                         *
                       </span>
                     ) : null}
                   </div>
                   <div className={styles.colHeader}>
                     <span>Description</span>
-                    <span className={styles.requiredAsterisk} aria-hidden="true">
+                    <span
+                      className={styles.requiredAsterisk}
+                      aria-hidden="true"
+                    >
                       *
                     </span>
                   </div>

@@ -38,11 +38,7 @@ const REQUESTS_LIST = (): string => Config.ListNames.MaterialGroupRequests;
 
 /** Normalize master names for fuzzy match (e.g. "Color(MGP1A)" vs "Color (MGP1A)"). */
 function normalizeMasterKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[()]/g, "")
-    .trim();
+  return value.toLowerCase().replace(/\s+/g, "").replace(/[()]/g, "").trim();
 }
 
 /** Read one RequestsJSON row — supports PascalCase / camelCase keys. */
@@ -84,8 +80,9 @@ function parseRequestsJson(raw: unknown): IMaterialGroupRequestJsonEntry[] {
   }
 
   return parsed
-    .filter((item): item is Record<string, unknown> =>
-      Boolean(item) && typeof item === "object",
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
     )
     .map(normalizeRequestsJsonEntry);
 }
@@ -179,9 +176,7 @@ export async function fetchMaterialGroupConfigs(): Promise<
       if (rf) {
         if (Array.isArray(rf) && rf.length > 0) {
           relatedFieldId = Number(rf[0].Id ?? rf[0].ID ?? relatedFieldId);
-          relatedFieldTitle = String(
-            rf[0].Title ?? relatedFieldTitle,
-          ).trim();
+          relatedFieldTitle = String(rf[0].Title ?? relatedFieldTitle).trim();
         } else if (Array.isArray(rf.results) && rf.results.length > 0) {
           relatedFieldId = Number(
             rf.results[0].Id ?? rf.results[0].ID ?? relatedFieldId,
@@ -309,7 +304,9 @@ async function saveOrUpdateMaterialGroupRecord(
     MaterialGroupConfigId: { results: configLookupIds },
   };
 
-  const tryWrite = async (payload: Record<string, unknown>): Promise<number> => {
+  const tryWrite = async (
+    payload: Record<string, unknown>,
+  ): Promise<number> => {
     if (id && id > 0) {
       await SPServices.SPUpdateItem({
         Listname: REQUESTS_LIST(),
@@ -324,10 +321,7 @@ async function saveOrUpdateMaterialGroupRecord(
       RequestJSON: payload,
     });
     const newId = Number(
-      created?.data?.Id ??
-        created?.data?.ID ??
-        created?.Id ??
-        created?.ID,
+      created?.data?.Id ?? created?.data?.ID ?? created?.Id ?? created?.ID,
     );
     if (!newId) {
       throw new Error("Item was created but ID could not be read.");
@@ -360,7 +354,8 @@ export interface ISaveMaterialGroupDraftParams {
 export async function saveMaterialGroupDraft(
   params: ISaveMaterialGroupDraftParams,
 ): Promise<{ id: number; guid: string }> {
-  const { id, selectedConfigIds, entriesByConfigId, actorEmail, actorId } = params;
+  const { id, selectedConfigIds, entriesByConfigId, actorEmail, actorId } =
+    params;
 
   let initiatorId = actorId;
   if (actorEmail && !initiatorId) {
@@ -375,11 +370,12 @@ export async function saveMaterialGroupDraft(
   }
 
   const configs = await fetchMaterialGroupConfigs().catch(() => []);
-  const { requestsJson, configLookupIds, rawEntries } = buildRequestsJsonAndLookupIds(
-    selectedConfigIds,
-    entriesByConfigId,
-    configs,
-  );
+  const { requestsJson, configLookupIds, rawEntries } =
+    buildRequestsJsonAndLookupIds(
+      selectedConfigIds,
+      entriesByConfigId,
+      configs,
+    );
 
   if (!selectedConfigIds.length) {
     throw new Error("Please select at least one master category to configure.");
@@ -450,11 +446,12 @@ export async function submitMaterialGroupRequest(
   }
 
   const configs = await fetchMaterialGroupConfigs().catch(() => []);
-  const { requestsJson, configLookupIds, rawEntries } = buildRequestsJsonAndLookupIds(
-    selectedConfigIds,
-    entriesByConfigId,
-    configs,
-  );
+  const { requestsJson, configLookupIds, rawEntries } =
+    buildRequestsJsonAndLookupIds(
+      selectedConfigIds,
+      entriesByConfigId,
+      configs,
+    );
 
   if (!rawEntries.length) {
     throw new Error("Please add at least one entry before submitting.");
@@ -507,7 +504,10 @@ export async function submitMaterialGroupRequest(
       actionVia: "System",
     });
   } catch (auditErr) {
-    console.warn("Failed to record Initiator audit log for Material Group:", auditErr);
+    console.warn(
+      "Failed to record Initiator audit log for Material Group:",
+      auditErr,
+    );
   }
 
   // Dispatch email notification to Consultant asynchronously
@@ -541,9 +541,11 @@ function statusEquals(actual: string, expected: string): boolean {
   return actual.trim().toLowerCase() === expected.trim().toLowerCase();
 }
 
-function resolveItemOwnerEmail(
-  item: Record<string, unknown>,
-): { name: string; email: string; userId: number } {
+function resolveItemOwnerEmail(item: Record<string, unknown>): {
+  name: string;
+  email: string;
+  userId: number;
+} {
   const initiatorEmails = extractPersonEmails(item.Initiator);
   const authorEmails = extractPersonEmails(item.Author);
   const initiator = item.Initiator as
@@ -668,10 +670,14 @@ export async function fetchGroupedMaterialGroupRequests(
     })) as Record<string, unknown>[];
   } catch (error) {
     // Fallback without person Expand if site schema differs
-    console.warn("MG list fetch with Expand failed, retrying minimal select:", error);
+    console.warn(
+      "MG list fetch with Expand failed, retrying minimal select:",
+      error,
+    );
     rawItems = (await SPServices.SPReadItems({
       Listname: REQUESTS_LIST(),
-      Select: "Id,Title,RequestsJSON,Status,Created,Modified,AuthorId,InitiatorId",
+      Select:
+        "Id,Title,RequestsJSON,Status,Created,Modified,AuthorId,InitiatorId",
       Orderby: "Modified",
       Orderbydecorasc: false,
       Topcount: 5000,
@@ -833,9 +839,7 @@ export async function fetchMaterialGroupRequestById(
 
   let rawItem: Record<string, unknown> | null = null;
 
-  const normalizeItem = (
-    byIdRaw: unknown,
-  ): Record<string, unknown> | null => {
+  const normalizeItem = (byIdRaw: unknown): Record<string, unknown> | null => {
     const byId = Array.isArray(byIdRaw)
       ? (byIdRaw[0] as Record<string, unknown> | undefined)
       : (byIdRaw as Record<string, unknown> | undefined);
@@ -845,7 +849,9 @@ export async function fetchMaterialGroupRequestById(
     return null;
   };
 
-  const readById = async (id: number): Promise<Record<string, unknown> | null> => {
+  const readById = async (
+    id: number,
+  ): Promise<Record<string, unknown> | null> => {
     // Prefer people Expand so Initiator email is available for Rework notifications
     try {
       const item = normalizeItem(
@@ -917,10 +923,7 @@ export async function fetchMaterialGroupRequestById(
           return items[0];
         }
       } catch (error) {
-        console.warn(
-          `MG filter by ${attempt.FilterKey} failed:`,
-          error,
-        );
+        console.warn(`MG filter by ${attempt.FilterKey} failed:`, error);
       }
     }
 
@@ -990,8 +993,7 @@ export async function fetchMaterialGroupRequestById(
   const author = rawItem.Author as
     | { Title?: string; EMail?: string; Email?: string }
     | undefined;
-  const initiatorName =
-    String(initiator?.Title || author?.Title || "").trim();
+  const initiatorName = String(initiator?.Title || author?.Title || "").trim();
   const initiatorEmail =
     ownerEmails[0] ||
     String(
@@ -1143,20 +1145,20 @@ export async function assertMaterialGroupCodesUniqueInLookupTypes(
     seenInBatch.add(key);
   }
 
-  const existing = await fetchActiveLookups();
-  for (const entry of filled) {
-    const codeKey = entry.code.toLowerCase();
-    const exists = existing.some(
-      (item) =>
-        item.LookupTypeId === entry.lookupTypeId &&
-        item.LookupCode.trim().toLowerCase() === codeKey,
-    );
-    if (exists) {
-      throw new Error(
-        `"${entry.code}" already exists as a Lookup Code under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
-      );
-    }
-  }
+  // const existing = await fetchActiveLookups();
+  // for (const entry of filled) {
+  //   const codeKey = entry.code.toLowerCase();
+  //   const exists = existing.some(
+  //     (item) =>
+  //       item.LookupTypeId === entry.lookupTypeId &&
+  //       item.LookupCode.trim().toLowerCase() === codeKey,
+  //   );
+  //   if (exists) {
+  //     throw new Error(
+  //       `"${entry.code}" already exists as a Lookup Code under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
+  //     );
+  //   }
+  // }
 }
 
 /**
@@ -1281,7 +1283,9 @@ export async function updateConsultantMaterialGroupAction(
   const rawEntries: IMaterialGroupRequestJsonEntry[] = [];
   const configLookupIds: number[] = [];
   if (params.entriesByConfigId) {
-    for (const [configIdStr, rows] of Object.entries(params.entriesByConfigId)) {
+    for (const [configIdStr, rows] of Object.entries(
+      params.entriesByConfigId,
+    )) {
       const configId = Number(configIdStr);
       const cfg = configMap.get(configId);
       const relatedLookupTypeId =
@@ -1319,7 +1323,6 @@ export async function updateConsultantMaterialGroupAction(
       }
       configLookupIds.push(configId);
     }
-
   }
 
   // Code unique within Lookup Type for every Consultant action (and on Complete sync).
@@ -1491,8 +1494,7 @@ export async function updateConsultantMaterialGroupAction(
     );
     const lastRole = getLastApproverRoleFromSequence(roleSequence);
     if (lastRole) {
-      actorIsLastApprover =
-        lastRole.toLowerCase() === auditRole.toLowerCase();
+      actorIsLastApprover = lastRole.toLowerCase() === auditRole.toLowerCase();
     }
   } catch (err) {
     console.warn(

@@ -120,8 +120,7 @@ export function useNpdRequestFormController(
     Boolean(editId),
   );
   const viewAs =
-    parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) ||
-    undefined;
+    parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) || undefined;
   const initialized = useAppSelector((state) => state.app.initialized);
   const roleStatus = useAppSelector((state) => state.app.roleStatus);
   const userEmail = useAppSelector((state) => state.app.userEmail);
@@ -162,8 +161,7 @@ export function useNpdRequestFormController(
     assignedRoles,
   );
   const draftOrReworkOpen =
-    Boolean(npdForm.requestId) &&
-    isDraftOrReworkStatus(npdForm.requestStatus);
+    Boolean(npdForm.requestId) && isDraftOrReworkStatus(npdForm.requestStatus);
   const stillBrandInitiator = isNpdApproversMasterInitiatorForBrand(
     access,
     npdForm.generalInfo.brand ?? "",
@@ -556,7 +554,7 @@ export function useNpdRequestFormController(
 
       const persistItems = options?.persistItems !== false;
       const items = persistItems
-        ? options?.items ?? toPersistableItemRecords(itemRows)
+        ? (options?.items ?? toPersistableItemRecords(itemRows))
         : undefined;
       const includeOtherDetails = lockedFooterMode === "mis-pending";
       const actorRole = pendingRole;
@@ -816,14 +814,14 @@ export function useNpdRequestFormController(
     const allItems = itemRows.map(toNpdItemDetailRecord);
     const comments = approverRemarks;
     const isResubmit = isNpdRequestIdTitle(npdForm.requestTitle || "");
-    const remainingItems = allItems.filter(
-      (item) => !(item.sharePointId > 0),
-    );
-    const changedExisting = (editId || npdForm.requestId)
-      ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current).changedRecords.filter(
-          (record) => record.sharePointId > 0,
-        )
-      : [];
+    const remainingItems = allItems.filter((item) => !(item.sharePointId > 0));
+    const changedExisting =
+      editId || npdForm.requestId
+        ? diffNpdItemDetailRows(
+            itemRows,
+            itemBaselineRef.current,
+          ).changedRecords.filter((record) => record.sharePointId > 0)
+        : [];
     const items = [...changedExisting, ...remainingItems];
     const backupItems = allItems;
     const totalUnits = Math.max(remainingItems.length, 1);
@@ -881,10 +879,13 @@ export function useNpdRequestFormController(
     void (async () => {
       // First Submit: every Item Detail. Resubmit: only new/updated lines.
       // Unchanged lines were already checked and are not scanned again.
-      const materialMasterItems = isResubmit
-        ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current)
-            .changedRecords
-        : allItems;
+      // const materialMasterItems = isResubmit
+      //   ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current)
+      //       .changedRecords
+      //   : allItems;
+
+      const materialMasterItems = allItems;
+
       // Processing only while Material Master duplicates are checked.
       // The item progress bar starts when rows are pushed to NPD_ItemDetails.
       flushSync(() => {
@@ -896,9 +897,7 @@ export function useNpdRequestFormController(
           const materialMasterDuplicates =
             await validateItemsAgainstMaterialMaster(materialMasterItems, {
               excludeRequestId:
-                isResubmit && npdForm.requestId
-                  ? npdForm.requestId
-                  : undefined,
+                isResubmit && npdForm.requestId ? npdForm.requestId : undefined,
             });
           const materialMasterMessage = firstValidationMessage(
             materialMasterDuplicates,
@@ -968,8 +967,7 @@ export function useNpdRequestFormController(
           stopOfflineWatch();
           finishUiProcessing(dispatch, false);
           const retainedDraftId = store.getState().npdForm.requestId;
-          const networkFailure =
-            isNetworkError(error) || !isBrowserOnline();
+          const networkFailure = isNetworkError(error) || !isBrowserOnline();
 
           if (networkFailure) {
             leaveForOfflineDraft();
@@ -1061,8 +1059,7 @@ export function useNpdRequestFormController(
           if (row.sharePointId > 0) {
             const prior = baselineBySpId.get(row.sharePointId);
             return (
-              prior === undefined ||
-              prior !== fingerprintNpdItemDetailRow(row)
+              prior === undefined || prior !== fingerprintNpdItemDetailRow(row)
             );
           }
           return true;
@@ -1101,10 +1098,7 @@ export function useNpdRequestFormController(
           showErrorToast(toastRef, firstMessage, "Validation");
           return;
         }
-        const mmDiff = diffNpdItemDetailRows(
-          itemRows,
-          itemBaselineRef.current,
-        );
+        const mmDiff = diffNpdItemDetailRows(itemRows, itemBaselineRef.current);
         dispatchWorkflowAction(action, remarks, {
           persistItems: true,
           items: toPersistableItemRecords(itemRows),

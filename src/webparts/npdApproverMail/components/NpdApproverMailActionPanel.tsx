@@ -24,7 +24,9 @@ function getPrompt(action: NpdWorkflowAction): string {
   return "Are you sure, you want to Re-work?";
 }
 
-const NpdApproverMailActionPanel: React.FC<INpdApproverMailActionPanelProps> = ({
+const NpdApproverMailActionPanel: React.FC<
+  INpdApproverMailActionPanelProps
+> = ({
   requestTitle,
   action,
   comments,
@@ -43,8 +45,9 @@ const NpdApproverMailActionPanel: React.FC<INpdApproverMailActionPanelProps> = (
 
       <textarea
         id="npdApproverMailComments"
-        className={`${styles.commentsTextarea} ${commentsError ? styles.commentsTextareaError : ""
-          }`}
+        className={`${styles.commentsTextarea} ${
+          commentsError ? styles.commentsTextareaError : ""
+        }`}
         placeholder="Enter comments here"
         value={comments}
         disabled={submitting}
