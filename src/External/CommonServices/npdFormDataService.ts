@@ -12,6 +12,7 @@ import {
   approversRowMatchesEmail,
   resolveLoginEmail,
 } from "./personFieldUtils";
+import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
@@ -105,19 +106,25 @@ export async function fetchInitiatorBrandOptions(
   }
 
   const [rows, userEmailById] = await Promise.all([
-    SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    }) as Promise<Record<string, unknown>[]>,
+    ensureApproversMasterRows(rocaSiteUrl, () =>
+      SPServices.getAnotherSPReadItems({
+        SiteUrl: rocaSiteUrl,
+        Listname: Config.RocaMasterListNames.ApproversMaster,
+        Select: APPROVERS_SELECT,
+        Expand: APPROVERS_EXPAND,
+        Topcount: 5000,
+      }) as Promise<Record<string, unknown>[]>,
+    ),
     SPServices.getAnotherSPSiteUserEmailMap(rocaSiteUrl).catch(
       () => new Map<number, string>(),
     ),
   ]);
 
-  return mapDistinctBrandOptions(rows, resolvedEmail, userEmailById);
+  return mapDistinctBrandOptions(
+    rows as Record<string, unknown>[],
+    resolvedEmail,
+    userEmailById,
+  );
 }
 
 export async function fetchActiveBrandMasterOptions(

@@ -10,6 +10,7 @@ import {
   resolveLoginEmail,
   type ILoginIdentityContext,
 } from "./personFieldUtils";
+import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
@@ -96,13 +97,15 @@ async function fetchMatchingApproverAssignments(
   const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
 
   const [rows, userEmailById] = await Promise.all([
-    SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    }) as Promise<Record<string, unknown>[]>,
+    ensureApproversMasterRows(rocaSiteUrl, () =>
+      SPServices.getAnotherSPReadItems({
+        SiteUrl: rocaSiteUrl,
+        Listname: Config.RocaMasterListNames.ApproversMaster,
+        Select: APPROVERS_SELECT,
+        Expand: APPROVERS_EXPAND,
+        Topcount: 5000,
+      }) as Promise<Record<string, unknown>[]>,
+    ),
     SPServices.getAnotherSPSiteUserEmailMap(rocaSiteUrl).catch(
       () => new Map<number, string>(),
     ),

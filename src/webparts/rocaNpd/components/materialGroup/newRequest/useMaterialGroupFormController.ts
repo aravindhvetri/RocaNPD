@@ -184,10 +184,13 @@ export function useMaterialGroupFormController(
     setApproverRemarks("");
   }, [formResetAt, urlId]);
 
-  // Load configs on mount or navigation
+  // New form: load configs once. Edit/View hydrate loads configs itself when needed.
   React.useEffect(() => {
+    if (urlId) {
+      return;
+    }
     void dispatch(fetchMaterialGroupConfigsThunk());
-  }, [dispatch, location.key, location.pathname]);
+  }, [dispatch, location.key, location.pathname, urlId]);
 
   React.useEffect(() => {
     if (urlId) {
@@ -426,8 +429,6 @@ export function useMaterialGroupFormController(
           return false;
         }
 
-        const seenCodesInMaster = new Set<string>();
-
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (!row.description.trim()) {
@@ -440,6 +441,7 @@ export function useMaterialGroupFormController(
           }
 
           // Initiator: Code optional. Consultant: Code mandatory on every action.
+          // Duplicate Code validation runs only on Consultant Complete.
           if (mode === "consultant-edit" && !row.code.trim()) {
             showWarningToast(
               toastRef,
@@ -448,41 +450,12 @@ export function useMaterialGroupFormController(
             );
             return false;
           }
-
-          const codeKey = row.code.trim().toLowerCase();
-          if (codeKey) {
-            if (seenCodesInMaster.has(codeKey)) {
-              showWarningToast(
-                toastRef,
-                `Code "${row.code.trim()}" is duplicated under ${masterTitle}.`,
-                "Validation",
-              );
-              return false;
-            }
-            seenCodesInMaster.add(codeKey);
-          }
         }
-      }
-
-      // Also block the same Code under masters that share one Lookup Type.
-      const seenByLookupType = new Set<string>();
-      for (const entry of collectCodeUniquenessEntries()) {
-        const key = `${entry.lookupTypeId}::${entry.code.toLowerCase()}`;
-        if (seenByLookupType.has(key)) {
-          showWarningToast(
-            toastRef,
-            `Code "${entry.code}" is duplicated under ${entry.lookupTypeTitle}.`,
-            "Validation",
-          );
-          return false;
-        }
-        seenByLookupType.add(key);
       }
 
       return true;
     },
     [
-      collectCodeUniquenessEntries,
       mgState.configs,
       mgState.entriesByConfigId,
       mgState.selectedConfigIds,
@@ -582,40 +555,36 @@ export function useMaterialGroupFormController(
       return;
     }
 
-    void (async () => {
-      try {
-        if (!(await assertCodesUniqueAgainstLookup())) {
-          return;
-        }
-
-        try {
-          const result = await dispatch(
-            submitMaterialGroupRequestThunk({ comments: approverRemarks }),
-          ).unwrap();
-          // Flash via MainComponent Toast — form Toast unmounts on navigate.
-          dispatch(
-            setFlashMessage({
-              severity: "success",
-              detail: `Request ${result.requestId} submitted to Consultant successfully.`,
-            }),
-          );
-          dispatch(resetMaterialGroupForm());
-          navigate(
-            buildNavHref(
-              Config.Routes.MgAll,
-              searchParams.get(Config.NpdFormQuery.ViewAs),
-            ),
-          );
-        } catch {
-          // Error toast is shown once via the mgState.error effect.
-        }
-      } finally {
+    // Duplicate Code vs NPD_Lookup is validated only on Consultant Complete —
+    // not on Initiator Submit to Consultant.
+    void dispatch(
+      submitMaterialGroupRequestThunk({ comments: approverRemarks }),
+    )
+      .unwrap()
+      .then((result) => {
+        // Flash via MainComponent Toast — form Toast unmounts on navigate.
+        dispatch(
+          setFlashMessage({
+            severity: "success",
+            detail: `Request ${result.requestId} submitted to Consultant successfully.`,
+          }),
+        );
+        dispatch(resetMaterialGroupForm());
+        navigate(
+          buildNavHref(
+            Config.Routes.MgAll,
+            searchParams.get(Config.NpdFormQuery.ViewAs),
+          ),
+        );
+      })
+      .catch(() => {
+        // Error toast is shown once via the mgState.error effect.
+      })
+      .finally(() => {
         endActionBusy();
-      }
-    })();
+      });
   }, [
     approverRemarks,
-    assertCodesUniqueAgainstLookup,
     dispatch,
     endActionBusy,
     initiatorAccessDenied,

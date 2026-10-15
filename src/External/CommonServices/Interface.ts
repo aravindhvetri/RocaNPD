@@ -190,6 +190,13 @@ export interface INpdRequestGeneralInfo {
   InitiatorId: number;
   Created: string;
   Modified: string;
+  /** Active Item Details lines — Products column on list pages. */
+  ItemDetailsCount?: number;
+  /**
+   * Server-relative URL of NpdItemDetailsBackup.json when present on the
+   * NPD_Request item (from AttachmentFiles expand — not a separate list call).
+   */
+  ItemDetailsBackupUrl?: string;
   PlantCode?: string;
   StorageLocation?: string;
   ProfitCenter?: string;
@@ -487,6 +494,9 @@ export interface IMaterialGroupHydratePayload {
   status: string;
   selectedConfigIds: number[];
   entriesByConfigId: Record<number, IMaterialGroupEntryRow[]>;
+  /** Fingerprint of hydrated form payload — used to skip no-op Draft updates. */
+  savedRequestsJson?: string;
+  savedConfigLookupIds?: number[];
   initiatorName?: string;
   initiatorEmail?: string;
   /** Audit log rows from NPD_MaterialGroupAuditLogs (newest first). */

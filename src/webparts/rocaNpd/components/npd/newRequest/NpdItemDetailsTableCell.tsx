@@ -5,7 +5,10 @@ import {
   sanitizeDigitsOnlyTextInput,
 } from "../../../../../External/CommonServices/textInputSanitize";
 import { InputNumber, InputText, MultiSelect } from "../../common/controls";
-import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
+import {
+  hasLookupImportAttention,
+  type INpdItemDetailsFieldDef,
+} from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
   NpdItemDetailFieldKey,
@@ -117,6 +120,8 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
     }
   });
 
+  const lookupImportAttention = hasLookupImportAttention(row, field);
+
   return (
     <>
       <span title={readOnly ? multiValue[0] : ""} style={{ cursor: "pointer" }}>
@@ -131,7 +136,11 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
           selectionLimit={1}
           readOnly={readOnly}
           disabled={readOnly}
-          className={controlClassName}
+          className={
+            lookupImportAttention
+              ? `${controlClassName} ${styles.lookupImportAttention}`
+              : controlClassName
+          }
           panelClassName={styles.itemDetailsMultiSelectPanel}
           onChange={(value) =>
             handleChange(
@@ -167,7 +176,14 @@ function areCellPropsEqual(
     return false;
   }
 
-  return prev.row[prev.fieldDef.field] === next.row[next.fieldDef.field];
+  if (prev.row[prev.fieldDef.field] !== next.row[next.fieldDef.field]) {
+    return false;
+  }
+
+  return (
+    hasLookupImportAttention(prev.row, prev.fieldDef.field) ===
+    hasLookupImportAttention(next.row, next.fieldDef.field)
+  );
 }
 
 export default React.memo(NpdItemDetailsTableCell, areCellPropsEqual);

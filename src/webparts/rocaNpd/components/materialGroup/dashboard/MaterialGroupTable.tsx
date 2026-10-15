@@ -264,8 +264,8 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
                   icon="pi pi-pencil"
                   iconOnly
                   className={tableStyles.editAction}
-                  title="Edit"
-                  aria-label="Edit"
+                  title={Config.Edit}
+                  aria-label={Config.Edit}
                   onClick={() => onEdit(row)}
                 />
               ) : null}
@@ -274,8 +274,8 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
                 icon="pi pi-eye"
                 iconOnly
                 className={tableStyles.viewAction}
-                title="View"
-                aria-label="View"
+                title={Config.View}
+                aria-label={Config.View}
                 onClick={() => onView(row)}
               />
             </div>

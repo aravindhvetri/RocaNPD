@@ -11,7 +11,7 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 73 | 62 | 11 |
+| B — Technical Foundation | 76 | 65 | 11 |
 | C — SharePoint Data | 26 | 15 | 11 |
 | D — Security & Roles | 31 | 30 | 1 |
 | E — UI / UX / Theme | 41 | 35 | 6 |
@@ -26,9 +26,9 @@
 | N — Testing | 26 | 0 | 26 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 22 | 0 | 22 |
-| **TOTAL** | **532** | **397** | **135** |
+| **TOTAL** | **535** | **400** | **135** |
 
-**Last Updated:** 12 October 2026
+**Last Updated:** 14 October 2026
 
 ---
 
@@ -150,6 +150,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-B45** Thunks call domain services; services call SPServices
 - [x] **CHK-B46** Form drafts held in Redux until Save Draft / Submit (no per-keystroke SP writes)
 - [x] **CHK-B47** Lookup data cached via `lookupService` / Redux (admin + npdForm) and reused across screens
+- [x] **CHK-B48** Reusable UI action labels come from `Config.ActionLabels` / `Config.Add`, `Config.Edit`, `Config.Update`, `Config.Cancel`, `Config.Delete`, `Config.View`, `Config.Close`, `Config.Yes`, `Config.No`, `Config.Submit`, `Config.Save`, `Config.SaveAsDraft`, `Config.Import`, `Config.Export`, `Config.Rework`, `Config.Reject`, `Config.Approve`, `Config.Complete`, `Config.AddNew`, `Config.ConfirmDelete` (no hardcoded Add/Edit/Cancel/… on shared buttons)
+- [x] **CHK-B49** ROCA `ApproversMaster` reads share `rocaApproversMasterCache` (roleService / assignment / notifications) — no duplicate full-list fetches in one session
+- [x] **CHK-B50** NPD list Products uses `ItemDetailsCount` on `NPD_Request`; Draft/Submit promote-only when Item Details already saved; hydrate does not re-run attachment backup when count is current
 
 ---
 
@@ -527,7 +530,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-H11** Description mandatory validation per row
 - [x] **CHK-H11a** Material Group Description must be unique within the request and against `NPD_Lookup` Title (LookupName) — same uniqueness family as Lookup Code; Submit / Complete blocked with “already exists”
 - [x] **CHK-H11b** Material Group Code optional for Initiator but must be unique across the request (and vs `NPD_Lookup` LookupCode) on Submit — empty Code allowed; duplicate non-empty Codes blocked
-- [x] **CHK-H11c** Consultant Complete / Rework / Reject require Code on all rows and block duplicate Code/Description (not Complete-only)
+- [x] **CHK-H11c** Consultant Complete / Rework / Reject require Code on all rows; **duplicate Code vs Lookup runs on Complete only** (Rework / Reject do not call uniqueness APIs)
 - [x] **CHK-H11d** MG Code + Description Lookup uniqueness uses **one** `fetchActiveLookups` call; Code-only duplicate shows Code message; both duplicates show one combined validation message
 - [x] **CHK-H12** Success toasts after MG/NPD Submit (and Draft / Consultant actions) show via app-level flash so navigation does not unmount them
 - [x] **CHK-H12** Consultant Outlook email Login links use SafeLinks-safe `npdRoute` on `SitePages/RocaNPD.aspx` (same pattern as VH/MIS) — hash `id`/`mode` no longer breaks SitePages
@@ -846,7 +849,7 @@ Use this table to sign off each phase only when all related checklist items are 
 | 01 Oct 2026 | Other Details after MIS action respect NPD_Request (no Brand Extension overwrite of cleared fields) | CHK-G37f |
 | 01 Oct 2026 | Consultant MG Outlook email links SafeLinks-safe via npdRoute (fix SitePages id error) | CHK-H12 |
 | 01 Oct 2026 | MG Initiator Submit: Code/Description uniqueness across request (empty Code OK) | CHK-H11b |
-| 01 Oct 2026 | Consultant MG actions require Code + block duplicates (not Complete-only) | CHK-H11c |
+| 01 Oct 2026 | Consultant MG actions require Code; duplicate Code check Complete-only (doc corrected 14 Oct) | CHK-H11c |
 | 01 Oct 2026 | Success toasts survive navigate via ui.flashMessage (MainComponent Toast) | CHK-H12 |
 | 01 Oct 2026 | Login syncs ApproversMaster into Pending/Rework NPD WorkFlowJSON (VH by brand; MIS and Consultant without brand) | CHK-D26 |
 | 01 Oct 2026 | New NPD / New MG always resets form when opened after View (no Cancel required) | CHK-D27 |
@@ -863,6 +866,8 @@ Use this table to sign off each phase only when all related checklist items are 
 | 09 Oct 2026 | Draft / Rework shows unsaved JSON backup rows without inserting them; Resubmit inserts only the missing rows. Post to SAP stops on network loss, stays on the form, and retries only SAP=false lines | CHK-G26j, CHK-J19 |
 | 11 Oct 2026 | Submit network drop stops Item Details inserts (no auto-resume); retry inserts remaining rows only; Draft Products = saved list count; progress = remaining | CHK-G26k |
 | 12 Oct 2026 | MIS Item Details rows first in DataTable; soft-delete IsDeleted + filter so deleted rows never reappear for VH | CHK-G37b, CHK-G37g |
+| 14 Oct 2026 | ApproversMaster cache; ItemDetailsCount + Draft/Submit promote-only / hydrate skip; MG Code uniqueness Complete-only | CHK-B49, CHK-B50, CHK-H11c |
+| 14 Oct 2026 | Shared action labels via `Config.Add` / `Config.Edit` / … | CHK-B48 |
 
 ---
 

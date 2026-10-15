@@ -3,6 +3,7 @@ import type { INpdItemDetailRecord } from "../../../../../External/CommonService
 import type {
   INpdItemDetailRow,
   NpdItemDetailFieldKey,
+  NpdItemDetailFieldValue,
   NpdItemDetailsControlType,
 } from "./npdItemDetails.types";
 
@@ -58,12 +59,56 @@ export function createEmptyNpdItemDetailRow(
 export function toNpdItemDetailRow(
   record: INpdItemDetailRecord,
 ): INpdItemDetailRow {
+  const attention = (
+    record as INpdItemDetailRecord & {
+      lookupImportAttentionFields?: NpdItemDetailFieldKey[];
+    }
+  ).lookupImportAttentionFields;
+
   return {
     ...record,
     id: createNpdItemDetailRowId(),
     sharePointId: record.sharePointId || 0,
     isMisAdded: Boolean(record.isMisAdded),
+    ...(Array.isArray(attention) && attention.length
+      ? { lookupImportAttentionFields: attention }
+      : {}),
   };
+}
+
+export function hasLookupImportAttention(
+  row: INpdItemDetailRow,
+  field: NpdItemDetailFieldKey,
+): boolean {
+  const fields = row.lookupImportAttentionFields;
+  return Array.isArray(fields) && fields.includes(field);
+}
+
+export function clearLookupImportAttention(
+  row: INpdItemDetailRow,
+  field: NpdItemDetailFieldKey,
+  value: NpdItemDetailFieldValue,
+): INpdItemDetailRow {
+  if (!hasLookupImportAttention(row, field)) {
+    return row;
+  }
+
+  const selected = Array.isArray(value)
+    ? value.some((entry) => String(entry ?? "").trim())
+    : Boolean(String(value ?? "").trim());
+  if (!selected) {
+    return row;
+  }
+
+  const remaining = (row.lookupImportAttentionFields || []).filter(
+    (key) => key !== field,
+  );
+  if (!remaining.length) {
+    const { lookupImportAttentionFields: _removed, ...rest } = row;
+    return rest as INpdItemDetailRow;
+  }
+
+  return { ...row, lookupImportAttentionFields: remaining };
 }
 
 export function toNpdItemDetailRecord(
@@ -127,7 +172,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     header: "Material Code",
     required: true,
     placeholder: "Max 18 Chars",
-    minWidth: "10rem",
+    minWidth: "12rem",
     controlType: "text",
     maxLength: 18,
   },
@@ -136,7 +181,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     header: "Material Description",
     required: true,
     placeholder: "Max 40 Chars",
-    minWidth: "19rem",
+    minWidth: "22rem",
     controlType: "text",
     maxLength: 40,
   },

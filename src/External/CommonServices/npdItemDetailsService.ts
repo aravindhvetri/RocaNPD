@@ -336,13 +336,38 @@ export interface ISaveNpdItemDetailsOptions {
    * saved stay saved and the rest of this submit is not sent.
    */
   shouldAbort?: () => boolean;
+  /**
+   * When true, caller already wrote the NPD_Request backup attachment —
+   * skip a second attachmentFiles round-trip.
+   */
+  skipBackup?: boolean;
+  /**
+   * When true, caller already wrote NPD_Request.ItemDetailsCount on the header
+   * create/update — skip a separate items(id) PATCH.
+   */
+  skipItemDetailsCountSync?: boolean;
+}
+
+function attachItemDetailsPersistProgress(
+  error: unknown,
+  inserted: number,
+  mutateCompleted: boolean,
+): Error {
+  const wrapped = error instanceof Error ? error : new Error(String(error));
+  const extra = wrapped as Error & {
+    npdInsertedItemCount?: number;
+    npdItemMutateCompleted?: boolean;
+  };
+  extra.npdInsertedItemCount = inserted;
+  extra.npdItemMutateCompleted = mutateCompleted;
+  return wrapped;
 }
 
 export async function saveNpdItemDetailsBatch(
   requestId: number,
   records: INpdItemDetailRecord[],
   options: boolean | ISaveNpdItemDetailsOptions = false,
-): Promise<void> {
+): Promise<number> {
   const normalized: ISaveNpdItemDetailsOptions =
     typeof options === "boolean" ? { isNewRequest: options } : options || {};
   const isNewRequest = Boolean(normalized.isNewRequest);
@@ -383,8 +408,23 @@ export async function saveNpdItemDetailsBatch(
   // Soft-delete first so a concurrent update of the same Id cannot revive it.
   const allUpdates = [...softDeleteUpdates, ...toUpdate];
 
+  const syncItemDetailsCount = async (): Promise<void> => {
+    if (normalized.skipItemDetailsCountSync) {
+      return;
+    }
+    // Non-partial replace leaves exactly the persistable rows active.
+    // Partial (soft-delete + insert) needs a recount of active lines.
+    const count = partial
+      ? (await fetchNpdItemDetailsByRequestId(requestId)).length
+      : persistable.length;
+    await syncNpdRequestItemDetailsCount(requestId, count);
+  };
+
   if (!allUpdates.length && !toInsert.length) {
-    return;
+    if (!partial) {
+      await syncItemDetailsCount();
+    }
+    return 0;
   }
 
   // Save Draft and other callers keep a single batch. Submit passes
@@ -392,7 +432,10 @@ export async function saveNpdItemDetailsBatch(
   // when the browser comes back online.
 
   if (!normalized.shouldAbort) {
-    await upsertNpdItemDetailsBackupAttachment(requestId, records);
+    // Initiator Draft/Submit already wrote the backup before this batch.
+    if (!normalized.skipBackup) {
+      await upsertNpdItemDetailsBackupAttachment(requestId, records);
+    }
 
     await SPServices.batchMutate({
       ListName: LIST_NAME(),
@@ -400,7 +443,8 @@ export async function saveNpdItemDetailsBatch(
       update: allUpdates,
       insert: toInsert,
     });
-    return;
+    await syncItemDetailsCount();
+    return toInsert.length;
   }
 
   const abortIfRequested = (): void => {
@@ -442,19 +486,58 @@ export async function saveNpdItemDetailsBatch(
   // Up to 100 Item Details per batch. 59 lines are one call.
   // The next batch starts only if this submit is still online.
   const insertChunkSize = SharePointMutateBatchSize;
-  if (!toInsert.length) {
-    await runAbortableMutate({
-      update: allUpdates,
-      insert: [],
-    });
+  let insertedCompleted = 0;
+  let mutateCompleted = false;
+  try {
+    if (!toInsert.length) {
+      await runAbortableMutate({
+        update: allUpdates,
+        insert: [],
+      });
+      mutateCompleted = true;
+      return 0;
+    }
+
+    for (let start = 0; start < toInsert.length; start += insertChunkSize) {
+      const chunk = toInsert.slice(start, start + insertChunkSize);
+      await runAbortableMutate({
+        update: start === 0 ? allUpdates : [],
+        insert: chunk,
+      });
+      mutateCompleted = true;
+      insertedCompleted += chunk.length;
+    }
+    return insertedCompleted;
+  } catch (error) {
+    throw attachItemDetailsPersistProgress(
+      error,
+      insertedCompleted,
+      mutateCompleted,
+    );
+  }
+}
+
+/** Writes NPD_Request.ItemDetailsCount for list Products column (best-effort). */
+async function syncNpdRequestItemDetailsCount(
+  requestId: number,
+  count: number,
+): Promise<void> {
+  if (!requestId) {
     return;
   }
-
-  for (let start = 0; start < toInsert.length; start += insertChunkSize) {
-    await runAbortableMutate({
-      update: start === 0 ? allUpdates : [],
-      insert: toInsert.slice(start, start + insertChunkSize),
+  try {
+    await SPServices.SPUpdateItem({
+      Listname: Config.ListNames.NpdRequest,
+      ID: requestId,
+      RequestJSON: {
+        [Config.FieldNames.NpdRequest.ItemDetailsCount]: Math.max(
+          0,
+          Math.floor(count),
+        ),
+      },
     });
+  } catch {
+    // Older sites without the column must not fail Item Details saves.
   }
 }
 

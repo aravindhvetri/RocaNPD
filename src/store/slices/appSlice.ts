@@ -24,6 +24,11 @@ export interface IAppState {
   mgInitiatorBrands: string[];
   mgConsultantBrands: string[];
   roleAssignments: IRoleBrandAssignment[];
+  /**
+   * ROCA siteUsers Id → Email (loaded once, reused for ApproversMaster matching).
+   * Keys are stringified SharePoint user Ids.
+   */
+  rocaSiteUserEmailById: Record<string, string>;
   roleStatus: RoleResolutionStatus;
   roleError: string | null;
   initialized: boolean;
@@ -46,6 +51,7 @@ const initialState: IAppState = {
   mgInitiatorBrands: initialAccess.mgInitiatorBrands,
   mgConsultantBrands: initialAccess.mgConsultantBrands,
   roleAssignments: initialAccess.assignments,
+  rocaSiteUserEmailById: {},
   roleStatus: "idle",
   roleError: null,
   initialized: false,
@@ -114,6 +120,12 @@ const appSlice = createSlice({
     setInitialized(state, action: PayloadAction<boolean>) {
       state.initialized = action.payload;
     },
+    setRocaSiteUserEmailById(
+      state,
+      action: PayloadAction<Record<string, string>>,
+    ) {
+      state.rocaSiteUserEmailById = action.payload;
+    },
   },
 });
 
@@ -123,6 +135,7 @@ export const {
   setUserAccess,
   setRoleError,
   setInitialized,
+  setRocaSiteUserEmailById,
 } = appSlice.actions;
 export default appSlice.reducer;
 

@@ -54,6 +54,7 @@ import {
   IAzureUsers,
 } from "./ISPServicesProps";
 import { SharePointMutateBatchSize } from "./Config";
+import { ensureRocaSiteUserEmailMap } from "./rocaSiteUserEmailCache";
 import { MSGraphClient } from "@microsoft/sp-http";
 import * as moment from "moment";
 
@@ -670,26 +671,28 @@ const AnotherformatInputs = (data: IAnotherListItems): IAnotherListItems => {
 const getAnotherSPSiteUserEmailMap = async (
   siteUrl: string,
 ): Promise<Map<number, string>> => {
-  const web = Web([getSP().web, siteUrl]);
-  const rows = (await web.siteUsers.select("Id,Email")()) as Array<{
-    Id?: number;
-    Email?: string;
-  }>;
+  const emailById = await ensureRocaSiteUserEmailMap(siteUrl, async () => {
+    const web = Web([getSP().web, siteUrl]);
+    const rows = (await web.siteUsers.select("Id,Email")()) as Array<{
+      Id?: number;
+      Email?: string;
+    }>;
 
-  const emailById = new Map<number, string>();
+    const map = new Map<number, string>();
+    rows.forEach((user) => {
+      const id = Number(user.Id);
+      const email = String(user.Email ?? "")
+        .trim()
+        .toLowerCase();
 
-  rows.forEach((user) => {
-    const id = Number(user.Id);
-    const email = String(user.Email ?? "")
-      .trim()
-      .toLowerCase();
-
-    if (id > 0 && email) {
-      emailById.set(id, email);
-    }
+      if (id > 0 && email) {
+        map.set(id, email);
+      }
+    });
+    return map;
   });
 
-  return emailById;
+  return new Map(emailById);
 };
 
 const getAnotherSPReadItems = async (

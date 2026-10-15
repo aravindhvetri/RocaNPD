@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
 import type {
   ILookup,
   ILookupType,
@@ -66,8 +66,9 @@ const LookupFormDialog: React.FC<ILookupFormDialogProps> = ({
     setLookupCode(item?.LookupCode ?? "");
   }, [item, visible]);
 
-  const dialogTitle = mode === "create" ? "Add Lookup" : "Edit Lookup";
-  const saveLabel = mode === "create" ? "Add" : "Update";
+  const dialogTitle =
+    mode === "create" ? `${Config.Add} Lookup` : `${Config.Edit} Lookup`;
+  const saveLabel = mode === "create" ? Config.Add : Config.Update;
 
   const handleSave = async (): Promise<void> => {
     const validationError = validateLookupForm(
@@ -96,7 +97,7 @@ const LookupFormDialog: React.FC<ILookupFormDialogProps> = ({
       footer={
         <div className={styles.footer}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             disabled={saving}

@@ -188,6 +188,11 @@ const npdFormSlice = createSlice({
       })
       .addCase(saveNpdDraft.rejected, (state, action) => {
         state.saveStatus = "idle";
+        const payload = String(action.payload ?? "").toLowerCase();
+        if (payload.includes("no internet") || payload.includes("offline")) {
+          state.error = null;
+          return;
+        }
         state.error = action.payload ?? "Failed to save draft.";
       })
       .addCase(submitNpdRequest.pending, (state) => {
@@ -203,6 +208,13 @@ const npdFormSlice = createSlice({
       })
       .addCase(submitNpdRequest.rejected, (state, action) => {
         state.saveStatus = "idle";
+        // Offline Submit already flashes + navigates. Do not keep the error in
+        // Redux — reopening Edit while online would toast "No Internet" again.
+        const payload = String(action.payload ?? "").toLowerCase();
+        if (payload.includes("no internet") || payload.includes("offline")) {
+          state.error = null;
+          return;
+        }
         state.error = action.payload ?? "Failed to submit the request.";
       })
       .addCase(applyNpdWorkflowAction.pending, (state) => {

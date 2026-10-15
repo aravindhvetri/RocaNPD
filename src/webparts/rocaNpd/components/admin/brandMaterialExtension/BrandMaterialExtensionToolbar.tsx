@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button } from "../../common/controls";
 import { MasterToolbarSearch } from "../../common/master/MasterToolbar";
 import styles from "../../common/master/MasterToolbar/MasterToolbar.module.scss";
@@ -38,7 +38,7 @@ const BrandMaterialExtensionToolbar: React.FC<
       />
 
       <Button
-        label={FieldLabels.Export}
+        label={Config.Export}
         icon="pi pi-download"
         size="sm"
         className={styles.actionButton}
@@ -46,7 +46,7 @@ const BrandMaterialExtensionToolbar: React.FC<
         onClick={onExport}
       />
       <Button
-        label="Add New"
+        label={Config.AddNew}
         icon="pi pi-plus"
         size="sm"
         className={styles.addNewButton}

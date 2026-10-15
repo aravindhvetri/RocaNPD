@@ -24,90 +24,17 @@ import {
   parseViewAsRole,
 } from "./permissionService";
 import type { NavViewRole } from "./navigationConfig";
-import { getActiveRecordFilters, SOFT_DELETE_FIELD } from "./softDelete";
-import { isDeletedYesFlag } from "./lookupFieldUtils";
-import SPServices from "./SPServices";
 
-const ITEM_FIELDS = Config.FieldNames.NpdItemDetails;
-
-interface IItemSummary {
-  count: number;
-  firstDescription: string;
-}
-
-function getLookupId(value: unknown): number {
-  if (typeof value === "number") {
-    return value;
-  }
-
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const nestedId = Number(record.Id ?? record.ID);
-    if (Number.isFinite(nestedId) && nestedId > 0) {
-      return nestedId;
-    }
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
-async function fetchItemSummaries(): Promise<Map<number, IItemSummary>> {
-  const rows = (await SPServices.SPReadItems({
-    Listname: Config.ListNames.NpdItemDetails,
-    Select: [
-      "Id",
-      ITEM_FIELDS.MaterialDescription,
-      ITEM_FIELDS.RequestGeneralInfoId,
-      ITEM_FIELDS.IsDeleted,
-    ].join(","),
-    Filter: getActiveRecordFilters(),
-    Orderby: "Id",
-    Orderbydecorasc: true,
-    Topcount: 5000,
-  })) as Record<string, unknown>[];
-
-  const summaries = new Map<number, IItemSummary>();
-  rows.forEach((row) => {
-    if (isDeletedYesFlag(row[SOFT_DELETE_FIELD] ?? row.IsDeleted)) {
-      return;
-    }
-    const requestId = getLookupId(row[ITEM_FIELDS.RequestGeneralInfoId]);
-    if (!requestId) {
-      return;
-    }
-
-    const existing = summaries.get(requestId);
-    const description = String(row[ITEM_FIELDS.MaterialDescription] ?? "").trim();
-    if (!existing) {
-      summaries.set(requestId, { count: 1, firstDescription: description });
-      return;
-    }
-
-    existing.count += 1;
-    if (!existing.firstDescription && description) {
-      existing.firstDescription = description;
-    }
-  });
-
-  return summaries;
-}
-
-function toListItem(
-  item: INpdRequestGeneralInfo,
-  summaries: Map<number, IItemSummary>,
-): INpdRequestListItem {
-  const summary = summaries.get(item.Id);
-  const projectName =
-    summary?.firstDescription ||
-    (isNpdRequestIdTitle(item.Title) ? item.Brand : item.Title);
+function toListItem(item: INpdRequestGeneralInfo): INpdRequestListItem {
+  const projectName = isNpdRequestIdTitle(item.Title)
+    ? item.Brand
+    : item.Title;
 
   return {
     ...item,
     ProjectName: projectName.trim(),
-    // Draft Products = rows actually stored in NPD_ItemDetails, never the
-    // JSON backup attachment count (backup can still hold unsaved lines).
-    ProductCount: summary?.count ?? 0,
+    // Products column uses NPD_Request.ItemDetailsCount (no Item Details list fetch).
+    ProductCount: Math.max(0, Math.floor(Number(item.ItemDetailsCount) || 0)),
   };
 }
 
@@ -152,10 +79,7 @@ export async function fetchNpdDashboardItems(
   viewRole?: string | NavViewRole | null,
 ): Promise<INpdRequestListItem[]> {
   const scopedRole = parseViewAsRole(viewRole ?? undefined);
-  const [requests, summaries] = await Promise.all([
-    fetchActiveNpdRequests(),
-    fetchItemSummaries(),
-  ]);
+  const requests = await fetchActiveNpdRequests();
 
   return requests
     .filter((item) => {
@@ -190,7 +114,7 @@ export async function fetchNpdDashboardItems(
         scopedRole,
       );
     })
-    .map((item) => toListItem(item, summaries));
+    .map(toListItem);
 }
 
 export async function fetchNpdPendingItems(
@@ -204,10 +128,7 @@ export async function fetchNpdPendingItems(
   }
 
   const role = parseViewAsRole(viewRole ?? undefined);
-  const [requests, summaries] = await Promise.all([
-    fetchActiveNpdRequests(),
-    fetchItemSummaries(),
-  ]);
+  const requests = await fetchActiveNpdRequests();
 
   return requests
     .filter((item) => {
@@ -279,7 +200,7 @@ export async function fetchNpdPendingItems(
         normalizeEmail(getNpdRequestOwnerEmail(item)) === loginEmail
       );
     })
-    .map((item) => toListItem(item, summaries));
+    .map(toListItem);
 }
 
 export async function fetchNpdDraftReworkItems(
@@ -293,10 +214,7 @@ export async function fetchNpdDraftReworkItems(
   }
 
   const role = parseViewAsRole(viewRole ?? undefined) ?? Config.Roles.Initiator;
-  const [requests, summaries] = await Promise.all([
-    fetchActiveNpdRequests(),
-    fetchItemSummaries(),
-  ]);
+  const requests = await fetchActiveNpdRequests();
 
   return requests
     .filter((item) => isDraftOrReworkStatus(item.Status))
@@ -314,5 +232,5 @@ export async function fetchNpdDraftReworkItems(
         role,
       ),
     )
-    .map((item) => toListItem(item, summaries));
+    .map(toListItem);
 }

@@ -32,9 +32,9 @@ function errorText(error: unknown): string {
 /**
  * Posts each Item Details line with SAP=false, then inserts that line into Material Master.
  * Lines already marked SAP=true are not sent again; their Material Master row is ensured.
- * Any failure is collected so later lines can still succeed. The caller must not approve
- * when this throws.
- * Network loss fails immediately and does not continue remaining lines.
+ * When sapData.STATUS is false (or createZMatMast / markPosted / insertMaster fails for a
+ * line), stop immediately and show that record's message — do not continue remaining lines.
+ * Retry skips SAP=true lines. Network loss also fails immediately.
  * Reconnecting does not resume this batch — the caller must start a new action.
  * An in-flight line that still succeeds after a brief reconnect is not interrupted.
  */
@@ -43,7 +43,6 @@ export async function postItemDetailsToSap(
   buildRow: (item: INpdItemDetailRecord) => ISapMaterialMasterRequestRow,
   deps: ISapMaterialMasterPostDependencies,
 ): Promise<void> {
-  const failures: string[] = [];
   const sapTargets = items.filter(
     (item) => isPersistableItem(item) && !item.sapPosted,
   );
@@ -113,21 +112,21 @@ export async function postItemDetailsToSap(
               ? error
               : new Error(NETWORK_OFFLINE_MESSAGE);
           }
-          failures.push(`${label}: ${errorText(error)}`);
+          throw new Error(`${label}: ${errorText(error)}`);
         }
         continue;
       }
 
       if (!item.sharePointId) {
-        failures.push(
+        throw new Error(
           `${label}: the Item Details record was not saved, so it was not sent to SAP.`,
         );
-        continue;
       }
 
       try {
         const row = buildRow(item);
         const responseText = await deps.postRow(row);
+        // Reads sapData[].STATUS / MESSAGE — STATUS False stops the batch here.
         deps.assertSuccess(responseText, label);
         await deps.markPosted(item.sharePointId);
         item.sapPosted = true;
@@ -141,20 +140,19 @@ export async function postItemDetailsToSap(
           throw new Error(NETWORK_OFFLINE_MESSAGE);
         }
       } catch (error) {
-        // Stop the batch immediately on network loss — do not continue remaining lines.
+        // Stop immediately — do not process remaining records.
         if (isNetworkError(error) || shouldStop()) {
           throw error instanceof Error
             ? error
             : new Error(NETWORK_OFFLINE_MESSAGE);
         }
-        failures.push(`${label}: ${errorText(error)}`);
+        const detail = errorText(error);
+        throw new Error(
+          detail.toLowerCase().includes(label.toLowerCase())
+            ? detail
+            : `${label}: ${detail}`,
+        );
       }
-    }
-
-    if (failures.length) {
-      throw new Error(
-        `SAP did not process all Item Details records due to the error: ${failures.join(" ")} Records already accepted by SAP have been retained and will not be resubmitted.`,
-      );
     }
   } finally {
     stopWatch();

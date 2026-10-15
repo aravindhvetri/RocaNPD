@@ -248,6 +248,17 @@
   }
 }
 
+/* Beat injected Prime border-color so import Lookup attention stays visible. */
+:global([data-roca-npd-root]) {
+  .lookupImportAttention {
+    :global(.p-multiselect),
+    :global(.p-multiselect:not(.p-disabled).p-focus),
+    :global(.p-multiselect:not(.p-disabled):focus-within) {
+      border-color: $roca-color-error !important;
+    }
+  }
+}
+
 /* Portaled MultiSelect panel — Item Details table only */
 .itemDetailsMultiSelectPanel {
   :global(.p-multiselect-header) {

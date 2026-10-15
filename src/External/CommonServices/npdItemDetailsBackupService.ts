@@ -12,12 +12,14 @@ function normalizeMatchPart(value: string): string {
     .toLowerCase();
 }
 
+type INpdItemDetailIdentity = Pick<
+  INpdItemDetailRecord,
+  "materialCode" | "materialDescription" | "rocaGlobalCode"
+>;
+
 /** Stable key for matching backup rows to rows already in NPD_ItemDetails. */
 export function buildNpdItemDetailsMatchKey(
-  item: Pick<
-    INpdItemDetailRecord,
-    "materialCode" | "materialDescription" | "rocaGlobalCode"
-  >,
+  item: INpdItemDetailIdentity,
 ): string {
   const code = normalizeMatchPart(item.materialCode);
   if (code) {
@@ -32,6 +34,53 @@ export function buildNpdItemDetailsMatchKey(
     return `roca:${roca}`;
   }
   return "";
+}
+
+/**
+ * Same Item Details line across SharePoint vs Attachments backup.
+ * Prefer Material Code; fall back to Description / Roca Global Code when a
+ * stored row did not round-trip its code (otherwise merge duplicates the row).
+ */
+export function npdItemDetailLinesMatch(
+  left: INpdItemDetailIdentity,
+  right: INpdItemDetailIdentity,
+): boolean {
+  const leftCode = normalizeMatchPart(left.materialCode);
+  const rightCode = normalizeMatchPart(right.materialCode);
+  if (leftCode && rightCode) {
+    return leftCode === rightCode;
+  }
+
+  const leftDesc = normalizeMatchPart(left.materialDescription);
+  const rightDesc = normalizeMatchPart(right.materialDescription);
+  if (leftDesc && rightDesc && leftDesc === rightDesc) {
+    if (leftCode && rightCode && leftCode !== rightCode) {
+      return false;
+    }
+    return true;
+  }
+
+  if (leftCode || rightCode) {
+    return false;
+  }
+
+  const leftRoca = normalizeMatchPart(left.rocaGlobalCode);
+  const rightRoca = normalizeMatchPart(right.rocaGlobalCode);
+  return Boolean(leftRoca && rightRoca && leftRoca === rightRoca);
+}
+
+/** Insert only rows that are not already represented in NPD_ItemDetails. */
+export function npdItemDetailNeedsInsert(
+  row: INpdItemDetailRecord,
+  storedRows: readonly INpdItemDetailRecord[],
+): boolean {
+  if (row.sharePointId > 0) {
+    return false;
+  }
+  return !storedRows.some(
+    (stored) =>
+      stored.sharePointId > 0 && npdItemDetailLinesMatch(row, stored),
+  );
 }
 
 function isPersistableBackupItem(item: INpdItemDetailRecord): boolean {
@@ -129,48 +178,58 @@ function parseBackupJson(raw: string): INpdItemDetailRecord[] {
     .filter(isPersistableBackupItem);
 }
 
+export type NpdItemDetailsBackupWriteMode = "add" | "replace" | "auto";
+
 /**
  * Writes / replaces the Item Details JSON backup on the NPD_Request item.
  * Call immediately after the header exists and before Item Details batch writes.
- * Prefer overwrite (setContent) so a replace never leaves a gap with no file.
+ *
+ * Modes:
+ * - add: one attachmentFiles/add (new request — no existence list call)
+ * - replace: one setContent (known existing file)
+ * - auto: try setContent, fall back to add (no attachmentFiles list round-trip)
  */
 export async function upsertNpdItemDetailsBackupAttachment(
   requestId: number,
   items: INpdItemDetailRecord[],
+  options?: { mode?: NpdItemDetailsBackupWriteMode },
 ): Promise<void> {
   if (!(requestId > 0)) {
     return;
   }
 
   const content = serializeNpdItemDetailsBackup(items);
-  let hasBackup = false;
-  try {
-    const attachments = (await SPServices.SPGetAttachments({
-      Listname: LIST_NAME(),
-      ID: requestId,
-    })) as Array<{ FileName?: string; fileName?: string }>;
-    hasBackup = (attachments || []).some((file) => {
-      const name = String(file.FileName ?? file.fileName ?? "").trim();
-      return name.toLowerCase() === BACKUP_FILE_NAME.toLowerCase();
-    });
-  } catch {
-    hasBackup = false;
-  }
+  const mode = options?.mode ?? "auto";
 
-  if (hasBackup) {
-    await getSP()
+  const addBackup = (): Promise<unknown> =>
+    SPServices.SPAddAttachments({
+      ListName: LIST_NAME(),
+      ListID: requestId,
+      Attachments: [{ name: BACKUP_FILE_NAME, content }],
+    });
+
+  const replaceBackup = (): Promise<unknown> =>
+    getSP()
       .web.lists.getByTitle(LIST_NAME())
       .items.getById(requestId)
       .attachmentFiles.getByName(BACKUP_FILE_NAME)
       .setContent(content);
+
+  if (mode === "add") {
+    await addBackup();
     return;
   }
 
-  await SPServices.SPAddAttachments({
-    ListName: LIST_NAME(),
-    ListID: requestId,
-    Attachments: [{ name: BACKUP_FILE_NAME, content }],
-  });
+  if (mode === "replace") {
+    await replaceBackup();
+    return;
+  }
+
+  try {
+    await replaceBackup();
+  } catch {
+    await addBackup();
+  }
 }
 
 /** Removes the backup after a successful Save Draft / Submit (normal path). */
@@ -204,37 +263,43 @@ export async function clearNpdItemDetailsBackupAttachment(
 }
 
 /**
- * Loads the JSON backup when present. Returns null when no recovery file exists
- * (normal Draft/Rework with a completed save).
+ * Loads the JSON backup when present. Prefer {@link serverRelativeUrl} from the
+ * already-fetched NPD_Request AttachmentFiles expand (no SPGetAttachments).
+ * Falls back to listing attachments only when no URL is supplied.
  */
 export async function tryLoadNpdItemDetailsBackup(
   requestId: number,
+  options?: { serverRelativeUrl?: string },
 ): Promise<INpdItemDetailRecord[] | null> {
   if (!(requestId > 0)) {
     return null;
   }
 
-  const attachments = (await SPServices.SPGetAttachments({
-    Listname: LIST_NAME(),
-    ID: requestId,
-  })) as Array<{
-    FileName?: string;
-    fileName?: string;
-    ServerRelativeUrl?: string;
-    serverRelativeUrl?: string;
-  }>;
+  let serverRelativeUrl = String(options?.serverRelativeUrl ?? "").trim();
 
-  const backup = (attachments || []).find((file) => {
-    const name = String(file.FileName ?? file.fileName ?? "").trim();
-    return name.toLowerCase() === BACKUP_FILE_NAME.toLowerCase();
-  });
-  if (!backup) {
-    return null;
+  if (!serverRelativeUrl) {
+    const attachments = (await SPServices.SPGetAttachments({
+      Listname: LIST_NAME(),
+      ID: requestId,
+    })) as Array<{
+      FileName?: string;
+      fileName?: string;
+      ServerRelativeUrl?: string;
+      serverRelativeUrl?: string;
+    }>;
+
+    const backup = (attachments || []).find((file) => {
+      const name = String(file.FileName ?? file.fileName ?? "").trim();
+      return name.toLowerCase() === BACKUP_FILE_NAME.toLowerCase();
+    });
+    if (!backup) {
+      return null;
+    }
+
+    serverRelativeUrl = String(
+      backup.ServerRelativeUrl ?? backup.serverRelativeUrl ?? "",
+    ).trim();
   }
-
-  const serverRelativeUrl = String(
-    backup.ServerRelativeUrl ?? backup.serverRelativeUrl ?? "",
-  ).trim();
 
   let raw = "";
   if (serverRelativeUrl) {
@@ -262,8 +327,9 @@ export async function tryLoadNpdItemDetailsBackup(
 }
 
 /**
- * Prefer backup order/content; stamp sharePointId / SAP flags from rows already
- * stored in NPD_ItemDetails so resubmit inserts only the missing lines.
+ * Prefer backup order. Rows already in NPD_ItemDetails use stored field values
+ * (SharePoint is source of truth after a successful Item Details save). Backup
+ * content is used only for recovery rows not yet in the list.
  * Soft-deleted SharePoint keys are never resurrected from backup alone.
  */
 export function mergeNpdItemDetailsWithBackup(
@@ -280,13 +346,8 @@ export function mergeNpdItemDetailsWithBackup(
   const takeStoredMatch = (
     backupItem: INpdItemDetailRecord,
   ): INpdItemDetailRecord | undefined => {
-    // Backup has no SharePointId — match on Item Details business keys only.
-    const key = buildNpdItemDetailsMatchKey(backupItem);
-    if (!key) {
-      return undefined;
-    }
-    const byKeyIndex = unusedStored.findIndex(
-      (item) => buildNpdItemDetailsMatchKey(item) === key,
+    const byKeyIndex = unusedStored.findIndex((item) =>
+      npdItemDetailLinesMatch(backupItem, item),
     );
     if (byKeyIndex >= 0) {
       return unusedStored.splice(byKeyIndex, 1)[0];
@@ -311,15 +372,31 @@ export function mergeNpdItemDetailsWithBackup(
       continue;
     }
     merged.push({
-      ...backupItem,
-      sharePointId: stored.sharePointId,
-      sapPosted: Boolean(stored.sapPosted),
+      ...stored,
       isMisAdded: Boolean(stored.isMisAdded || backupItem.isMisAdded),
     });
   }
 
-  // Keep any stored rows that were not represented in the backup (should be rare).
-  const combined = [...merged, ...unusedStored];
+  // Attach leftover SharePoint Ids to unmatched backup rows. Never append a
+  // second copy of the same line (that produced 150 rows from 50 + 100).
+  unusedStored.forEach((leftover) => {
+    const mergeIndex = merged.findIndex(
+      (row) =>
+        !(row.sharePointId > 0) && npdItemDetailLinesMatch(row, leftover),
+    );
+    if (mergeIndex >= 0) {
+      merged[mergeIndex] = {
+        ...leftover,
+        isMisAdded: Boolean(
+          leftover.isMisAdded || merged[mergeIndex].isMisAdded,
+        ),
+      };
+      return;
+    }
+    merged.push(leftover);
+  });
+
+  const combined = merged;
   // MIS-added rows first; then remaining by SharePoint Id.
   return combined.sort((left, right) => {
     const leftMis = left.isMisAdded ? 0 : 1;

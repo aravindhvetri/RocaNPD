@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../../External/CommonServices/Config";
 import { Button } from "../Button";
 import { Dialog } from "../Dialog";
 import type { IDeleteBlockedDialogProps } from "./IDeleteBlockedDialogProps";
@@ -18,7 +19,7 @@ const DeleteBlockedDialog: React.FC<IDeleteBlockedDialogProps> = ({
     footer={
       <div className={styles.footer}>
         <Button
-          label="Close"
+          label={Config.Close}
           size="sm"
           className={styles.closeButton}
           onClick={onClose}

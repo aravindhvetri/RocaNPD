@@ -23,8 +23,9 @@ function normalizeUniqueValue(value: string): string {
 }
 
 /**
- * Roca Global Code / Material Code / Material Description must be unique
- * within the request (case-insensitive). Empty values are ignored.
+ * Roca Global Code / Material Code must be unique within the request
+ * (case-insensitive). Material Description duplicates are allowed.
+ * Empty values are ignored.
  */
 export function validateNpdItemDetailDuplicates(
   itemRows: INpdItemDetailRow[],
@@ -46,11 +47,6 @@ export function validateNpdItemDetailDuplicates(
     {
       label: "Material Code",
       getValue: (row) => String(row.materialCode ?? ""),
-      enabled: true,
-    },
-    {
-      label: "Material Description",
-      getValue: (row) => String(row.materialDescription ?? ""),
       enabled: true,
     },
   ];

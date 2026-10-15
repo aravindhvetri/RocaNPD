@@ -255,33 +255,47 @@ function splitCellValues(value: string): string[] {
     .filter(Boolean);
 }
 
-function canonicalizeLookupValues(
-  rawValues: string[],
+function matchLookupOption(
+  rawValue: string,
   options: ISelectOption[],
-  header: string,
-  rowNumber: number,
-  errors: string[],
-): string[] {
+): string | null {
+  const match = options.find(
+    (option) =>
+      lookupValuesMatch(String(option.value), rawValue) ||
+      lookupValuesMatch(option.label, rawValue),
+  );
+  return match ? String(match.value) : null;
+}
+
+/**
+ * Lookup-configured Excel cells: invalid or blank values do not fail import.
+ * The MultiSelect is left empty and flagged for a red-border prompt instead.
+ */
+function resolveImportedLookupField(
+  raw: string,
+  options: ISelectOption[],
+): { values: string[]; needsAttention: boolean } {
+  const tokens = splitCellValues(raw);
+  if (!tokens.length) {
+    return { values: [], needsAttention: true };
+  }
+
   const canonical: string[] = [];
-
-  rawValues.forEach((rawValue) => {
-    const match = options.find(
-      (option) =>
-        lookupValuesMatch(String(option.value), rawValue) ||
-        lookupValuesMatch(option.label, rawValue),
-    );
-
-    if (!match) {
-      errors.push(
-        `Row ${rowNumber}: "${rawValue}" is not a valid ${header} option.`,
-      );
+  let hasInvalid = false;
+  tokens.forEach((token) => {
+    const matched = matchLookupOption(token, options);
+    if (!matched) {
+      hasInvalid = true;
       return;
     }
-
-    canonical.push(String(match.value));
+    canonical.push(matched);
   });
 
-  return canonical;
+  if (hasInvalid || !canonical.length) {
+    return { values: [], needsAttention: true };
+  }
+
+  return { values: canonical, needsAttention: false };
 }
 
 function createEmptyRecord(): INpdItemDetailRecord {
@@ -318,8 +332,9 @@ function normalizeUniqueText(value: string): string {
 }
 
 /**
- * Collect Already exists messages for Roca Global Code / Material Code /
- * Description. One message per Excel row lists every duplicate field name.
+ * Collect Already exists messages for Roca Global Code / Material Code.
+ * Material Description duplicates are allowed. One message per Excel row
+ * lists every duplicate field name.
  */
 function collectUniqueFieldDuplicates(
   record: INpdItemDetailRecord,
@@ -327,7 +342,6 @@ function collectUniqueFieldDuplicates(
   requireRocaGlobalCode: boolean,
   seenRocaGlobalCodes: Set<string>,
   seenMaterialCodes: Set<string>,
-  seenMaterialDescriptions: Set<string>,
 ): string[] {
   const duplicateFields: string[] = [];
   const candidates: Array<{ raw: string; label: string; seen: Set<string> }> =
@@ -344,11 +358,6 @@ function collectUniqueFieldDuplicates(
     raw: record.materialCode,
     label: "Material Code",
     seen: seenMaterialCodes,
-  });
-  candidates.push({
-    raw: record.materialDescription,
-    label: "Material Description",
-    seen: seenMaterialDescriptions,
   });
 
   candidates.forEach(({ raw, label, seen }) => {
@@ -460,11 +469,6 @@ export async function parseNpdItemDetailsImportFile(
       .map((record) => normalizeUniqueText(record.materialCode))
       .filter(Boolean),
   );
-  const seenMaterialDescriptions = new Set(
-    existingFilled
-      .map((record) => normalizeUniqueText(record.materialDescription))
-      .filter(Boolean),
-  );
 
   for (let rowIndex = headerRowIndex + 1; rowIndex < dataRows.length; rowIndex++) {
     const row = dataRows[rowIndex];
@@ -475,6 +479,7 @@ export async function parseNpdItemDetailsImportFile(
     const record = createEmptyRecord();
     const excelRowNumber = rowIndex + 1;
     const errorCountBefore = errors.length;
+    const lookupAttentionFields: Array<keyof INpdItemDetailRecord> = [];
 
     columnIndexes.forEach(({ column, index }) => {
       if (index < 0) {
@@ -540,9 +545,7 @@ export async function parseNpdItemDetailsImportFile(
         return;
       }
 
-      const tokens = splitCellValues(raw);
-      if (required && !tokens.length) {
-        errors.push(`Row ${excelRowNumber}: ${column.header} is required.`);
+      if (column.controlType !== "multiselect") {
         return;
       }
 
@@ -551,21 +554,18 @@ export async function parseNpdItemDetailsImportFile(
         column.header,
         String(column.field),
       );
-      if (!options.length && tokens.length) {
-        errors.push(
-          `Row ${excelRowNumber}: ${column.header} options are not configured.`,
-        );
-        return;
+      const resolved = resolveImportedLookupField(raw, options);
+      (record[column.field] as string[]) = resolved.values;
+      if (resolved.needsAttention) {
+        lookupAttentionFields.push(column.field);
       }
-      const canonical = canonicalizeLookupValues(
-        tokens,
-        options,
-        column.header,
-        excelRowNumber,
-        errors,
-      );
-      (record[column.field] as string[]) = canonical;
     });
+
+    if (lookupAttentionFields.length) {
+      Object.assign(record, {
+        lookupImportAttentionFields: lookupAttentionFields,
+      });
+    }
 
     if (isEmptyRecord(record) || errors.length > errorCountBefore) {
       continue;
@@ -577,7 +577,6 @@ export async function parseNpdItemDetailsImportFile(
       requireRocaGlobalCode,
       seenRocaGlobalCodes,
       seenMaterialCodes,
-      seenMaterialDescriptions,
     );
     if (fieldDuplicates.length) {
       duplicates.push(...fieldDuplicates);

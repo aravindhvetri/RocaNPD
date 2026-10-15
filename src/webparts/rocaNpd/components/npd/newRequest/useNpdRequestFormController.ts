@@ -10,7 +10,6 @@ import type {
   INpdApproverCommentRow,
   NpdWorkflowAction,
 } from "../../../../../External/CommonServices/Interface";
-import { buildNpdItemDetailsMatchKey } from "../../../../../External/CommonServices/npdItemDetailsBackupService";
 import { fetchNpdApproverComments } from "../../../../../External/CommonServices/npdApproverCommentsService";
 import {
   canActOnPendingNpdStep,
@@ -73,7 +72,9 @@ import {
   toUserActionErrorMessage,
 } from "../../../../../External/CommonServices/networkConnectivity";
 import {
+  cancelInFlightNpdDraftPersist,
   cancelInFlightNpdSubmit,
+  resetNpdDraftPersistLatch,
   resetNpdSubmitOfflineLatch,
 } from "../../../../../External/CommonServices/npdRequestGeneralInfoService";
 import {
@@ -133,6 +134,15 @@ export function useNpdRequestFormController(
   ]);
   /** Snapshot after hydrate — used to persist only added/edited Item Details. */
   const itemBaselineRef = React.useRef<INpdItemDetailRow[]>([]);
+  /** General Information + Products count at last hydrate (skip unchanged NPD_Request writes). */
+  const headerBaselineRef = React.useRef<{
+    brand: string;
+    materialType: string;
+    plantSource: string;
+    title: string;
+    status: string;
+    itemDetailsCount: number;
+  } | null>(null);
   const [recordReady, setRecordReady] = React.useState(!editId);
   const [initiatorAccessDenied, setInitiatorAccessDenied] =
     React.useState(false);
@@ -309,10 +319,30 @@ export function useNpdRequestFormController(
     if (!initialized || (!userEmail && !userLoginName)) {
       return;
     }
+    // Brands are seeded at login from ApproversMaster — do not re-fetch
+    // ApproversMaster + siteUsers on every Form open.
+    if (npdForm.brandOptions.length > 0) {
+      return;
+    }
+    // VH / MIS / Consultant never need Initiator brand options for View/Approve.
+    if (roleStatus === "succeeded") {
+      const needsInitiatorBrandFetch =
+        hasRole(assignedRoles, Config.Roles.Initiator) ||
+        hasRole(assignedRoles, Config.Roles.Admin);
+      if (!needsInitiatorBrandFetch) {
+        return;
+      }
+      // Initiator brands already resolved at login (possibly empty).
+      if (hasRole(assignedRoles, Config.Roles.Initiator)) {
+        return;
+      }
+    }
     void dispatch(fetchNpdInitiatorBrandOptions());
   }, [
+    assignedRoles,
     dispatch,
     initialized,
+    npdForm.brandOptions.length,
     roleStatus,
     userEmail,
     userLoginName,
@@ -333,6 +363,7 @@ export function useNpdRequestFormController(
       dispatch(resetNpdFormState());
       setItemRows([createEmptyNpdItemDetailRow()]);
       itemBaselineRef.current = [];
+      headerBaselineRef.current = null;
       setApproverRemarks("");
       setAuditLogs([]);
       setRecordReady(true);
@@ -357,6 +388,24 @@ export function useNpdRequestFormController(
         itemBaselineRef.current = result.items.length
           ? result.items.map(toNpdItemDetailRow)
           : [];
+        const hydratedCount =
+          typeof result.request.ItemDetailsCount === "number"
+            ? Math.max(0, Math.floor(result.request.ItemDetailsCount))
+            : result.items.filter(
+                (item) =>
+                  Boolean(
+                    String(item.materialCode ?? "").trim() ||
+                      String(item.materialDescription ?? "").trim(),
+                  ),
+              ).length;
+        headerBaselineRef.current = {
+          brand: String(result.request.Brand ?? "").trim(),
+          materialType: String(result.request.MaterialType ?? "").trim(),
+          plantSource: String(result.request.Plant ?? "").trim(),
+          title: String(result.request.Title ?? "").trim(),
+          status: String(result.request.Status ?? "").trim(),
+          itemDetailsCount: hydratedCount,
+        };
         setRecordReady(true);
 
         requestInitiatorEmailRef.current = normalizeEmail(
@@ -382,21 +431,24 @@ export function useNpdRequestFormController(
         ) {
           denyFormerInitiatorAccess();
         }
+
+        // Remarks are a separate list — load after Request + Item Details so
+        // View/Edit opens with only those two SharePoint calls first.
+        void fetchNpdApproverComments(editId)
+          .then((rows) => {
+            if (!cancelled) {
+              setAuditLogs(rows);
+            }
+          })
+          .catch(() => {
+            if (!cancelled) {
+              setAuditLogs([]);
+            }
+          });
       })
       .catch(() => {
         if (!cancelled) {
           setRecordReady(true);
-        }
-      });
-
-    void fetchNpdApproverComments(editId)
-      .then((rows) => {
-        if (!cancelled) {
-          setAuditLogs(rows);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
           setAuditLogs([]);
         }
       });
@@ -468,6 +520,8 @@ export function useNpdRequestFormController(
     userLoginName,
   ]);
 
+  const generalInfoEditable = lockedFooterMode === "initiator-edit";
+
   React.useEffect(() => {
     if (
       !initialized ||
@@ -476,9 +530,17 @@ export function useNpdRequestFormController(
     ) {
       return;
     }
+    // View / approver edit: Plant is already on NPD_Request — reuse it
+    // (General Info dropdown injects the saved value). Only New / Initiator
+    // Draft needs the PlantMaster list for the picker.
+    if (editId && !generalInfoEditable) {
+      return;
+    }
     void dispatch(fetchNpdPlantSourceOptions(npdForm.generalInfo.materialType));
   }, [
     dispatch,
+    editId,
+    generalInfoEditable,
     hasPlantSourceMaterialType,
     initialized,
     npdForm.generalInfo.materialType,
@@ -706,35 +768,52 @@ export function useNpdRequestFormController(
       ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current)
       : null;
     const backupItems = toPersistableItemRecords(itemRows);
-    // Rows shown from the JSON backup have no SharePoint id yet. Save Draft
-    // must not insert them; Resubmit is the only action that does.
-    const recoveryKeys = new Set(
-      itemBaselineRef.current
-        .filter((row) => !(row.sharePointId > 0) && !isEmptyItemDetailRow(row))
-        .map((row) => buildNpdItemDetailsMatchKey(toNpdItemDetailRecord(row)))
-        .filter(Boolean),
-    );
-    const items = isExistingRequest
-      ? diff!.changedRecords.filter((record) => {
-          if (record.sharePointId > 0) {
-            return true;
-          }
-          const key = buildNpdItemDetailsMatchKey(record);
-          return !key || !recoveryKeys.has(key);
-        })
-      : backupItems;
+    // Include recovery rows (sharePointId 0 from Attachments backup) so Save
+    // Draft inserts missing Item Details after an offline mid-Submit.
+    const items = isExistingRequest ? diff!.changedRecords : backupItems;
     const persistableCount = isExistingRequest
       ? Math.max(items.length + (diff?.deletedSharePointIds.length || 0), 1)
       : itemRows.reduce(
           (count, row) => (isEmptyItemDetailRow(row) ? count : count + 1),
           0,
         );
+    const headerBaseline = headerBaselineRef.current;
+    const normalizeHeaderPart = (value: string | null | undefined): string =>
+      String(value ?? "").trim();
+    const headerUnchanged = Boolean(
+      isExistingRequest &&
+        headerBaseline &&
+        normalizeHeaderPart(npdForm.generalInfo.brand) ===
+          headerBaseline.brand &&
+        normalizeHeaderPart(npdForm.generalInfo.materialType) ===
+          headerBaseline.materialType &&
+        normalizeHeaderPart(npdForm.generalInfo.plantSource) ===
+          headerBaseline.plantSource &&
+        normalizeHeaderPart(npdForm.requestTitle) === headerBaseline.title,
+    );
 
+    const showItemProgress =
+      !isExistingRequest ||
+      items.length > 0 ||
+      (diff?.deletedSharePointIds.length ?? 0) > 0;
     flushSync(() => {
       leaveFormForProcessing(Math.max(persistableCount, 1), {
-        showItemProgress: !isExistingRequest,
+        showItemProgress,
+        // Same pace as Send Request — do not change Submit timing.
+        submitPace: showItemProgress,
       });
     });
+
+    resetNpdDraftPersistLatch();
+    const onDraftOffline = (): void => {
+      cancelInFlightNpdDraftPersist();
+    };
+    window.addEventListener("offline", onDraftOffline);
+    const draftOfflinePollId = window.setInterval(() => {
+      if (!isBrowserOnline()) {
+        onDraftOffline();
+      }
+    }, 200);
 
     void dispatch(
       saveNpdDraft({
@@ -744,12 +823,16 @@ export function useNpdRequestFormController(
           ? {
               partial: true,
               deletedSharePointIds: diff?.deletedSharePointIds,
+              headerUnchanged,
+              existingItemDetailsCount: headerBaseline?.itemDetailsCount,
             }
           : {}),
       }),
     )
       .unwrap()
       .then((saved) => {
+        window.clearInterval(draftOfflinePollId);
+        window.removeEventListener("offline", onDraftOffline);
         tabLock.notifyDraftSaved(saved.Id, saved.Title);
         dispatch(
           setFlashMessage({
@@ -760,6 +843,9 @@ export function useNpdRequestFormController(
         completeFormNavigation(Config.Routes.NpdAll, {});
       })
       .catch((error: unknown) => {
+        window.clearInterval(draftOfflinePollId);
+        window.removeEventListener("offline", onDraftOffline);
+        cancelInFlightNpdDraftPersist();
         finishUiProcessing(dispatch, false);
         dispatch(
           setFlashMessage({
@@ -814,16 +900,17 @@ export function useNpdRequestFormController(
     const allItems = itemRows.map(toNpdItemDetailRecord);
     const comments = approverRemarks;
     const isResubmit = isNpdRequestIdTitle(npdForm.requestTitle || "");
+    const existingForSubmit = Boolean(editId || npdForm.requestId);
+    const itemDiff = existingForSubmit
+      ? diffNpdItemDetailRows(itemRows, itemBaselineRef.current)
+      : null;
     const remainingItems = allItems.filter((item) => !(item.sharePointId > 0));
-    const changedExisting =
-      editId || npdForm.requestId
-        ? diffNpdItemDetailRows(
-            itemRows,
-            itemBaselineRef.current,
-          ).changedRecords.filter((record) => record.sharePointId > 0)
-        : [];
+    const changedExisting = itemDiff
+      ? itemDiff.changedRecords.filter((record) => record.sharePointId > 0)
+      : [];
     const items = [...changedExisting, ...remainingItems];
     const backupItems = allItems;
+    const deletedSharePointIds = itemDiff?.deletedSharePointIds ?? [];
     const totalUnits = Math.max(remainingItems.length, 1);
 
     resetNpdSubmitOfflineLatch();
@@ -896,8 +983,11 @@ export function useNpdRequestFormController(
         try {
           const materialMasterDuplicates =
             await validateItemsAgainstMaterialMaster(materialMasterItems, {
+              // Exclude this request's own Material Master rows (Draft/Resubmit).
               excludeRequestId:
-                isResubmit && npdForm.requestId ? npdForm.requestId : undefined,
+                npdForm.requestId && npdForm.requestId > 0
+                  ? npdForm.requestId
+                  : undefined,
             });
           const materialMasterMessage = firstValidationMessage(
             materialMasterDuplicates,
@@ -944,7 +1034,14 @@ export function useNpdRequestFormController(
         });
       });
 
-      void dispatch(submitNpdRequest({ items, backupItems, comments }))
+      void dispatch(
+        submitNpdRequest({
+          items,
+          backupItems,
+          comments,
+          ...(existingForSubmit ? { deletedSharePointIds } : {}),
+        }),
+      )
         .unwrap()
         .then((saved) => {
           if (leftForOfflineDraft) {
@@ -1008,6 +1105,17 @@ export function useNpdRequestFormController(
     }
 
     const remarks = approverRemarks.trim();
+
+    // MIS Post to SAP: Profit Center before Approver Comments when PC is empty.
+    if (
+      lockedFooterMode === "mis-pending" &&
+      action === "Approve" &&
+      !String(npdForm.otherDetails.profitCenter ?? "").trim()
+    ) {
+      showErrorToast(toastRef, "Profit Center is required.", "Validation");
+      return;
+    }
+
     if (workflowActionRequiresComments(action) && !remarks) {
       const actionText =
         action === "Rework"

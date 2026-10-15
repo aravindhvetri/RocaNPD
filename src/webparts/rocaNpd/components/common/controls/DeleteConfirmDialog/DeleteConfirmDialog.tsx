@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../../External/CommonServices/Config";
 import { Button } from "../Button";
 import { Dialog } from "../Dialog";
 import type { IDeleteConfirmDialogProps } from "./IDeleteConfirmDialogProps";
@@ -14,7 +15,7 @@ const DeleteConfirmDialog: React.FC<IDeleteConfirmDialogProps> = ({
 }) => (
   <Dialog
     visible={visible}
-    title="Confirm Delete"
+    title={Config.ConfirmDelete}
     width="22rem"
     closable={!loading}
     className={styles.deleteDialog}
@@ -22,14 +23,14 @@ const DeleteConfirmDialog: React.FC<IDeleteConfirmDialogProps> = ({
     footer={
       <div className={styles.footer}>
         <Button
-          label="Cancel"
+          label={Config.Cancel}
           variant="secondary"
           size="sm"
           disabled={loading}
           onClick={onCancel}
         />
         <Button
-          label="Delete"
+          label={Config.Delete}
           size="sm"
           loading={loading}
           disabled={loading}

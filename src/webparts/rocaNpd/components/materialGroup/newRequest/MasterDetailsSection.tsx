@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button, InputText } from "../../common/controls";
 import type { IMasterDetailsSectionProps } from "./materialGroupTypes";
 import styles from "./MasterDetailsSection.module.scss";
@@ -64,7 +65,7 @@ const MasterDetailsSection: React.FC<IMasterDetailsSectionProps> = ({
                 </div>
                 {!readOnly && !isConsultantMode ? (
                   <Button
-                    label="Add Row"
+                    label={`${Config.Add} Row`}
                     icon="pi pi-plus"
                     variant="secondary"
                     size="sm"

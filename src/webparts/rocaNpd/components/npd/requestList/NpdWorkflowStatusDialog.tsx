@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { INpdWorkflowStatusViewRow } from "../../../../../External/CommonServices/npdWorkflowStatusView";
 import { Button, Dialog } from "../../common/controls";
 import styles from "./NpdWorkflowStatusDialog.module.scss";
@@ -23,7 +23,7 @@ const NpdWorkflowStatusDialog: React.FC<INpdWorkflowStatusDialogProps> = ({
     onHide={onHide}
     footer={
       <div className={styles.footer}>
-        <Button label="Cancel" variant="secondary" size="sm" onClick={onHide} />
+        <Button label={Config.Cancel} variant="secondary" size="sm" onClick={onHide} />
       </div>
     }
   >
