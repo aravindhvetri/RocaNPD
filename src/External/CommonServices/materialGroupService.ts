@@ -1346,7 +1346,10 @@ export async function updateConsultantMaterialGroupAction(
     configs.map((c) => [c.id, c]),
   );
 
-  // Build updated RequestsJSON with SAP codes entered by consultant
+  // Build updated RequestsJSON with SAP codes entered by consultant.
+  // Complete: Code + Description mandatory. Rework / Reject: comments only
+  // (same as MIS) — persist the current grid without field / duplicate checks.
+  const requireEntryFields = params.action === "Completed";
   const rawEntries: IMaterialGroupRequestJsonEntry[] = [];
   if (params.entriesByConfigId) {
     for (const [configIdStr, rows] of Object.entries(
@@ -1361,7 +1364,7 @@ export async function updateConsultantMaterialGroupAction(
       const lookupName =
         cfg?.relatedFieldTitle || cfg?.title || `Master (${configId})`;
 
-      if (!rows.length) {
+      if (requireEntryFields && !rows.length) {
         throw new Error(`Please add at least one entry for ${lookupName}.`);
       }
 
@@ -1369,16 +1372,17 @@ export async function updateConsultantMaterialGroupAction(
         const row = rows[i];
         const code = (row.code || "").trim();
         const description = (row.description || "").trim();
-        if (!description) {
-          throw new Error(
-            `Description is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
-          );
-        }
-        // Consultant: Code is mandatory for Complete / Rework / Reject.
-        if (!code) {
-          throw new Error(
-            `Code is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
-          );
+        if (requireEntryFields) {
+          if (!description) {
+            throw new Error(
+              `Description is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+            );
+          }
+          if (!code) {
+            throw new Error(
+              `Code is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+            );
+          }
         }
         rawEntries.push({
           LookupId: String(relatedLookupTypeId),

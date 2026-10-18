@@ -114,7 +114,9 @@ export function useMaterialGroupFormController(
     React.useState(false);
   const deniedInitiatorAccessIdRef = React.useRef("");
 
-  // Compute active mode
+  // Compute active mode from live status — not the email URL alone.
+  // Stale Initiator Rework emails after resubmit, and stale Consultant emails
+  // after Rework/Reject/Complete, must resolve to view (Cancel only).
   const mode: MaterialGroupFormMode = React.useMemo(() => {
     if (initiatorAccessDenied) {
       return "view";
@@ -123,16 +125,27 @@ export function useMaterialGroupFormController(
       return "view";
     }
     const status = (mgState.currentStatus || "").trim().toLowerCase();
+    const isPending =
+      status === Config.MaterialGroupStatus.Pending.toLowerCase();
     // When request is Completed, any approver who opens it sees it in view mode
     if (status === Config.MaterialGroupStatus.Completed.toLowerCase()) {
       return "view";
     }
     if (urlId) {
-      if (
-        isConsultant &&
-        status === Config.MaterialGroupStatus.Pending.toLowerCase()
-      ) {
+      // Consultant Rework / Reject / Complete only while still Pending.
+      if (isConsultant && isPending) {
         return "consultant-edit";
+      }
+      // Stale Consultant email (status already Rework / Rejected / etc.):
+      // never honor mode=consultant-edit from the URL.
+      if (urlMode === "consultant-edit") {
+        return "view";
+      }
+      // Initiator edit/draft actions only while Draft or Rework. After
+      // resubmit (Pending) or Rejected, keep Cancel only — even if the
+      // old Rework email still has mode=edit.
+      if (status && !isDraftOrRework) {
+        return "view";
       }
       return urlMode || "edit";
     }
@@ -142,6 +155,7 @@ export function useMaterialGroupFormController(
     urlMode,
     urlId,
     isConsultant,
+    isDraftOrRework,
     mgState.currentStatus,
   ]);
 
@@ -440,7 +454,8 @@ export function useMaterialGroupFormController(
             return false;
           }
 
-          // Initiator: Code optional. Consultant: Code mandatory on every action.
+          // Initiator: Code optional. Consultant Complete: Code mandatory.
+          // Rework / Reject: comments only (no Code / Description checks).
           // Duplicate Code validation runs only on Consultant Complete.
           if (mode === "consultant-edit" && !row.code.trim()) {
             showWarningToast(
@@ -603,11 +618,6 @@ export function useMaterialGroupFormController(
 
       const remarks = approverRemarks.trim();
 
-      // // Complete / Rework / Reject: Code and Description required; Code unique per Lookup Type.
-      // if (!validateEntries(true)) {
-      //   return;
-      // }
-
       try {
         assertBrowserOnline();
       } catch (error: unknown) {
@@ -615,6 +625,8 @@ export function useMaterialGroupFormController(
         return;
       }
 
+      // Rework / Reject: comments only (no Code / Description / duplicate checks).
+      // Complete: Code / Description enforced in the service (+ Lookup uniqueness below).
       if (action === "Completed" && !remarks) {
         showActionValidationToast(
           toastRef,

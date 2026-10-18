@@ -630,7 +630,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.10",
+  AppVersion: "V2.2",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

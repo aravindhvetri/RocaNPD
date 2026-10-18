@@ -1,8 +1,9 @@
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type { ILookupType } from "../../../../../External/CommonServices/Interface";
 
+/** Lowercase and remove all whitespace for duplicate matching. */
 function normalizeLookupTypeTitle(value: string): string {
-  return value.trim().toLowerCase();
+  return value.replace(/\s+/g, "").toLowerCase();
 }
 
 export function validateLookupTypeTitle(

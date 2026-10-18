@@ -12,12 +12,15 @@ import {
   resolveApproverUserIds,
 } from "./npdApproverCommentsService";
 import {
+  dedupeNpdItemDetailsForInsert,
   npdItemDetailNeedsInsert,
+  remainingNpdItemDetailsAfterStored,
   upsertNpdItemDetailsBackupAttachment,
 } from "./npdItemDetailsBackupService";
 import {
   fetchNpdItemDetailsByRequestId,
   saveNpdItemDetailsBatch,
+  waitForInFlightNpdItemDetailsMutate,
 } from "./npdItemDetailsService";
 import {
   generateNextNpdRequestId,
@@ -451,9 +454,11 @@ async function persistHeaderAndItems(
 
   if (itemsChanged) {
     const storedRows = backupItems.filter((row) => row.sharePointId > 0);
-    const itemsToPersist = items.filter(
-      (row) =>
-        row.sharePointId > 0 || npdItemDetailNeedsInsert(row, storedRows),
+    const itemsToPersist = dedupeNpdItemDetailsForInsert(
+      items.filter(
+        (row) =>
+          row.sharePointId > 0 || npdItemDetailNeedsInsert(row, storedRows),
+      ),
     );
 
     try {
@@ -621,6 +626,8 @@ export interface INpdSubmitOptions {
    * When provided (including []), skip the NPD_ItemDetails list reconcile GET.
    */
   deletedSharePointIds?: number[];
+  /** Full Item Details count from hydrate (Products). Caps remaining inserts. */
+  intendedItemDetailsCount?: number;
   onDraftRetained?: (draft: {
     requestId: number;
     requestTitle: string;
@@ -651,6 +658,7 @@ export async function submitNpdRequest(
   const backupItems = submitOptions.backupItems;
   const clientDeletedIds = submitOptions.deletedSharePointIds;
   const clientReconciled = Array.isArray(clientDeletedIds);
+  const intendedItemDetailsCount = submitOptions.intendedItemDetailsCount;
 
   const submitToken = beginNpdSubmitToken();
   const stopIfOffline = (): void => {
@@ -736,9 +744,11 @@ export async function submitNpdRequest(
       // Insert only backup/new rows that are not already in NPD_ItemDetails.
       softDeleteIds = (clientDeletedIds || []).filter((id) => id > 0);
       const storedRows = formBackup.filter((row) => row.sharePointId > 0);
-      remainingToPersist = items.filter(
-        (row) =>
-          row.sharePointId > 0 || npdItemDetailNeedsInsert(row, storedRows),
+      remainingToPersist = dedupeNpdItemDetailsForInsert(
+        items.filter(
+          (row) =>
+            row.sharePointId > 0 || npdItemDetailNeedsInsert(row, storedRows),
+        ),
       );
     } else if (existingRequestId > 0) {
       const formKeepIds = new Set(
@@ -754,27 +764,29 @@ export async function submitNpdRequest(
       const activeStored = storedItems.filter(
         (row) => !softDeleteIdSet.has(row.sharePointId),
       );
-      remainingToPersist = items.filter((row) => {
-        if (row.sharePointId > 0) {
-          return !softDeleteIdSet.has(row.sharePointId);
-        }
-        return npdItemDetailNeedsInsert(row, activeStored);
-      });
+      remainingToPersist = dedupeNpdItemDetailsForInsert(
+        items.filter((row) => {
+          if (row.sharePointId > 0) {
+            return !softDeleteIdSet.has(row.sharePointId);
+          }
+          return npdItemDetailNeedsInsert(row, activeStored);
+        }),
+      );
     }
 
     const itemsNeedWrite =
       remainingToPersist.length > 0 || softDeleteIds.length > 0;
 
-    if (existingRequestId > 0 && !itemsNeedWrite) {
-      // Draft/Rework already has header + Item Details — promote only.
+    if (existingRequestId > 0) {
+      // Retry after disconnect: header already exists. Attachments JSON is
+      // rewritten below when Item Details still need writes (keeps field edits).
       requestId = existingRequestId;
       onDraftRetained?.({
         requestId,
         requestTitle: holdingTitle,
       });
     } else {
-      // Phase 1: create/update header as Draft/Rework while items persist.
-      // ItemDetailsCount = full form grid on this same write (Products column).
+      // Phase 1: create header as Draft while items persist.
       requestId = await upsertNpdRequestHeader(
         payload,
         workflowJson,
@@ -795,18 +807,59 @@ export async function submitNpdRequest(
       isNpdSubmitCancelled(submitToken) || !isBrowserOnline();
 
     if (itemsNeedWrite) {
-      await upsertNpdItemDetailsBackupAttachment(requestId, formBackup, {
-        mode: existingRequestId > 0 ? "auto" : "add",
-      });
-      stopIfOffline();
+      if (!existingRequestId) {
+        await upsertNpdItemDetailsBackupAttachment(requestId, formBackup, {
+          mode: "add",
+        });
+        stopIfOffline();
+      } else {
+        // Offline recovery left a stale Attachments JSON. Rewrite it with the
+        // current form grid so field edits after hydrate are not lost on the
+        // next Draft open / attachment+list merge.
+        await upsertNpdItemDetailsBackupAttachment(requestId, formBackup, {
+          mode: "auto",
+        });
+        stopIfOffline();
 
-      await saveNpdItemDetailsBatch(requestId, remainingToPersist, {
-        partial: true,
-        deletedSharePointIds: softDeleteIds,
-        shouldAbort: shouldAbortSubmit,
-        skipBackup: true,
-        skipItemDetailsCountSync: true,
-      });
+        if (remainingToPersist.some((row) => !(row.sharePointId > 0))) {
+          // First $batch may still be completing after an offline abort.
+          // Wait, then insert only rows that are still missing.
+          await waitForInFlightNpdItemDetailsMutate();
+          stopIfOffline();
+          const storedNow = await fetchNpdItemDetailsByRequestId(requestId);
+          stopIfOffline();
+          // Rows in softDeleteIds are removed in the same batch — do not count
+          // them against the insert cap (delete-MIS + add-N was inserting 0).
+          const pendingDeleteIds = new Set(softDeleteIds);
+          const storedSurviving = storedNow.filter(
+            (row) =>
+              row.sharePointId > 0 && !pendingDeleteIds.has(row.sharePointId),
+          );
+          const formPersistableCount = countPersistableItemDetails(formBackup);
+          remainingToPersist = remainingNpdItemDetailsAfterStored(
+            remainingToPersist,
+            storedSurviving,
+            Math.max(
+              formPersistableCount,
+              typeof intendedItemDetailsCount === "number" &&
+                intendedItemDetailsCount > 0
+                ? intendedItemDetailsCount
+                : 0,
+              storedSurviving.length,
+            ),
+          );
+        }
+      }
+
+      if (remainingToPersist.length > 0 || softDeleteIds.length > 0) {
+        await saveNpdItemDetailsBatch(requestId, remainingToPersist, {
+          partial: true,
+          deletedSharePointIds: softDeleteIds,
+          shouldAbort: shouldAbortSubmit,
+          skipBackup: true,
+          skipItemDetailsCountSync: true,
+        });
+      }
     }
     stopIfOffline();
 
@@ -829,6 +882,9 @@ export async function submitNpdRequest(
       RequestJSON: {
         [FIELDS.Status]: RequestStatus.Pending,
         [FIELDS.Title]: requestIdTitle,
+        [FIELDS.Brand]: payload.brand.trim(),
+        [FIELDS.MaterialType]: payload.materialType.trim(),
+        [FIELDS.Plant]: (payload.plantSource || "").trim(),
         [FIELDS.WorkFlowJSON]: workflowJson,
         [FIELDS.ItemDetailsCount]: activeItemCount,
       },
@@ -1068,9 +1124,10 @@ export async function applyNpdWorkflowAction(params: {
   const isMisRework =
     params.action === "Rework" && isMisCoordinatorWorkflowRole(actorRole);
 
-  // VH (any action) and MIS Reject: status/workflow only — never touch Item Details.
+  // VH, and MIS Reject / Rework: status/workflow only — never touch Item Details.
+  // MIS Item Details edits are persisted only on Post to SAP.
   const itemsToPersist =
-    isVerticalHeadActor || isMisReject ? undefined : params.items;
+    isVerticalHeadActor || isMisReject || isMisRework ? undefined : params.items;
   const itemSavePartial = Boolean(params.itemSavePartial) || isMisRework;
 
   const actionStatus =
@@ -1231,6 +1288,9 @@ export async function applyNpdWorkflowAction(params: {
       await saveNpdItemDetailsBatch(params.requestId, itemsToPersist, {
         partial: itemSavePartial,
         deletedSharePointIds: params.deletedItemIds,
+        // Partial MIS Rework/Post must not overwrite Attachments JSON with only
+        // changedRecords — that corrupted offline recovery / Draft merge.
+        skipBackup: itemSavePartial,
       });
     } catch (itemsError) {
       console.warn(
@@ -1240,10 +1300,10 @@ export async function applyNpdWorkflowAction(params: {
     }
   }
 
-  // Vertical Head: only the Status/WorkFlowJSON update above is required.
-  // Do not re-read NPD_Request — navigate immediately with the committed snapshot.
+  // VH and MIS Reject/Rework: the Status/WorkFlowJSON update above is the
+  // only awaited call. Do not re-read NPD_Request.
   let saved = committedFallback;
-  if (!isVerticalHeadActor) {
+  if (!isVerticalHeadActor && !isMisReject && !isMisRework) {
     try {
       saved = await fetchNpdGeneralInfoById(params.requestId);
     } catch (fetchError) {
@@ -1279,9 +1339,10 @@ export async function applyNpdWorkflowAction(params: {
     }
 
     let requestForNotify = saved;
-    // VH may return before Initiator email is known — load once in background.
+    // VH / MIS Reject / Rework return before Initiator email is known — load
+    // once in the background so Initiator notification still sends.
     if (
-      isVerticalHeadActor &&
+      (isVerticalHeadActor || isMisReject || isMisRework) &&
       !getNpdRequestOwnerEmail(requestForNotify).trim()
     ) {
       try {

@@ -83,6 +83,54 @@ export function npdItemDetailNeedsInsert(
   );
 }
 
+/**
+ * After SharePoint is the source of truth, insert only lines that are still
+ * missing. Cap at intendedCount so a stale form cannot add a second copy.
+ */
+export function remainingNpdItemDetailsAfterStored(
+  candidates: readonly INpdItemDetailRecord[],
+  storedRows: readonly INpdItemDetailRecord[],
+  intendedCount: number,
+): INpdItemDetailRecord[] {
+  const storedActive = storedRows.filter((row) => row.sharePointId > 0);
+  const updates = candidates.filter((row) => row.sharePointId > 0);
+  const insertLimit = Math.max(0, intendedCount - storedActive.length);
+  if (insertLimit <= 0) {
+    return updates;
+  }
+  const inserts = dedupeNpdItemDetailsForInsert(
+    candidates.filter(
+      (row) =>
+        !(row.sharePointId > 0) &&
+        npdItemDetailNeedsInsert(row, storedActive),
+    ),
+  );
+  return [...updates, ...inserts.slice(0, insertLimit)];
+}
+
+/** Drop duplicate insert copies of the same line (same submit must not add twice). */
+export function dedupeNpdItemDetailsForInsert(
+  rows: readonly INpdItemDetailRecord[],
+): INpdItemDetailRecord[] {
+  const seenKeys = new Set<string>();
+  const unique: INpdItemDetailRecord[] = [];
+  rows.forEach((row) => {
+    if (row.sharePointId > 0) {
+      unique.push(row);
+      return;
+    }
+    const key = buildNpdItemDetailsMatchKey(row);
+    if (key) {
+      if (seenKeys.has(key)) {
+        return;
+      }
+      seenKeys.add(key);
+    }
+    unique.push(row);
+  });
+  return unique;
+}
+
 function isPersistableBackupItem(item: INpdItemDetailRecord): boolean {
   return Boolean(
     String(item.materialCode ?? "").trim() ||
@@ -377,23 +425,29 @@ export function mergeNpdItemDetailsWithBackup(
     });
   }
 
-  // Attach leftover SharePoint Ids to unmatched backup rows. Never append a
-  // second copy of the same line (that produced 150 rows from 50 + 100).
-  unusedStored.forEach((leftover) => {
+  // First successful insert batch is backup order. Pair leftover stored
+  // rows (Id ascending) to unmatched backup rows so 50 saved + 100 backup
+  // becomes 100 lines — never 150.
+  const leftoverStored = unusedStored
+    .filter((row) => row.sharePointId > 0)
+    .sort((left, right) => left.sharePointId - right.sharePointId);
+  leftoverStored.forEach((leftover) => {
     const mergeIndex = merged.findIndex(
       (row) =>
         !(row.sharePointId > 0) && npdItemDetailLinesMatch(row, leftover),
     );
-    if (mergeIndex >= 0) {
-      merged[mergeIndex] = {
+    const fallbackIndex =
+      mergeIndex >= 0
+        ? mergeIndex
+        : merged.findIndex((row) => !(row.sharePointId > 0));
+    if (fallbackIndex >= 0) {
+      merged[fallbackIndex] = {
         ...leftover,
         isMisAdded: Boolean(
-          leftover.isMisAdded || merged[mergeIndex].isMisAdded,
+          leftover.isMisAdded || merged[fallbackIndex].isMisAdded,
         ),
       };
-      return;
     }
-    merged.push(leftover);
   });
 
   const combined = merged;

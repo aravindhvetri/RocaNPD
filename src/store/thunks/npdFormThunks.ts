@@ -427,6 +427,8 @@ export const submitNpdRequest = createAsyncThunk<
       backupItems?: INpdItemDetailRecord[];
       /** Soft-deletes vs hydrate baseline — skips NPD_ItemDetails reconcile GET. */
       deletedSharePointIds?: number[];
+      /** Full Item Details count from hydrate (caps remaining inserts). */
+      intendedItemDetailsCount?: number;
     },
   { rejectValue: string; state: RootState }
 >("npdForm/submitRequest", async (arg, { getState, dispatch, rejectWithValue }) => {
@@ -446,6 +448,9 @@ export const submitNpdRequest = createAsyncThunk<
     const deletedSharePointIds = Array.isArray(arg)
       ? undefined
       : arg.deletedSharePointIds;
+    const intendedItemDetailsCount = Array.isArray(arg)
+      ? undefined
+      : arg.intendedItemDetailsCount;
     const existingRequestId = state.npdForm.requestId;
     let retainedDraftId = 0;
 
@@ -462,6 +467,7 @@ export const submitNpdRequest = createAsyncThunk<
           state.app.userId,
           {
             backupItems,
+            intendedItemDetailsCount,
             deletedSharePointIds:
               existingRequestId && existingRequestId > 0
                 ? deletedSharePointIds ?? []
@@ -699,17 +705,9 @@ export const hydrateNpdRequestForm = createAsyncThunk<
       return { request, items };
     }
 
-    const softDeletedMatchKeys = await npdItemDetailsService
-      .fetchNpdItemDetailsSoftDeletedMatchKeys(id)
-      .catch(() => new Set<string>());
-
     return {
       request,
-      items: mergeNpdItemDetailsWithBackup(
-        items,
-        backup,
-        softDeletedMatchKeys,
-      ),
+      items: mergeNpdItemDetailsWithBackup(items, backup),
     };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));

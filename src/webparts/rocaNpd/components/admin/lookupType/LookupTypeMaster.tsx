@@ -8,7 +8,6 @@ import type {
 } from "../../../../../External/CommonServices/Interface";
 import {
   buildImportValidationRows,
-  ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { validateLookupTypeDeleteAllowed } from "../../../../../External/CommonServices/dependencyValidationService";
@@ -299,7 +298,8 @@ const LookupTypeMaster: React.FC = () => {
       const result = await dispatch(previewImportLookupTypes(file)).unwrap();
       const validationRows = buildImportValidationRows(
         result.duplicates,
-        ImportValidationMessages.duplicateLookupType,
+        // Parser already includes row + duplicate detail (spaces/case ignored).
+        "",
         result.errors,
       );
 

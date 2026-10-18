@@ -95,7 +95,9 @@ export function clearLookupImportAttention(
 
   const selected = Array.isArray(value)
     ? value.some((entry) => String(entry ?? "").trim())
-    : Boolean(String(value ?? "").trim());
+    : typeof value === "number"
+      ? Number.isFinite(value)
+      : Boolean(String(value ?? "").trim());
   if (!selected) {
     return row;
   }
@@ -295,7 +297,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     header: "Weight (Kg)",
     required: true,
     placeholder: "Enter Weight",
-    minWidth: "3rem",
+    minWidth: "8rem",
     controlType: "number",
   },
   {

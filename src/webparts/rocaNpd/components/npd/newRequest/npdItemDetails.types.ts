@@ -22,8 +22,8 @@ export type INpdItemDetailRow = {
   minQtyBoxQty: string;
   isMisAdded?: boolean;
   /**
-   * Lookup MultiSelect field keys left empty after Excel import
-   * (invalid or blank Lookup values). UI-only; not persisted.
+   * Field keys left blank/invalid after Excel import (text, number, or Lookup).
+   * UI-only red-border attention; not persisted.
    */
   lookupImportAttentionFields?: NpdItemDetailFieldKey[];
 } & Record<string, unknown>;

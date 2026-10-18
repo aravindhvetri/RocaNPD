@@ -16,7 +16,7 @@
 | D — Security & Roles | 31 | 30 | 1 |
 | E — UI / UX / Theme | 41 | 35 | 6 |
 | F — Admin Module | 73 | 70 | 3 |
-| G — NPD Module | 97 | 96 | 1 |
+| G — NPD Module | 99 | 98 | 1 |
 | H — Material Group Module | 41 | 41 | 0 |
 | I — Workflow & Automation | 20 | 18 | 2 |
 | J — SAP Integration | 19 | 10 | 9 |
@@ -26,9 +26,9 @@
 | N — Testing | 26 | 0 | 26 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 22 | 0 | 22 |
-| **TOTAL** | **535** | **400** | **135** |
+| **TOTAL** | **537** | **402** | **135** |
 
-**Last Updated:** 14 October 2026
+**Last Updated:** 15 October 2026
 
 ---
 
@@ -456,13 +456,15 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G26** All mandatory item fields validated on submit — validation Toast (no inline errors)
 - [x] **CHK-G26c** Submit validates **every** Item Details grid row (blank added lines are not skipped); each required field on each line must be filled before Submit / Approve
 - [x] **CHK-G26f** MIS Coordinator Post to SAP / Approve uses the same Item Details row validation (`validateNpdItemDetailsRows`) — every added line’s required fields must be filled
-- [x] **CHK-G26g** MIS Coordinator Rework / Reject / Post to SAP all run `validateMisCoordinatorAction` first (Item Details every row + mandatory Profit Center) — empty newly added rows block all three actions
-- [x] **CHK-G26d** Item Details Roca Global Code, Material Code, and Material Description are unique within the request — Save Draft / Submit blocked with “already exists”; Excel import shows duplicates in the validation popup and does not proceed
+- [x] **CHK-G26g** MIS Coordinator Rework / Reject do not validate empty Item Details; Post to SAP validates Item Details (empty/incomplete rows block Post only)
+- [x] **CHK-G26d** Item Details Material Code must be unique within the request — Save Draft / Submit blocked with “already exists”; Excel import shows Material Code duplicates in the validation popup. Roca Global Code and Material Description duplicates are allowed (manual entry, Initiator/MIS import, and Material Master)
 - [x] **CHK-G26e** Item Details S.No continues sequentially across pagination (Prime absolute `rowIndex` + 1; do not add `first`)
 - [x] **CHK-G26h** Initiator Submit blocked when Material Code / Description already exists in Material Master (toast); MIS Post to SAP uses the same rule
 - [x] **CHK-G26i** Processing loader shown while Material Master duplicate validation runs; after pass, Submit line-item progress bar (`n / total`) appears as usual (Pending page does not cover it with a second overlay)
 - [x] **CHK-G26j** Draft / Rework shows Item Details already saved in `NPD_ItemDetails` and the remaining rows from the JSON backup. Opening the form does not insert them. Resubmit inserts only the missing rows and does not create duplicates
 - [x] **CHK-G26k** After a Submit network drop: request stays Draft; remaining `NPD_ItemDetails` inserts stop and do not continue when the network returns; the next Send Request inserts only unsaved rows; Draft Products shows the saved list count (not attachment rows); the form still shows attachment + list comparison; progress bar counts remaining rows only
+- [x] **CHK-G26l** After offline Attachments recovery, field edits on Send Request rewrite `NpdItemDetailsBackup.json` with the current form grid before remaining inserts — next Draft open / merge shows the latest values
+- [x] **CHK-G26m** MIS Post to SAP validation order: Item Details → Profit Center → Approver Comments
 - [x] **CHK-G27** Roca Global Code validated when applicable — validation Toast on Submit
 - [x] **CHK-G28** At least one item row required on submit — validation Toast on Submit
 
@@ -487,7 +489,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G36** Pending Approval shows VH-approved requests for any user in the MIS Coordinator role
 - [x] **CHK-G37** Item Details editable (edit rows, add line items)
 - [x] **CHK-G37c** MIS Post to SAP / Approve blocked until every Item Details row has required fields filled (same rule as Initiator Submit)
-- [x] **CHK-G37d** MIS Profit Center is mandatory — empty value blocks Rework, Reject, and Post to SAP (error toast; also enforced in workflow thunk)
+- [x] **CHK-G37d** MIS Profit Center is mandatory for Post to SAP (error toast; also enforced in workflow thunk) — Rework / Reject do not require Profit Center
 - [x] **CHK-G37a** Newly added Item Details rows by MIS Coordinator highlighted in yellow (`#fefce8`) with amber border (`#eab308`); persists across views for Initiator and Vertical Head; Initiator-added rows are never highlighted
 - [x] **CHK-G37b** NPD Item Details: MIS Coordinator-added rows appear first in the DataTable; remaining rows keep SharePoint Id ascending order
 - [x] **CHK-G37g** Deleting an Item Details row sets `IsDeleted=true` (soft-delete). Fetches for the form, VH/MIS views, and Products count exclude `IsDeleted=true`. Soft-deleted MIS rows do not reappear after Initiator Resubmit
@@ -868,6 +870,7 @@ Use this table to sign off each phase only when all related checklist items are 
 | 12 Oct 2026 | MIS Item Details rows first in DataTable; soft-delete IsDeleted + filter so deleted rows never reappear for VH | CHK-G37b, CHK-G37g |
 | 14 Oct 2026 | ApproversMaster cache; ItemDetailsCount + Draft/Submit promote-only / hydrate skip; MG Code uniqueness Complete-only | CHK-B49, CHK-B50, CHK-H11c |
 | 14 Oct 2026 | Shared action labels via `Config.Add` / `Config.Edit` / … | CHK-B48 |
+| 15 Oct 2026 | MIS Rework/Reject skip Item Details empty validation; Post to SAP order Item Details → Profit Center → Comments; offline recovery resubmit rewrites Attachments JSON with latest form edits | CHK-G26g, CHK-G26l, CHK-G26m, CHK-G37d |
 
 ---
 

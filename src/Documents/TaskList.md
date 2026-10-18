@@ -15,7 +15,7 @@
 | Phase 2 — SharePoint Data Structure | 22 | 15 | In Progress |
 | Phase 3 — Security & Role Management | 18 | 17 | In Progress |
 | Phase 4 — Admin Module | 87 | 82 | In Progress |
-| Phase 5 — NPD Initiator Module | 56 | 55 | In Progress |
+| Phase 5 — NPD Initiator Module | 58 | 57 | In Progress |
 | Phase 6 — NPD Vertical Head Module | 23 | 23 | Complete |
 | Phase 7 — NPD MIS Coordinator Module | 27 | 27 | Complete |
 | Phase 8 — Material Group Initiator Module | 22 | 22 | Complete |
@@ -28,9 +28,9 @@
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **445** | **345** | **In Progress** |
+| **TOTAL** | **447** | **347** | **In Progress** |
 
-**Last Updated:** 14 October 2026
+**Last Updated:** 15 October 2026
 
 ---
 
@@ -373,8 +373,9 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0523** Validate all mandatory item fields — Toast on Submit
 - [x] **T-0523a** Submit / Approve validates every Item Details grid row (do not skip blank added lines); required fields must be filled on each line
 - [x] **T-0523d** MIS Coordinator Post to SAP / Approve validates Item Details via `validateNpdItemDetailsRows` (same required-field rule as Initiator Submit)
-- [x] **T-0523e** MIS Rework / Reject / Post to SAP all use `validateMisCoordinatorAction` (every Item Details row + required Profit Center) before any workflow action
-- [x] **T-0523b** Block Save Draft / Submit when Roca Global Code, Material Code, or Material Description is duplicated in Item Details; Excel import shows “Already exists” in validation popup
+- [x] **T-0523e** MIS Rework / Reject do not validate empty Item Details; Post to SAP validates Item Details (and Profit Center) before workflow
+- [x] **T-0523f** MIS Post to SAP validation order: Item Details empty/completeness → Profit Center → Approver Comments
+- [x] **T-0523b** Block Save Draft / Submit when Material Code is duplicated in Item Details; Excel import shows “Already exists” for Material Code only. Roca Global Code and Material Description duplicates are allowed
 - [x] **T-0523c** Item Details S.No uses absolute Prime `rowIndex + 1` across pages
 - [x] **T-0526** Block Initiator Submit when Item Details Material Code / Description already exist in `NPD_MaterialMaster` (trim + lowercase); MIS Post to SAP uses the same check (`excludeRequestId` for retries)
 - [x] **T-0526a** Show Processing loader during Material Master duplicate validation; after pass, restore Submit line-item progress bar (`showItemProgress`) — Pending/Draft destination must not mount a second LoaderOverlay that hides progress
@@ -382,6 +383,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0526c** Submit writes the full Item Details grid to the `NPD_Request` attachment first. Network drop moves the request to Draft, stops further `NPD_ItemDetails` inserts, and does not resume when the network returns. The next Send Request inserts only rows not already in `NPD_ItemDetails`. Draft Products count is the saved list count (not the attachment). Progress bar shows remaining rows only
 - [x] **T-0526d** List Products uses `NPD_Request.ItemDetailsCount` (no Item Details list fetch). Draft / Submit reuses prior Item Details work (promote-only when already saved; skip redundant backup/count sync). Hydrate loads Request + Item Details without re-inserting attachment backup when count matches
 - [x] **T-0526e** Cache ROCA `ApproversMaster` (`rocaApproversMasterCache`) so role/brand/approver assignment reads share one fetch; skip Initiator BrandMaster / PlantMaster loads for VH/MIS-only form opens
+- [x] **T-0526f** After offline Attachments JSON recovery, Send Request rewrites `NpdItemDetailsBackup.json` with the current form grid before remaining Item Details inserts so field edits are not lost on the next Draft open / merge
 - [x] **T-0501c** NPD/MG Drafts visible only in Initiator module lists — not Admin / VH / MIS / Consultant All Requests
 - [x] **T-0524** Validate Roca Global Code when applicable — Toast on Submit
 - [x] **T-0525** Validate at least one item row on submit — Toast on Submit
@@ -730,6 +732,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 12 Oct 2026 | MIS Item Details rows display first; Item Details soft-delete via IsDeleted + filter active rows on fetch/resubmit | T-0721, T-0721a |
 | 14 Oct 2026 | ApproversMaster cache + skip VH/MIS brand/plant prefetch; ItemDetailsCount list Products; Draft/Submit promote-only / hydrate skip backup; MG duplicate Code check Complete-only | T-0526d, T-0526e, T-0811c |
 | 14 Oct 2026 | Reusable UI action labels centralized in `Config.ActionLabels` / `Config.Add` / `Config.Edit` / … | T-0150a |
+| 15 Oct 2026 | MIS Rework/Reject skip Item Details empty validation; Post to SAP validates Item Details → Profit Center → Comments; offline recovery resubmit rewrites Attachments JSON with latest form edits | T-0523e, T-0523f, T-0526f |
 
 ---
 

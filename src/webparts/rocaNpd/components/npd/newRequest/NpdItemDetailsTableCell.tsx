@@ -1,6 +1,10 @@
 import * as React from "react";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
 import {
+  lookupOptionSelectValue,
+  lookupOptionStoredValue,
+} from "../../../../../External/CommonServices/lookupOptionUtils";
+import {
   sanitizeAlphanumericTextInput,
   sanitizeDigitsOnlyTextInput,
 } from "../../../../../External/CommonServices/textInputSanitize";
@@ -58,6 +62,10 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
 }) => {
   const { field, controlType, placeholder, maxLength, textFilter } = fieldDef;
   const controlClassName = styles.tableCellControl;
+  const importAttention = hasLookupImportAttention(row, field);
+  const attentionClassName = importAttention
+    ? `${controlClassName} ${styles.lookupImportAttention}`
+    : controlClassName;
   const handleChange = React.useCallback(
     (value: NpdItemDetailFieldValue) => {
       onFieldChange(row.id, field, value);
@@ -74,7 +82,7 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
         maxLength={maxLength}
         readOnly={readOnly}
         disabled={readOnly}
-        className={controlClassName}
+        className={attentionClassName}
         onChange={(value) =>
           handleChange(sanitizeTextFieldValue(value, textFilter))
         }
@@ -92,7 +100,7 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
         maxFractionDigits={3}
         readOnly={readOnly}
         disabled={readOnly}
-        className={controlClassName}
+        className={attentionClassName}
         onChange={handleChange}
       />
     );
@@ -113,21 +121,27 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
   const optionsWithSelected = [...lookupOptions];
   multiValue.forEach((selected) => {
     const alreadyPresent = optionsWithSelected.some(
-      (option) => String(option.value ?? "") === selected,
+      (option) =>
+        String(option.label ?? "").trim() === selected ||
+        String(option.value ?? "") === selected,
     );
     if (!alreadyPresent) {
       optionsWithSelected.push({ label: selected, value: selected });
     }
   });
 
-  const lookupImportAttention = hasLookupImportAttention(row, field);
+  // Options may share the same Lookup Name (duplicate list rows); values are
+  // unique Ids. The grid still stores Lookup Name for SharePoint.
+  const selectValues = multiValue
+    .map((selected) => lookupOptionSelectValue(selected, optionsWithSelected))
+    .filter(Boolean);
 
   return (
     <>
       <span title={readOnly ? multiValue[0] : ""} style={{ cursor: "pointer" }}>
         <MultiSelect
           id={id}
-          value={multiValue}
+          value={selectValues}
           options={optionsWithSelected}
           placeholder={placeholder}
           filter={!readOnly}
@@ -136,16 +150,15 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
           selectionLimit={1}
           readOnly={readOnly}
           disabled={readOnly}
-          className={
-            lookupImportAttention
-              ? `${controlClassName} ${styles.lookupImportAttention}`
-              : controlClassName
-          }
+          className={attentionClassName}
           panelClassName={styles.itemDetailsMultiSelectPanel}
           onChange={(value) =>
             handleChange(
               value
-                .map((entry) => String(entry ?? "").trim())
+                .map((entry) =>
+                  lookupOptionStoredValue(String(entry ?? ""), optionsWithSelected),
+                )
+                .map((entry) => entry.trim())
                 .filter((entry) => {
                   const key = entry.toLowerCase();
                   return (

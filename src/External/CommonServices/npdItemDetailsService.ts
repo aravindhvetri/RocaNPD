@@ -16,6 +16,24 @@ import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.NpdItemDetails;
 const FIELDS = Config.FieldNames.NpdItemDetails;
+
+/**
+ * SharePoint $batch cannot be cancelled. After an offline abort the request
+ * may still finish — wait for it before inserting "remaining" rows.
+ */
+let inFlightItemDetailsMutate: Promise<void> = Promise.resolve();
+
+export function waitForInFlightNpdItemDetailsMutate(): Promise<void> {
+  return inFlightItemDetailsMutate;
+}
+
+function trackItemDetailsMutate(mutate: Promise<void>): Promise<void> {
+  inFlightItemDetailsMutate = mutate.then(
+    () => undefined,
+    () => undefined,
+  );
+  return mutate;
+}
 const SEPARATOR = Config.NpdItemImport.MultiValueSeparator;
 
 const SELECT_FIELDS = [
@@ -437,12 +455,14 @@ export async function saveNpdItemDetailsBatch(
       await upsertNpdItemDetailsBackupAttachment(requestId, records);
     }
 
-    await SPServices.batchMutate({
-      ListName: LIST_NAME(),
-      remove: [],
-      update: allUpdates,
-      insert: toInsert,
-    });
+    await trackItemDetailsMutate(
+      SPServices.batchMutate({
+        ListName: LIST_NAME(),
+        remove: [],
+        update: allUpdates,
+        insert: toInsert,
+      }),
+    );
     await syncItemDetailsCount();
     return toInsert.length;
   }
@@ -461,12 +481,14 @@ export async function saveNpdItemDetailsBatch(
     let pollId = 0;
     try {
       await Promise.race([
-        SPServices.batchMutate({
-          ListName: LIST_NAME(),
-          remove: [],
-          update: params.update,
-          insert: params.insert,
-        }),
+        trackItemDetailsMutate(
+          SPServices.batchMutate({
+            ListName: LIST_NAME(),
+            remove: [],
+            update: params.update,
+            insert: params.insert,
+          }),
+        ),
         new Promise<never>((_resolve, reject) => {
           pollId = window.setInterval(() => {
             if (normalized.shouldAbort?.()) {

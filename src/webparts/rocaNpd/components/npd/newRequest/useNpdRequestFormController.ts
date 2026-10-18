@@ -79,8 +79,6 @@ import {
 } from "../../../../../External/CommonServices/npdRequestGeneralInfoService";
 import {
   validateMisCoordinatorAction,
-  validateMisCoordinatorReject,
-  validateMisCoordinatorRework,
   validateNpdDraftForm,
   validateNpdItemDetailsRows,
   validateNpdRequestForm,
@@ -156,6 +154,7 @@ export function useNpdRequestFormController(
    * bindNpdFormDraftRequest then navigate to Draft / Rework.
    */
   const pendingOfflineDraftNavigationRef = React.useRef(false);
+  const submitInFlightRef = React.useRef(false);
   /** Prevents repeat deny toast/navigation for the same deep-linked request. */
   const deniedInitiatorAccessIdRef = React.useRef(0);
   /** Request Initiator email from hydrate — used only for former-Initiator email gate. */
@@ -618,7 +617,9 @@ export function useNpdRequestFormController(
       const items = persistItems
         ? (options?.items ?? toPersistableItemRecords(itemRows))
         : undefined;
-      const includeOtherDetails = lockedFooterMode === "mis-pending";
+      // Other Details are saved only with Post to SAP — not Rework / Reject.
+      const includeOtherDetails =
+        lockedFooterMode === "mis-pending" && action === "Approve";
       const actorRole = pendingRole;
       const isMisPostToSap = action === "Approve" && includeOtherDetails;
 
@@ -873,6 +874,9 @@ export function useNpdRequestFormController(
   };
 
   const handleSubmit = (): void => {
+    if (submitInFlightRef.current) {
+      return;
+    }
     if (initiatorAccessDenied) {
       showErrorToast(toastRef, INITIATOR_ACCESS_DENIED_MESSAGE);
       return;
@@ -911,7 +915,20 @@ export function useNpdRequestFormController(
     const items = [...changedExisting, ...remainingItems];
     const backupItems = allItems;
     const deletedSharePointIds = itemDiff?.deletedSharePointIds ?? [];
+    // Full current grid size — not hydrate count + net length delta (that
+    // under-counted when Initiator replaced MIS/soft-deleted lines).
+    const intendedItemDetailsCount = allItems.filter((item) =>
+      Boolean(
+        String(item.materialCode ?? "").trim() ||
+          String(item.materialDescription ?? "").trim(),
+      ),
+    ).length;
     const totalUnits = Math.max(remainingItems.length, 1);
+
+    submitInFlightRef.current = true;
+    const releaseSubmit = (): void => {
+      submitInFlightRef.current = false;
+    };
 
     resetNpdSubmitOfflineLatch();
     let leftForOfflineDraft = false;
@@ -922,6 +939,7 @@ export function useNpdRequestFormController(
       }
       leftForOfflineDraft = true;
       stopOfflineWatch();
+      releaseSubmit();
       cancelInFlightNpdSubmit();
       pendingOfflineDraftNavigationRef.current = false;
       finishUiProcessing(dispatch, false);
@@ -995,6 +1013,7 @@ export function useNpdRequestFormController(
           if (materialMasterMessage) {
             if (!leftForOfflineDraft) {
               stopOfflineWatch();
+              releaseSubmit();
               finishUiProcessing(dispatch, false);
               showErrorToast(toastRef, materialMasterMessage, "Validation");
             }
@@ -1005,6 +1024,7 @@ export function useNpdRequestFormController(
             return;
           }
           stopOfflineWatch();
+          releaseSubmit();
           finishUiProcessing(dispatch, false);
           showErrorToast(
             toastRef,
@@ -1039,6 +1059,7 @@ export function useNpdRequestFormController(
           items,
           backupItems,
           comments,
+          intendedItemDetailsCount,
           ...(existingForSubmit ? { deletedSharePointIds } : {}),
         }),
       )
@@ -1048,6 +1069,7 @@ export function useNpdRequestFormController(
             return;
           }
           stopOfflineWatch();
+          releaseSubmit();
           tabLock.notifySubmitted(saved.Id, saved.Title);
           dispatch(
             setFlashMessage({
@@ -1062,6 +1084,7 @@ export function useNpdRequestFormController(
             return;
           }
           stopOfflineWatch();
+          releaseSubmit();
           finishUiProcessing(dispatch, false);
           const retainedDraftId = store.getState().npdForm.requestId;
           const networkFailure = isNetworkError(error) || !isBrowserOnline();
@@ -1105,18 +1128,15 @@ export function useNpdRequestFormController(
     }
 
     const remarks = approverRemarks.trim();
+    const isMisPostToSap =
+      lockedFooterMode === "mis-pending" && action === "Approve";
 
-    // MIS Post to SAP: Profit Center before Approver Comments when PC is empty.
+    // Post to SAP validates comments after Item Details + Profit Center.
     if (
-      lockedFooterMode === "mis-pending" &&
-      action === "Approve" &&
-      !String(npdForm.otherDetails.profitCenter ?? "").trim()
+      !isMisPostToSap &&
+      workflowActionRequiresComments(action) &&
+      !remarks
     ) {
-      showErrorToast(toastRef, "Profit Center is required.", "Validation");
-      return;
-    }
-
-    if (workflowActionRequiresComments(action) && !remarks) {
       const actionText =
         action === "Rework"
           ? "sending back for rework"
@@ -1139,61 +1159,15 @@ export function useNpdRequestFormController(
     }
 
     if (lockedFooterMode === "mis-pending") {
-      // MIS Reject: Profit Center + status only.
-      if (action === "Reject") {
-        const firstMessage = firstValidationMessage(
-          validateMisCoordinatorReject(npdForm.otherDetails.profitCenter),
-        );
-        if (firstMessage) {
-          showErrorToast(toastRef, firstMessage, "Validation");
-          return;
-        }
+      // MIS Reject / Rework: comments + status only. Item Details edits,
+      // deletes, and adds are discarded until Post to SAP.
+      if (action === "Reject" || action === "Rework") {
         dispatchWorkflowAction(action, remarks, { persistItems: false });
         return;
       }
 
-      // MIS Rework: only added/updated Item Details (+ deletes).
-      if (action === "Rework") {
-        const diff = diffNpdItemDetailRows(itemRows, itemBaselineRef.current);
-        const baselineBySpId = new Map(
-          itemBaselineRef.current
-            .filter((row) => row.sharePointId > 0)
-            .map((row) => [row.sharePointId, fingerprintNpdItemDetailRow(row)]),
-        );
-        const changedRows = itemRows.filter((row) => {
-          if (isEmptyItemDetailRow(row)) {
-            return false;
-          }
-          if (row.sharePointId > 0) {
-            const prior = baselineBySpId.get(row.sharePointId);
-            return (
-              prior === undefined || prior !== fingerprintNpdItemDetailRow(row)
-            );
-          }
-          return true;
-        });
-        const firstMessage = firstValidationMessage(
-          validateMisCoordinatorRework(
-            npdForm.generalInfo.brand,
-            changedRows,
-            npdForm.otherDetails.profitCenter,
-          ),
-        );
-        if (firstMessage) {
-          showErrorToast(toastRef, firstMessage, "Validation");
-          return;
-        }
-        dispatchWorkflowAction(action, remarks, {
-          persistItems: true,
-          items: diff.changedRecords,
-          itemSavePartial: true,
-          deletedItemIds: diff.deletedSharePointIds,
-        });
-        return;
-      }
-
-      // MIS Post to SAP: form validation for all rows; MM duplicate check only
-      // for newly added / updated Item Details (not unchanged lines).
+      // MIS Post to SAP: Item Details → Profit Center → Comments, then save.
+      // MM duplicate check only for newly added / updated Item Details.
       if (action === "Approve") {
         const firstMessage = firstValidationMessage(
           validateMisCoordinatorAction(
@@ -1204,6 +1178,15 @@ export function useNpdRequestFormController(
         );
         if (firstMessage) {
           showErrorToast(toastRef, firstMessage, "Validation");
+          return;
+        }
+        if (workflowActionRequiresComments(action) && !remarks) {
+          showActionValidationToast(
+            toastRef,
+            action,
+            "Please enter approver remarks before approving.",
+            "Validation",
+          );
           return;
         }
         const mmDiff = diffNpdItemDetailRows(itemRows, itemBaselineRef.current);
