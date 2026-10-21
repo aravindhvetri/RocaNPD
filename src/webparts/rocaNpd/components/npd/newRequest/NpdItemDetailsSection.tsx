@@ -7,6 +7,7 @@ import {
   NpdItemDetailsActionsContext,
 } from "./NpdItemDetailsActionCell";
 import {
+  clearLookupImportAttention,
   createEmptyNpdItemDetailRow,
   getVisibleNpdItemDetailFields,
 } from "./npdItemDetailsConfig";
@@ -161,9 +162,16 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         return;
       }
       onRowsChange((currentRows) =>
-        currentRows.map((row) =>
-          row.id === rowId ? { ...row, [field]: value } : row,
-        ),
+        currentRows.map((row) => {
+          if (row.id !== rowId) {
+            return row;
+          }
+          return clearLookupImportAttention(
+            { ...row, [field]: value },
+            field,
+            value,
+          );
+        }),
       );
     },
     [onRowsChange, readOnly],
@@ -219,21 +227,21 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   const headerActions = readOnly ? null : (
     <>
       <Button
-        label="Add"
+        label={Config.Add}
         icon="pi pi-plus"
         size="xs"
         className={styles.headerAddButton}
         onClick={() => handleAddItem()}
       />
       <Button
-        label="Import"
+        label={Config.Import}
         icon="pi pi-download"
         size="xs"
         className={styles.headerImportButton}
         onClick={onImportClick}
       />
       <Button
-        label="Delete"
+        label={Config.Delete}
         icon="pi pi-trash"
         size="xs"
         title="Delete all item lines"

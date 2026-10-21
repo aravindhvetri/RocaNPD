@@ -232,8 +232,8 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
                 icon="pi pi-pencil"
                 iconOnly
                 className={tableStyles.editAction}
-                title="Edit"
-                aria-label="Edit"
+                title={Config.Edit}
+                aria-label={Config.Edit}
                 onClick={() => handleEdit(row)}
               />
             ) : null}
@@ -242,8 +242,8 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
               icon="pi pi-eye"
               iconOnly
               className={tableStyles.viewAction}
-              title="View"
-              aria-label="View"
+              title={Config.View}
+              aria-label={Config.View}
               onClick={() => handleView(row)}
             />
           </div>

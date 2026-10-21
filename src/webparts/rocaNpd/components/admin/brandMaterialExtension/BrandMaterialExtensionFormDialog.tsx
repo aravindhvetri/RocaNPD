@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
 import type {
   IBrandMaterialExtension,
   ISelectOption,
@@ -87,9 +87,9 @@ const BrandMaterialExtensionFormDialog: React.FC<
 
   const dialogTitle =
     mode === "create"
-      ? "Add Brand Material Extension"
-      : "Edit Brand Material Extension";
-  const saveLabel = mode === "create" ? "Add" : "Update";
+      ? `${Config.Add} Brand Material Extension`
+      : `${Config.Edit} Brand Material Extension`;
+  const saveLabel = mode === "create" ? Config.Add : Config.Update;
   const controlsDisabled = saving;
 
   const handleSave = async (): Promise<void> => {
@@ -120,7 +120,7 @@ const BrandMaterialExtensionFormDialog: React.FC<
       footer={
         <div className={styles.footer}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             disabled={controlsDisabled}

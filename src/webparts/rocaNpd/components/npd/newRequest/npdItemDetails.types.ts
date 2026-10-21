@@ -21,11 +21,16 @@ export type INpdItemDetailRow = {
   uom: string[];
   minQtyBoxQty: string;
   isMisAdded?: boolean;
+  /**
+   * Field keys left blank/invalid after Excel import (text, number, or Lookup).
+   * UI-only red-border attention; not persisted.
+   */
+  lookupImportAttentionFields?: NpdItemDetailFieldKey[];
 } & Record<string, unknown>;
 
 export type NpdItemDetailFieldKey = Exclude<
   keyof INpdItemDetailRow,
-  "id" | "sharePointId" | "isMisAdded"
+  "id" | "sharePointId" | "isMisAdded" | "lookupImportAttentionFields"
 >;
 
 export type NpdItemDetailFieldValue = string | string[] | number | null;

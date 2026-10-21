@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
 import {
   Button,
@@ -91,7 +92,7 @@ const MaterialMasterToolbar: React.FC<IMaterialMasterToolbarProps> = ({
           onChange={(value) => onInitiatorChange(String(value ?? "all"))}
         />
         <Button
-          label="Export"
+          label={Config.Export}
           icon="pi pi-download"
           size="sm"
           className={styles.exportButton}

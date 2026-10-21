@@ -41,6 +41,9 @@ export interface IMaterialGroupState {
 
   selectedConfigIds: number[];
   entriesByConfigId: Record<number, IMaterialGroupEntryRow[]>;
+  /** Last hydrated/saved RequestsJSON fingerprint — skip no-op Draft PATCH. */
+  savedRequestsJson: string | null;
+  savedConfigLookupIds: number[];
 
   saveStatus: "idle" | "saving" | "succeeded" | "failed";
   submitStatus: "idle" | "submitting" | "succeeded" | "failed";
@@ -69,6 +72,8 @@ const initialState: IMaterialGroupState = {
 
   selectedConfigIds: [],
   entriesByConfigId: {},
+  savedRequestsJson: null,
+  savedConfigLookupIds: [],
 
   saveStatus: "idle",
   submitStatus: "idle",
@@ -182,6 +187,8 @@ export const materialGroupSlice = createSlice({
       state.latestCommentAction = null;
       state.selectedConfigIds = [];
       state.entriesByConfigId = {};
+      state.savedRequestsJson = null;
+      state.savedConfigLookupIds = [];
       state.saveStatus = "idle";
       state.submitStatus = "idle";
       state.hydrateStatus = "idle";
@@ -229,6 +236,8 @@ export const materialGroupSlice = createSlice({
         state.saveStatus = "succeeded";
         state.currentId = action.payload.id;
         state.currentGuid = action.payload.guid;
+        state.savedRequestsJson = action.payload.requestsJson;
+        state.savedConfigLookupIds = action.payload.configLookupIds;
       })
       .addCase(saveMaterialGroupDraftThunk.rejected, (state, action) => {
         state.saveStatus = "failed";
@@ -264,6 +273,8 @@ export const materialGroupSlice = createSlice({
         if (current !== requestedId) {
           state.selectedConfigIds = [];
           state.entriesByConfigId = {};
+          state.savedRequestsJson = null;
+          state.savedConfigLookupIds = [];
           state.currentRequestId = null;
           state.currentStatus = null;
           state.auditLogs = [];
@@ -288,6 +299,8 @@ export const materialGroupSlice = createSlice({
           state.currentStatus = payload.status;
           state.selectedConfigIds = payload.selectedConfigIds;
           state.entriesByConfigId = payload.entriesByConfigId;
+          state.savedRequestsJson = payload.savedRequestsJson ?? null;
+          state.savedConfigLookupIds = payload.savedConfigLookupIds ?? [];
           state.initiatorName = payload.initiatorName ?? null;
           state.initiatorEmail = payload.initiatorEmail ?? null;
           state.auditLogs = payload.auditLogs ?? [];

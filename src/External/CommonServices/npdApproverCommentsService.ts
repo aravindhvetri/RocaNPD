@@ -301,7 +301,8 @@ export async function addNpdApproverComment(
 
   let userId = payload.userIds.find((id) => Number.isFinite(id) && id > 0) || 0;
 
-  if (payload.actorEmail) {
+  // Prefer caller-resolved user Ids (e.g. pageContext.userId) — avoid a second ensureuser.
+  if (!userId && payload.actorEmail) {
     try {
       const ensured = await SPServices.ensureSiteUserId(payload.actorEmail);
       if (ensured > 0) {
@@ -328,6 +329,11 @@ export async function resolveApproverUserIds(
   actorUserId: number,
   actorEmail: string,
 ): Promise<number[]> {
+  // Prefer the known site user Id from login — skip ensureuser when possible.
+  if (actorUserId > 0) {
+    return [actorUserId];
+  }
+
   const email = (actorEmail || "").trim();
   if (email) {
     try {
@@ -338,10 +344,6 @@ export async function resolveApproverUserIds(
     } catch (error) {
       console.warn("ensureSiteUserId failed for Approver Comments:", error);
     }
-  }
-
-  if (actorUserId > 0) {
-    return [actorUserId];
   }
 
   return [];

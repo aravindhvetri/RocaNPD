@@ -10,6 +10,7 @@ import {
   parseSharePointUserIds,
 } from "./personFieldUtils";
 import { APPROVERS_EXPAND, APPROVERS_SELECT } from "./roleService";
+import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
@@ -105,13 +106,15 @@ export async function fetchNpdApproverAssignmentRows(
 }> {
   const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
   const [rows, userEmailById] = await Promise.all([
-    SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    }) as Promise<Record<string, unknown>[]>,
+    ensureApproversMasterRows(rocaSiteUrl, () =>
+      SPServices.getAnotherSPReadItems({
+        SiteUrl: rocaSiteUrl,
+        Listname: Config.RocaMasterListNames.ApproversMaster,
+        Select: APPROVERS_SELECT,
+        Expand: APPROVERS_EXPAND,
+        Topcount: 5000,
+      }) as Promise<Record<string, unknown>[]>,
+    ).then((cached) => cached.slice() as Record<string, unknown>[]),
     SPServices.getAnotherSPSiteUserEmailMap(rocaSiteUrl).catch(
       () => new Map<number, string>(),
     ),

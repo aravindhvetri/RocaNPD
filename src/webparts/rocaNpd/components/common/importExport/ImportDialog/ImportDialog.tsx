@@ -9,7 +9,7 @@ import styles from "./ImportDialog.module.scss";
 
 const ImportDialog: React.FC<IImportDialogProps> = ({
   visible,
-  title = "Import",
+  title = Config.Import,
   importSectionTitle,
   templateSectionHint,
   templateFileName,
@@ -171,14 +171,14 @@ const ImportDialog: React.FC<IImportDialogProps> = ({
         footer={
           <div className={styles.footer}>
             <Button
-              label="Cancel"
+              label={Config.Cancel}
               variant="secondary"
               size="sm"
               disabled={interactionLocked}
               onClick={onHide}
             />
             <Button
-              label="Import"
+              label={Config.Import}
               size="sm"
               loading={importing || localImporting}
               disabled={!selectedFile || interactionLocked}

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FieldLabels } from "../../../../../External/CommonServices/Config";
+import { Config, FieldLabels } from "../../../../../External/CommonServices/Config";
 import { Button, Dropdown } from "../../common/controls";
 import type { IDropdownOption } from "../../common/controls";
 import { MasterToolbarSearch } from "../../common/master/MasterToolbar";
@@ -81,7 +81,7 @@ const NpdRequestListToolbar: React.FC<INpdRequestListToolbarProps> = ({
       />
       {showExport && onExport ? (
         <Button
-          label={FieldLabels.Export}
+          label={Config.Export}
           icon="pi pi-download"
           size="sm"
           className={styles.exportButton}

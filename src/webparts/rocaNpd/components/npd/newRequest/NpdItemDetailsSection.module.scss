@@ -248,6 +248,26 @@
   }
 }
 
+/* Beat injected Prime border-color so import blank/invalid attention stays visible
+   on hover/focus until the user enters a value (attention class removed). */
+:global([data-roca-npd-root]) {
+  .lookupImportAttention {
+    :global(.p-multiselect),
+    :global(.p-multiselect:hover),
+    :global(.p-multiselect:not(.p-disabled):hover),
+    :global(.p-multiselect:not(.p-disabled).p-focus),
+    :global(.p-multiselect:not(.p-disabled):focus-within),
+    :global(.p-inputtext),
+    :global(.p-inputtext:enabled:hover),
+    :global(.p-inputtext:enabled:focus),
+    :global(.p-inputnumber-input),
+    :global(.p-inputnumber-input:enabled:hover),
+    :global(.p-inputnumber-input:enabled:focus) {
+      border-color: $roca-color-error !important;
+    }
+  }
+}
+
 /* Portaled MultiSelect panel — Item Details table only */
 .itemDetailsMultiSelectPanel {
   :global(.p-multiselect-header) {

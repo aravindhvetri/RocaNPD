@@ -3,6 +3,7 @@ import type {
   INpdItemDetailRecord,
   INpdOtherDetails,
   INpdRequestGeneralInfo,
+  INpdWorkflowStepJson,
   ISelectOption,
   NpdWorkflowAction,
 } from "../../External/CommonServices/Interface";
@@ -13,6 +14,7 @@ import * as npdItemDetailsService from "../../External/CommonServices/npdItemDet
 import * as npdOtherDetailsService from "../../External/CommonServices/npdOtherDetailsService";
 import * as npdRequestGeneralInfoService from "../../External/CommonServices/npdRequestGeneralInfoService";
 import {
+  stringifyWorkflowJson,
   wasNpdWorkflowActionApplied,
 } from "../../External/CommonServices/npdWorkflowJsonService";
 import {
@@ -39,6 +41,19 @@ function getErrorMessage(error: unknown): string {
   return toUserActionErrorMessage(error);
 }
 
+function stringifyWorkflowJsonFromState(
+  steps: readonly INpdWorkflowStepJson[] | undefined,
+): string {
+  if (!steps?.length) {
+    return "";
+  }
+  try {
+    return stringifyWorkflowJson(steps as INpdWorkflowStepJson[]);
+  } catch {
+    return "";
+  }
+}
+
 function getHeaderPayload(state: RootState, isDraft = false) {
   const { npdForm } = state;
   const { brand, materialType, plantSource } = npdForm.generalInfo;
@@ -63,6 +78,11 @@ function getHeaderPayload(state: RootState, isDraft = false) {
   };
 }
 
+function roleListIncludes(roles: readonly string[], role: string): boolean {
+  const target = role.trim().toLowerCase();
+  return roles.some((item) => item.trim().toLowerCase() === target);
+}
+
 export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
   ISelectOption[],
   void,
@@ -72,10 +92,30 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
   async (_, { getState, rejectWithValue }) => {
     try {
       const app = getState().app;
-      const { siteUrl, userEmail, userLoginName } = app;
+      const { siteUrl, userEmail, userLoginName, assignedRoles } = app;
 
-      // 1. Direct query from ApproversMaster matching current user
-      if (userEmail || userLoginName) {
+      // Prefer login-resolved brands — avoids a second ApproversMaster round-trip.
+      if (app.npdInitiatorBrands && app.npdInitiatorBrands.length > 0) {
+        return app.npdInitiatorBrands.map((title) => ({
+          label: title,
+          value: title,
+        }));
+      }
+
+      const isInitiator = roleListIncludes(
+        assignedRoles,
+        Config.Roles.Initiator,
+      );
+      const isAdmin = roleListIncludes(assignedRoles, Config.Roles.Admin);
+
+      // VH / MIS / Consultant: empty initiator brands after login is expected.
+      // Do not re-query ApproversMaster or BrandMaster on form open.
+      if (app.roleStatus === "succeeded" && !isInitiator && !isAdmin) {
+        return [];
+      }
+
+      // Initiator/Admin: query ApproversMaster only when login seed was empty.
+      if ((userEmail || userLoginName) && (isInitiator || isAdmin)) {
         try {
           const directOptions =
             await npdFormDataService.fetchInitiatorBrandOptions(
@@ -91,25 +131,19 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
         }
       }
 
-      // 2. Fall back to resolved app.npdInitiatorBrands
-      if (app.npdInitiatorBrands && app.npdInitiatorBrands.length > 0) {
-        return app.npdInitiatorBrands.map((title) => ({
-          label: title,
-          value: title,
-        }));
-      }
-
-      // 3. Fall back to BrandMaster if available
-      try {
-        const fallbackBrands =
-          await npdFormDataService.fetchActiveBrandMasterOptions(
-            siteUrl || undefined,
-          );
-        if (fallbackBrands && fallbackBrands.length > 0) {
-          return fallbackBrands;
+      // Admin-only BrandMaster fallback (create form without Initiator mapping).
+      if (isAdmin) {
+        try {
+          const fallbackBrands =
+            await npdFormDataService.fetchActiveBrandMasterOptions(
+              siteUrl || undefined,
+            );
+          if (fallbackBrands && fallbackBrands.length > 0) {
+            return fallbackBrands;
+          }
+        } catch {
+          // Ignore fallback error
         }
-      } catch {
-        // Ignore fallback error
       }
 
       return [];
@@ -119,11 +153,28 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
   },
   {
     condition: (_, { getState }) => {
-      const { npdForm } = getState();
+      const { npdForm, app } = getState();
       if (npdForm.brandOptionsStatus === "loading") {
         return false;
       }
-
+      // Login already hydrated brands — skip ApproversMaster / siteUsers again.
+      if (npdForm.brandOptions.length > 0) {
+        return false;
+      }
+      // After roles resolve, VH / MIS / Consultant never need Initiator brand fetch.
+      if (app.roleStatus === "succeeded") {
+        const roles = app.assignedRoles || [];
+        const needsInitiatorBrandFetch =
+          roleListIncludes(roles, Config.Roles.Initiator) ||
+          roleListIncludes(roles, Config.Roles.Admin);
+        if (!needsInitiatorBrandFetch) {
+          return false;
+        }
+        // Initiator brands were seeded at login (possibly empty) — do not refetch.
+        if (roleListIncludes(roles, Config.Roles.Initiator)) {
+          return false;
+        }
+      }
       return true;
     },
   },
@@ -145,6 +196,22 @@ export const fetchNpdPlantSourceOptions = createAsyncThunk<
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
+  },
+  {
+    condition: (materialType, { getState }) => {
+      const { npdForm } = getState();
+      if (npdForm.plantSourceStatus === "loading") {
+        return false;
+      }
+      // Reuse an already-loaded PlantMaster list for the same Finished Products session.
+      if (
+        materialType === Config.NpdMaterialTypes.FinishedProducts &&
+        npdForm.plantSourceOptions.length > 0
+      ) {
+        return false;
+      }
+      return true;
+    },
   },
 );
 
@@ -256,6 +323,10 @@ export const saveNpdDraft = createAsyncThunk<
       deletedSharePointIds?: number[];
       /** Full Item Details grid for JSON backup (all form rows). */
       backupItems?: INpdItemDetailRecord[];
+      /** General Information unchanged since hydrate — skip NPD_Request PATCH. */
+      headerUnchanged?: boolean;
+      /** ItemDetailsCount from last hydrate (Products column). */
+      existingItemDetailsCount?: number;
     },
   { rejectValue: string; state: RootState }
 >("npdForm/saveDraft", async (arg, { getState, dispatch, rejectWithValue }) => {
@@ -275,9 +346,19 @@ export const saveNpdDraft = createAsyncThunk<
       ? undefined
       : arg.deletedSharePointIds;
     const backupItems = Array.isArray(arg) ? items : arg.backupItems ?? items;
+    const headerUnchanged = Array.isArray(arg)
+      ? undefined
+      : arg.headerUnchanged;
+    const existingItemDetailsCount = Array.isArray(arg)
+      ? undefined
+      : arg.existingItemDetailsCount;
+    const existingWorkflowJson = stringifyWorkflowJsonFromState(
+      state.npdForm.workflowSteps,
+    );
     let retainedDraftId = 0;
 
     try {
+      // Zero grace: reconnect must not resume remaining Item Details batches.
       return await raceWithBrowserOffline(
         npdRequestGeneralInfoService.saveNpdGeneralInfoDraft(
           payload,
@@ -291,6 +372,9 @@ export const saveNpdDraft = createAsyncThunk<
               ? undefined
               : deletedSharePointIds,
             backupItems,
+            headerUnchanged,
+            existingItemDetailsCount,
+            existingWorkflowJson,
             onDraftRetained: (draft) => {
               retainedDraftId = draft.requestId;
               dispatch(
@@ -302,8 +386,10 @@ export const saveNpdDraft = createAsyncThunk<
             },
           },
         ),
+        0,
       );
     } catch (error) {
+      npdRequestGeneralInfoService.cancelInFlightNpdDraftPersist();
       const draftMeta = error as {
         npdDraftRequestId?: number;
         npdDraftRequestTitle?: string;
@@ -339,6 +425,10 @@ export const submitNpdRequest = createAsyncThunk<
       comments?: string;
       /** Full Item Details grid for JSON backup (all form rows). */
       backupItems?: INpdItemDetailRecord[];
+      /** Soft-deletes vs hydrate baseline — skips NPD_ItemDetails reconcile GET. */
+      deletedSharePointIds?: number[];
+      /** Full Item Details count from hydrate (caps remaining inserts). */
+      intendedItemDetailsCount?: number;
     },
   { rejectValue: string; state: RootState }
 >("npdForm/submitRequest", async (arg, { getState, dispatch, rejectWithValue }) => {
@@ -355,6 +445,12 @@ export const submitNpdRequest = createAsyncThunk<
     const items = Array.isArray(arg) ? arg : arg.items;
     const comments = Array.isArray(arg) ? undefined : arg.comments;
     const backupItems = Array.isArray(arg) ? items : arg.backupItems ?? items;
+    const deletedSharePointIds = Array.isArray(arg)
+      ? undefined
+      : arg.deletedSharePointIds;
+    const intendedItemDetailsCount = Array.isArray(arg)
+      ? undefined
+      : arg.intendedItemDetailsCount;
     const existingRequestId = state.npdForm.requestId;
     let retainedDraftId = 0;
 
@@ -369,16 +465,23 @@ export const submitNpdRequest = createAsyncThunk<
           state.app.siteUrl || undefined,
           comments,
           state.app.userId,
-          (draft) => {
-            retainedDraftId = draft.requestId;
-            dispatch(
-              bindNpdFormDraftRequest({
-                requestId: draft.requestId,
-                requestTitle: draft.requestTitle,
-              }),
-            );
+          {
+            backupItems,
+            intendedItemDetailsCount,
+            deletedSharePointIds:
+              existingRequestId && existingRequestId > 0
+                ? deletedSharePointIds ?? []
+                : deletedSharePointIds,
+            onDraftRetained: (draft) => {
+              retainedDraftId = draft.requestId;
+              dispatch(
+                bindNpdFormDraftRequest({
+                  requestId: draft.requestId,
+                  requestTitle: draft.requestTitle,
+                }),
+              );
+            },
           },
-          backupItems,
         ),
         0,
       );
@@ -566,39 +669,45 @@ export const hydrateNpdRequestForm = createAsyncThunk<
   { rejectValue: string }
 >("npdForm/hydrateById", async (id, { rejectWithValue }) => {
   try {
+    // Normal View/Edit: exactly NPD_Request + NPD_ItemDetails (once each).
     const [request, items] = await Promise.all([
-      npdRequestGeneralInfoService.fetchNpdGeneralInfoById(id),
+      npdRequestGeneralInfoService.fetchNpdGeneralInfoById(id, {
+        includeBackupMeta: true,
+      }),
       npdItemDetailsService.fetchNpdItemDetailsByRequestId(id),
     ]);
 
     const status = (request.Status || "").trim().toLowerCase();
-    const showBackupRows =
+    const isDraftOrRework =
       status === Config.RequestStatus.Draft.toLowerCase() ||
       status === Config.RequestStatus.Rework.toLowerCase() ||
       status === "in rework";
-    if (!showBackupRows) {
+    const expectedCount = Math.max(
+      0,
+      Math.floor(Number(request.ItemDetailsCount) || 0),
+    );
+    const backupUrl = String(request.ItemDetailsBackupUrl ?? "").trim();
+    // Recover only when Draft/Rework is short of the full Item Details count
+    // (or count is 0 but a backup file exists). A matching count must not
+    // merge Attachments again — that duplicated rows in the grid.
+    const maybeIncomplete =
+      isDraftOrRework &&
+      (expectedCount > items.length ||
+        (expectedCount === 0 && Boolean(backupUrl)));
+    if (!maybeIncomplete) {
       return { request, items };
     }
 
-    // Draft / Rework: show saved rows plus backup rows not yet in the list.
-    // This read does not insert. Resubmit inserts the missing rows.
-    // Soft-deleted keys block stale backup lines (e.g. Initiator rows MIS removed).
-    const [backup, softDeletedMatchKeys] = await Promise.all([
-      tryLoadNpdItemDetailsBackup(id).catch(() => null),
-      npdItemDetailsService
-        .fetchNpdItemDetailsSoftDeletedMatchKeys(id)
-        .catch(() => new Set<string>()),
-    ]);
-    if (!backup?.length) {
+    const backup = await tryLoadNpdItemDetailsBackup(id, {
+      serverRelativeUrl: backupUrl || undefined,
+    }).catch(() => null);
+    if (!backup?.length || backup.length <= items.length) {
       return { request, items };
     }
+
     return {
       request,
-      items: mergeNpdItemDetailsWithBackup(
-        items,
-        backup,
-        softDeletedMatchKeys,
-      ),
+      items: mergeNpdItemDetailsWithBackup(items, backup),
     };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));

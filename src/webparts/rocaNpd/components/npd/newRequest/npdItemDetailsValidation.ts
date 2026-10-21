@@ -2,7 +2,6 @@ import type { INpdGeneralInfo } from "../../../../../External/CommonServices/Int
 import {
   getVisibleNpdItemDetailFields,
   isEmptyItemDetailRow,
-  isRocaGlobalCodeBrand,
 } from "./npdItemDetailsConfig";
 import type { INpdItemDetailRow } from "./npdItemDetails.types";
 
@@ -23,61 +22,33 @@ function normalizeUniqueValue(value: string): string {
 }
 
 /**
- * Roca Global Code / Material Code / Material Description must be unique
- * within the request (case-insensitive). Empty values are ignored.
+ * Material Code must be unique within the request (case-insensitive).
+ * Roca Global Code and Material Description duplicates are allowed.
+ * Empty values are ignored.
  */
 export function validateNpdItemDetailDuplicates(
   itemRows: INpdItemDetailRow[],
-  brand: string | null,
+  _brand: string | null,
 ): string[] {
   const messages: string[] = [];
-  const checkRocaGlobalCode = isRocaGlobalCodeBrand(brand);
+  const firstLineByValue = new Map<string, number>();
 
-  const trackers: Array<{
-    label: string;
-    getValue: (row: INpdItemDetailRow) => string;
-    enabled: boolean;
-  }> = [
-    {
-      label: "Roca Global Code",
-      getValue: (row) => String(row.rocaGlobalCode ?? ""),
-      enabled: checkRocaGlobalCode,
-    },
-    {
-      label: "Material Code",
-      getValue: (row) => String(row.materialCode ?? ""),
-      enabled: true,
-    },
-    {
-      label: "Material Description",
-      getValue: (row) => String(row.materialDescription ?? ""),
-      enabled: true,
-    },
-  ];
-
-  trackers.forEach(({ label, getValue, enabled }) => {
-    if (!enabled) {
+  itemRows.forEach((row, index) => {
+    const raw = String(row.materialCode ?? "");
+    const key = normalizeUniqueValue(raw);
+    if (!key) {
       return;
     }
 
-    const firstLineByValue = new Map<string, number>();
-    itemRows.forEach((row, index) => {
-      const raw = getValue(row);
-      const key = normalizeUniqueValue(raw);
-      if (!key) {
-        return;
-      }
+    const firstLine = firstLineByValue.get(key);
+    if (firstLine === undefined) {
+      firstLineByValue.set(key, index + 1);
+      return;
+    }
 
-      const firstLine = firstLineByValue.get(key);
-      if (firstLine === undefined) {
-        firstLineByValue.set(key, index + 1);
-        return;
-      }
-
-      messages.push(
-        `Item line ${index + 1}: ${label} "${raw.trim()}" already exists (Item line ${firstLine}).`,
-      );
-    });
+    messages.push(
+      `Item line ${index + 1}: Material Code "${raw.trim()}" already exists (Item line ${firstLine}).`,
+    );
   });
 
   return messages;
@@ -134,8 +105,8 @@ export function validateNpdGeneralInfo(
 
 /**
  * Item Details grid only — every row's required fields + uniqueness.
- * Used for Initiator Submit and MIS Post to SAP / Approve / Rework / Reject
- * when items are editable.
+ * Used for Initiator Submit and MIS Post to SAP when items are editable.
+ * MIS Rework / Reject do not use this gate.
  */
 export function validateNpdItemDetailsRows(
   brand: string | null,
@@ -217,17 +188,15 @@ export function validateMisCoordinatorReject(
 }
 
 /**
- * MIS Rework: only rows that were added/updated.
- * Profit Center is not required. Unchanged lines are not re-validated.
+ * MIS Rework: Item Details completeness and Profit Center are not required.
+ * Empty / incomplete Item Details are validated only on Post to SAP.
  */
 export function validateMisCoordinatorRework(
-  brand: string | null,
-  changedRows: INpdItemDetailRow[],
+  _brand: string | null,
+  _changedRows: INpdItemDetailRow[],
   _profitCenter: string | null | undefined,
 ): string[] {
-  return changedRows.length
-    ? validateNpdItemDetailsRows(brand, changedRows)
-    : [];
+  return [];
 }
 
 /**

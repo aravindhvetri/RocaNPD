@@ -78,29 +78,69 @@ function getLookupItemTitle(lookup: ILookup): string {
   return lookup.LookupName.trim();
 }
 
-function toTitleOption(title: string): ISelectOption | null {
+/**
+ * One MultiSelect option per NPD_Lookup row. Duplicate Lookup Names are kept
+ * (unique value via Id) so every list item appears in NPD Item Details.
+ * Persist Lookup Name via option.label — not option.value.
+ */
+function toLookupOption(lookup: ILookup): ISelectOption | null {
+  const title = getLookupItemTitle(lookup);
   if (!title) {
     return null;
   }
 
-  return { label: title, value: title };
+  const id = Number(lookup.Id) || 0;
+  return {
+    label: title,
+    value: id > 0 ? `${id}\u001f${title}` : title,
+  };
 }
 
-function pushUniqueTitleOption(options: ISelectOption[], title: string): void {
-  const option = toTitleOption(title);
+function pushLookupOption(options: ISelectOption[], lookup: ILookup): void {
+  const option = toLookupOption(lookup);
   if (!option) {
     return;
   }
 
-  const optionKey = normalizeLookupCompareValue(String(option.value));
-  const alreadyPresent = options.some(
-    (entry) => normalizeLookupCompareValue(String(entry.value)) === optionKey,
-  );
-  if (alreadyPresent) {
+  const valueKey = String(option.value);
+  if (options.some((entry) => String(entry.value) === valueKey)) {
     return;
   }
 
   options.push(option);
+}
+
+/** Resolve MultiSelect option value → Lookup Name for Item Details persist. */
+export function lookupOptionStoredValue(
+  optionValue: string,
+  options: readonly ISelectOption[],
+): string {
+  const matched = options.find(
+    (option) => String(option.value ?? "") === String(optionValue ?? ""),
+  );
+  if (matched) {
+    return String(matched.label ?? "").trim() || String(optionValue ?? "").trim();
+  }
+  const raw = String(optionValue ?? "").trim();
+  const separator = raw.indexOf("\u001f");
+  return separator >= 0 ? raw.slice(separator + 1).trim() : raw;
+}
+
+/** Map stored Lookup Name → MultiSelect option value (first matching label). */
+export function lookupOptionSelectValue(
+  storedName: string,
+  options: readonly ISelectOption[],
+): string {
+  const name = String(storedName ?? "").trim();
+  if (!name) {
+    return "";
+  }
+  const matched = options.find(
+    (option) =>
+      String(option.label ?? "").trim() === name ||
+      String(option.value ?? "") === name,
+  );
+  return matched ? String(matched.value) : name;
 }
 
 /** Title options whose expanded LookupType/Title matches `fieldName`. */
@@ -115,7 +155,7 @@ export function getLookupNameOptionsForType(
       return;
     }
 
-    pushUniqueTitleOption(options, getLookupItemTitle(lookup));
+    pushLookupOption(options, lookup);
   });
 
   return options.sort((left, right) => left.label.localeCompare(right.label));
@@ -142,7 +182,7 @@ export function buildLookupOptionsByType(
       });
     }
 
-    pushUniqueTitleOption(optionList, getLookupItemTitle(lookup));
+    pushLookupOption(optionList, lookup);
   });
 
   Object.keys(grouped).forEach((typeKey) => {

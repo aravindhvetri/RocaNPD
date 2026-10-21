@@ -1,5 +1,6 @@
 import * as React from "react";
 import { flushSync } from "react-dom";
+import { Config } from "../../../../../../External/CommonServices/Config";
 import { Button, Dialog, LoaderOverlay } from "../../controls";
 import { awaitUiPaint } from "../awaitUiPaint";
 import type { IImportValidationDialogProps } from "./IImportValidationDialogProps";
@@ -7,7 +8,7 @@ import styles from "./ImportValidationDialog.module.scss";
 
 const ImportValidationDialog: React.FC<IImportValidationDialogProps> = ({
   visible,
-  title = "Import",
+  title = Config.Import,
   sectionTitle,
   validationRows,
   canProceed = false,
@@ -48,7 +49,7 @@ const ImportValidationDialog: React.FC<IImportValidationDialogProps> = ({
         footer={
           <div className={styles.footer}>
             <Button
-              label="Cancel"
+              label={Config.Cancel}
               variant="secondary"
               size="sm"
               disabled={busy}

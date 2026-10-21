@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../External/CommonServices/Config";
 import type { NpdWorkflowAction } from "../../../External/CommonServices/Interface";
 import styles from "./NpdApproverMail.module.scss";
 
@@ -63,7 +64,7 @@ const NpdApproverMailActionPanel: React.FC<
           disabled={submitting}
           onClick={onConfirm}
         >
-          {submitting ? "..." : "Yes"}
+          {submitting ? "..." : Config.Yes}
         </button>
         <button
           type="button"
@@ -71,7 +72,7 @@ const NpdApproverMailActionPanel: React.FC<
           disabled={submitting}
           onClick={onCancel}
         >
-          No
+          {Config.No}
         </button>
       </div>
     </div>

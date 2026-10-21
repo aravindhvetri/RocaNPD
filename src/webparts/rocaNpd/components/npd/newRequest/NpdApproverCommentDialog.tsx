@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button, Dialog, InputTextarea } from "../../common/controls";
 import type { NpdWorkflowAction } from "../../../../../External/CommonServices/Interface";
 import styles from "./NpdApproverCommentDialog.module.scss";
@@ -48,14 +49,14 @@ const NpdApproverCommentDialog: React.FC<INpdApproverCommentDialogProps> = ({
       footer={
         <div className={styles.footer}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             disabled={saving}
             onClick={onHide}
           />
           <Button
-            label={action ?? "Submit"}
+            label={action ?? Config.Submit}
             size="sm"
             loading={saving}
             disabled={!canSubmit}

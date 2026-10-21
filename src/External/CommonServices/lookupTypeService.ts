@@ -51,16 +51,21 @@ export async function fetchActiveLookupTypes(): Promise<ILookupType[]> {
   return rows.map(mapLookupType).filter(isActiveRecord);
 }
 
+/** Lowercase and remove all whitespace for duplicate matching. */
+function normalizeLookupTypeTitleKey(value: string): string {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+
 async function assertLookupTypeNotDuplicate(
   title: string,
   editingId?: number,
 ): Promise<void> {
   const existing = await fetchActiveLookupTypes();
-  const titleKey = title.trim().toLowerCase();
+  const titleKey = normalizeLookupTypeTitleKey(title);
   const isDuplicate = existing.some(
     (item) =>
       item.Id !== editingId &&
-      item.Title.trim().toLowerCase() === titleKey,
+      normalizeLookupTypeTitleKey(item.Title) === titleKey,
   );
   if (isDuplicate) {
     throw new Error(`Lookup Type Name already exists.`);
@@ -112,12 +117,12 @@ export async function bulkCreateLookupTypes(titles: string[]): Promise<void> {
   // Final SharePoint guard — do not trust Redux/list state from page load (multi-tab).
   const existing = await fetchActiveLookupTypes();
   const existingKeys = new Set(
-    existing.map((item) => item.Title.trim().toLowerCase()),
+    existing.map((item) => normalizeLookupTypeTitleKey(item.Title)),
   );
   const batchKeys = new Set<string>();
 
   for (const title of titles) {
-    const titleKey = title.trim().toLowerCase();
+    const titleKey = normalizeLookupTypeTitleKey(title);
     if (!titleKey) {
       continue;
     }
@@ -159,9 +164,9 @@ export async function parseLookupTypeImportFile(
   const columnIndex = findColumnIndex(headerRow, FieldLabels.LookupTypeName);
 
   const existingLower = new Set(
-    existingItems.map((item) => item.Title.trim().toLowerCase()),
+    existingItems.map((item) => normalizeLookupTypeTitleKey(item.Title)),
   );
-  const seenInFile = new Set<string>();
+  const seenInFile = new Map<string, { title: string; rowNumber: number }>();
   const toCreate: string[] = [];
   const duplicates: string[] = [];
   const errors: string[] = [];
@@ -190,13 +195,28 @@ export async function parseLookupTypeImportFile(
       continue;
     }
 
-    const lower = title.toLowerCase();
-    if (existingLower.has(lower) || seenInFile.has(lower)) {
-      duplicates.push(title);
+    // Same key as Add/Edit: ignore spaces and case ("Number 01" === "Number01").
+    const titleKey = normalizeLookupTypeTitleKey(title);
+    if (!titleKey) {
       continue;
     }
 
-    seenInFile.add(lower);
+    if (existingLower.has(titleKey)) {
+      duplicates.push(
+        `Row ${excelRowNumber}: "${title}" is a duplicate Lookup Type Name`,
+      );
+      continue;
+    }
+
+    const priorInFile = seenInFile.get(titleKey);
+    if (priorInFile) {
+      duplicates.push(
+        `Row ${excelRowNumber}: "${title}" is a duplicate of "${priorInFile.title}" (Row ${priorInFile.rowNumber})`,
+      );
+      continue;
+    }
+
+    seenInFile.set(titleKey, { title, rowNumber: excelRowNumber });
     toCreate.push(title);
   }
 

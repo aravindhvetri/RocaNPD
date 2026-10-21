@@ -37,13 +37,26 @@ export const fetchMaterialGroupConfigsThunk = createAsyncThunk<
       if (mgState && mgState.configsStatus === "loading") {
         return false;
       }
+      // Reuse configs already loaded for this session.
+      if (
+        mgState &&
+        mgState.configsStatus === "succeeded" &&
+        mgState.configs.length > 0
+      ) {
+        return false;
+      }
       return true;
     },
   },
 );
 
 export const saveMaterialGroupDraftThunk = createAsyncThunk<
-  { id: number; guid: string },
+  {
+    id: number;
+    guid: string;
+    requestsJson: string;
+    configLookupIds: number[];
+  },
   void,
   { rejectValue: string; state: RootState }
 >("materialGroup/saveDraft", async (_, { getState, rejectWithValue }) => {
@@ -55,6 +68,8 @@ export const saveMaterialGroupDraftThunk = createAsyncThunk<
       configs,
       currentId,
       currentGuid,
+      savedRequestsJson,
+      savedConfigLookupIds,
     } = getState().materialGroup;
     const appState = getState().app;
 
@@ -75,6 +90,9 @@ export const saveMaterialGroupDraftThunk = createAsyncThunk<
         actorEmail: appState.userEmail,
         actorName: appState.userDisplayName || appState.userLoginName,
         actorId: appState.userId,
+        configs,
+        previousRequestsJson: savedRequestsJson || undefined,
+        previousConfigLookupIds: savedConfigLookupIds,
       }),
     );
   } catch (error) {
@@ -97,6 +115,7 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
       currentGuid,
       currentRequestId,
       currentStatus,
+      savedRequestsJson,
     } = getState().materialGroup;
     const appState = getState().app;
 
@@ -129,7 +148,7 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
       }
     }
 
-    // Code uniqueness within Lookup Type is enforced in materialGroupService.submit.
+    // Duplicate Code vs Lookup is enforced on Consultant Complete only.
 
     const targetId = currentId ?? (currentGuid ? Number(currentGuid) : undefined);
     const comments =
@@ -152,6 +171,8 @@ export const submitMaterialGroupRequestThunk = createAsyncThunk<
         existingRequestId: currentRequestId || undefined,
         existingStatus: currentStatus || undefined,
         comments,
+        configs,
+        previousRequestsJson: savedRequestsJson || undefined,
       }),
     );
   } catch (error) {
@@ -163,13 +184,25 @@ export const fetchMaterialGroupRequestByIdThunk = createAsyncThunk<
   IMaterialGroupHydratePayload,
   string | number,
   { rejectValue: string; state: RootState }
->("materialGroup/fetchById", async (idOrGuid, { rejectWithValue }) => {
-  try {
-    return await materialGroupService.fetchMaterialGroupRequestById(idOrGuid);
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error));
-  }
-});
+>(
+  "materialGroup/fetchById",
+  async (idOrGuid, { dispatch, getState, rejectWithValue }) => {
+    try {
+      // Ensure configs are loaded once, then reuse — hydrate must not re-GET them.
+      let { configs, configsStatus } = getState().materialGroup;
+      if (configsStatus !== "succeeded" || !configs.length) {
+        await dispatch(fetchMaterialGroupConfigsThunk());
+        configs = getState().materialGroup.configs;
+      }
+      return await materialGroupService.fetchMaterialGroupRequestById(
+        idOrGuid,
+        { configs },
+      );
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 // Backward-compatible alias
 export const fetchMaterialGroupRequestByGuidThunk =

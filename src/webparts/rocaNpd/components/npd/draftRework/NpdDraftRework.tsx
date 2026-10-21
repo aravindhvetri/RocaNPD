@@ -36,9 +36,11 @@ import {
   uniqueBrandOptions,
 } from "../requestList/npdRequestListUtils";
 import { isBrowserOnline } from "../../../../../External/CommonServices/networkConnectivity";
-import { fetchNpdRequestStatusChoices } from "../../../../../External/CommonServices/npdRequestStatusChoices";
+import { getNpdRequestStatusChoiceCatalog } from "../../../../../External/CommonServices/npdRequestStatusChoices";
 import { parseViewAsRole } from "../../../../../External/CommonServices/permissionService";
 import styles from "./NpdDraftRework.module.scss";
+
+const STATUS_CHOICE_CATALOG = getNpdRequestStatusChoiceCatalog();
 
 const NpdDraftRework: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -57,7 +59,6 @@ const NpdDraftRework: React.FC = () => {
   const [searchValue, setSearchValue] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState(ALL_STATUS_VALUE);
   const [brandFilter, setBrandFilter] = React.useState(ALL_BRAND_VALUE);
-  const [statusChoices, setStatusChoices] = React.useState<string[]>([]);
   const isPendingList = location.pathname === Config.Routes.NpdPending;
   const viewAs =
     parseViewAsRole(searchParams.get(Config.NpdFormQuery.ViewAs)) || undefined;
@@ -81,10 +82,6 @@ const NpdDraftRework: React.FC = () => {
       window.removeEventListener("online", syncOnline);
       window.clearInterval(pollId);
     };
-  }, []);
-
-  React.useEffect(() => {
-    void fetchNpdRequestStatusChoices().then(setStatusChoices);
   }, []);
 
   React.useEffect(() => {
@@ -167,9 +164,9 @@ const NpdDraftRework: React.FC = () => {
     () =>
       buildStatusFilterOptionsFromData(
         sourceRows.map((item) => item.Status),
-        statusChoices,
+        STATUS_CHOICE_CATALOG,
       ),
-    [sourceRows, statusChoices],
+    [sourceRows],
   );
 
   React.useEffect(() => {

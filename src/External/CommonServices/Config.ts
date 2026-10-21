@@ -263,6 +263,8 @@ export const FieldNames = {
     Plant: "Plant",
     Status: "Status",
     WorkFlowJSON: "WorkFlowJSON",
+    /** Active Item Details line count — drives Products column on list pages. */
+    ItemDetailsCount: "ItemDetailsCount",
     PlantCode: "PlantCode",
     StorageLocation: "StorageLocation",
     ProfitCenter: "ProfitCenter",
@@ -380,6 +382,33 @@ export const FieldNames = {
     ActionVia: "ActionVia",
     Action: "Action",
   },
+} as const;
+
+/**
+ * Shared action / button labels. Prefer `Config.Add`, `Config.Edit`, etc.
+ * (or `Config.ActionLabels.*`) over hardcoded UI strings.
+ */
+export const ActionLabels = {
+  Add: "Add",
+  AddNew: "Add New",
+  Edit: "Edit",
+  Update: "Update",
+  Cancel: "Cancel",
+  Delete: "Delete",
+  ConfirmDelete: "Confirm Delete",
+  View: "View",
+  Close: "Close",
+  Yes: "Yes",
+  No: "No",
+  Submit: "Submit",
+  Save: "Save",
+  SaveAsDraft: "Save as Draft",
+  Import: "Import",
+  Export: "Export",
+  Rework: "Rework",
+  Reject: "Reject",
+  Approve: "Approve",
+  Complete: "Complete",
 } as const;
 
 export const FieldLabels = {
@@ -524,6 +553,28 @@ export const Config = {
   NpdItemDetailsPageSize,
   FieldNames,
   FieldLabels,
+  ActionLabels,
+  /** Common action labels — use instead of hardcoded "Add" / "Edit" / etc. */
+  Add: ActionLabels.Add,
+  AddNew: ActionLabels.AddNew,
+  Edit: ActionLabels.Edit,
+  Update: ActionLabels.Update,
+  Cancel: ActionLabels.Cancel,
+  Delete: ActionLabels.Delete,
+  ConfirmDelete: ActionLabels.ConfirmDelete,
+  View: ActionLabels.View,
+  Close: ActionLabels.Close,
+  Yes: ActionLabels.Yes,
+  No: ActionLabels.No,
+  Submit: ActionLabels.Submit,
+  Save: ActionLabels.Save,
+  SaveAsDraft: ActionLabels.SaveAsDraft,
+  Import: ActionLabels.Import,
+  Export: ActionLabels.Export,
+  Rework: ActionLabels.Rework,
+  Reject: ActionLabels.Reject,
+  Approve: ActionLabels.Approve,
+  Complete: ActionLabels.Complete,
   DeleteDependencies,
   ImportExport,
   TextInputRules,
@@ -579,7 +630,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.9",
+  AppVersion: "V2.2",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

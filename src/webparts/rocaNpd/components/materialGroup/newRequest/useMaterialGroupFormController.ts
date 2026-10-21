@@ -114,7 +114,9 @@ export function useMaterialGroupFormController(
     React.useState(false);
   const deniedInitiatorAccessIdRef = React.useRef("");
 
-  // Compute active mode
+  // Compute active mode from live status — not the email URL alone.
+  // Stale Initiator Rework emails after resubmit, and stale Consultant emails
+  // after Rework/Reject/Complete, must resolve to view (Cancel only).
   const mode: MaterialGroupFormMode = React.useMemo(() => {
     if (initiatorAccessDenied) {
       return "view";
@@ -123,16 +125,27 @@ export function useMaterialGroupFormController(
       return "view";
     }
     const status = (mgState.currentStatus || "").trim().toLowerCase();
+    const isPending =
+      status === Config.MaterialGroupStatus.Pending.toLowerCase();
     // When request is Completed, any approver who opens it sees it in view mode
     if (status === Config.MaterialGroupStatus.Completed.toLowerCase()) {
       return "view";
     }
     if (urlId) {
-      if (
-        isConsultant &&
-        status === Config.MaterialGroupStatus.Pending.toLowerCase()
-      ) {
+      // Consultant Rework / Reject / Complete only while still Pending.
+      if (isConsultant && isPending) {
         return "consultant-edit";
+      }
+      // Stale Consultant email (status already Rework / Rejected / etc.):
+      // never honor mode=consultant-edit from the URL.
+      if (urlMode === "consultant-edit") {
+        return "view";
+      }
+      // Initiator edit/draft actions only while Draft or Rework. After
+      // resubmit (Pending) or Rejected, keep Cancel only — even if the
+      // old Rework email still has mode=edit.
+      if (status && !isDraftOrRework) {
+        return "view";
       }
       return urlMode || "edit";
     }
@@ -142,6 +155,7 @@ export function useMaterialGroupFormController(
     urlMode,
     urlId,
     isConsultant,
+    isDraftOrRework,
     mgState.currentStatus,
   ]);
 
@@ -184,10 +198,13 @@ export function useMaterialGroupFormController(
     setApproverRemarks("");
   }, [formResetAt, urlId]);
 
-  // Load configs on mount or navigation
+  // New form: load configs once. Edit/View hydrate loads configs itself when needed.
   React.useEffect(() => {
+    if (urlId) {
+      return;
+    }
     void dispatch(fetchMaterialGroupConfigsThunk());
-  }, [dispatch, location.key, location.pathname]);
+  }, [dispatch, location.key, location.pathname, urlId]);
 
   React.useEffect(() => {
     if (urlId) {
@@ -426,8 +443,6 @@ export function useMaterialGroupFormController(
           return false;
         }
 
-        const seenCodesInMaster = new Set<string>();
-
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (!row.description.trim()) {
@@ -439,7 +454,9 @@ export function useMaterialGroupFormController(
             return false;
           }
 
-          // Initiator: Code optional. Consultant: Code mandatory on every action.
+          // Initiator: Code optional. Consultant Complete: Code mandatory.
+          // Rework / Reject: comments only (no Code / Description checks).
+          // Duplicate Code validation runs only on Consultant Complete.
           if (mode === "consultant-edit" && !row.code.trim()) {
             showWarningToast(
               toastRef,
@@ -448,41 +465,12 @@ export function useMaterialGroupFormController(
             );
             return false;
           }
-
-          const codeKey = row.code.trim().toLowerCase();
-          if (codeKey) {
-            if (seenCodesInMaster.has(codeKey)) {
-              showWarningToast(
-                toastRef,
-                `Code "${row.code.trim()}" is duplicated under ${masterTitle}.`,
-                "Validation",
-              );
-              return false;
-            }
-            seenCodesInMaster.add(codeKey);
-          }
         }
-      }
-
-      // Also block the same Code under masters that share one Lookup Type.
-      const seenByLookupType = new Set<string>();
-      for (const entry of collectCodeUniquenessEntries()) {
-        const key = `${entry.lookupTypeId}::${entry.code.toLowerCase()}`;
-        if (seenByLookupType.has(key)) {
-          showWarningToast(
-            toastRef,
-            `Code "${entry.code}" is duplicated under ${entry.lookupTypeTitle}.`,
-            "Validation",
-          );
-          return false;
-        }
-        seenByLookupType.add(key);
       }
 
       return true;
     },
     [
-      collectCodeUniquenessEntries,
       mgState.configs,
       mgState.entriesByConfigId,
       mgState.selectedConfigIds,
@@ -582,40 +570,36 @@ export function useMaterialGroupFormController(
       return;
     }
 
-    void (async () => {
-      try {
-        if (!(await assertCodesUniqueAgainstLookup())) {
-          return;
-        }
-
-        try {
-          const result = await dispatch(
-            submitMaterialGroupRequestThunk({ comments: approverRemarks }),
-          ).unwrap();
-          // Flash via MainComponent Toast — form Toast unmounts on navigate.
-          dispatch(
-            setFlashMessage({
-              severity: "success",
-              detail: `Request ${result.requestId} submitted to Consultant successfully.`,
-            }),
-          );
-          dispatch(resetMaterialGroupForm());
-          navigate(
-            buildNavHref(
-              Config.Routes.MgAll,
-              searchParams.get(Config.NpdFormQuery.ViewAs),
-            ),
-          );
-        } catch {
-          // Error toast is shown once via the mgState.error effect.
-        }
-      } finally {
+    // Duplicate Code vs NPD_Lookup is validated only on Consultant Complete —
+    // not on Initiator Submit to Consultant.
+    void dispatch(
+      submitMaterialGroupRequestThunk({ comments: approverRemarks }),
+    )
+      .unwrap()
+      .then((result) => {
+        // Flash via MainComponent Toast — form Toast unmounts on navigate.
+        dispatch(
+          setFlashMessage({
+            severity: "success",
+            detail: `Request ${result.requestId} submitted to Consultant successfully.`,
+          }),
+        );
+        dispatch(resetMaterialGroupForm());
+        navigate(
+          buildNavHref(
+            Config.Routes.MgAll,
+            searchParams.get(Config.NpdFormQuery.ViewAs),
+          ),
+        );
+      })
+      .catch(() => {
+        // Error toast is shown once via the mgState.error effect.
+      })
+      .finally(() => {
         endActionBusy();
-      }
-    })();
+      });
   }, [
     approverRemarks,
-    assertCodesUniqueAgainstLookup,
     dispatch,
     endActionBusy,
     initiatorAccessDenied,
@@ -634,11 +618,6 @@ export function useMaterialGroupFormController(
 
       const remarks = approverRemarks.trim();
 
-      // // Complete / Rework / Reject: Code and Description required; Code unique per Lookup Type.
-      // if (!validateEntries(true)) {
-      //   return;
-      // }
-
       try {
         assertBrowserOnline();
       } catch (error: unknown) {
@@ -646,6 +625,8 @@ export function useMaterialGroupFormController(
         return;
       }
 
+      // Rework / Reject: comments only (no Code / Description / duplicate checks).
+      // Complete: Code / Description enforced in the service (+ Lookup uniqueness below).
       if (action === "Completed" && !remarks) {
         showActionValidationToast(
           toastRef,
