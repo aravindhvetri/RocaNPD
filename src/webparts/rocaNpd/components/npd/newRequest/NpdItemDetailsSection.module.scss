@@ -97,6 +97,8 @@
     border: none !important;
     font-family: "Poppins", sans-serif;
     overflow: hidden;
+    // Keep column width fixed when selected MultiSelect / text values are long.
+    max-width: 0;
   }
 
   :global(.p-datatable-tbody > tr) {
@@ -174,6 +176,13 @@
   text-align: center;
 }
 
+.cellControlHost {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .tableCellControl {
   margin-bottom: 0 !important;
   width: 100%;
@@ -199,8 +208,10 @@
   :global(.p-multiselect),
   :global(.p-inputnumber),
   :global(.p-inputnumber-input) {
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
     min-height: 1.75rem;
     height: 1.75rem;
     font-size: calc(0.75rem + 1px);
@@ -209,7 +220,7 @@
   }
 
   :global(.p-multiselect) {
-    display: inline-flex;
+    display: flex !important;
     align-items: center;
     overflow: hidden;
   }
@@ -227,19 +238,23 @@
 
   :global(.p-inputtext) {
     padding: 0.25rem 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :global(.p-multiselect-label) {
-    display: block;
-    width: 100%;
-    max-width: 100%;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     padding: 0.25rem 0.5rem;
     font-size: calc(0.75rem + 1px);
     line-height: 1.25rem;
     font-family: "Poppins", sans-serif;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   :global(.p-multiselect-trigger) {
@@ -437,6 +452,7 @@
 
 .headerAddButton,
 .headerImportButton,
+.headerExportButton,
 .headerDeleteButton {
   height: 1.4375rem !important;
   min-height: 1.75rem !important;

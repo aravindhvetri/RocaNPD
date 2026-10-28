@@ -13,6 +13,7 @@ import {
 } from "./npdRequestGeneralInfoService";
 import {
   getFirstPendingApproverRole,
+  isVerticalHeadWorkflowRole,
   resolveActorWorkflowRole,
   userCanActOnPendingWorkflow,
 } from "./npdWorkflowJsonService";
@@ -172,11 +173,7 @@ export async function fetchNpdPendingItems(
       }
 
       if (role === Config.Roles.VerticalHead) {
-        return (
-          canAct &&
-          pendingRole.trim().toLowerCase() ===
-            Config.Roles.VerticalHead.toLowerCase()
-        );
+        return canAct && isVerticalHeadWorkflowRole(pendingRole);
       }
 
       if (role === Config.Roles.MisCoordinator) {

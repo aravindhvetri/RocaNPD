@@ -173,6 +173,10 @@ function approverRowMatchesUser(
 
 function matchKnownRole(roleTitle: string): UserRole | null {
   const normalized = roleTitle.trim().toLowerCase();
+  // Legacy ApproversMaster Role title → current VH-Marketing Manager.
+  if (normalized === "vertical head") {
+    return Config.Roles.VerticalHead;
+  }
   return (
     KNOWN_ROLES.find((role) => role.toLowerCase() === normalized) ?? null
   );

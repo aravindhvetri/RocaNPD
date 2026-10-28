@@ -63,7 +63,7 @@ const MaterialGroupRequestForm: React.FC = () => {
     }
 
     // When status is Completed (e.g. MIS Post to SAP / Consultant completed) or mode is view:
-    // any approver (MIS Coordinator, Vertical Head, Consultant) sees "View Material Group"
+    // any approver (MIS Coordinator, VH-Marketing Manager, Consultant) sees "View Material Group"
     if (isCompleted || mode === "view") {
       return "View Material Group";
     }

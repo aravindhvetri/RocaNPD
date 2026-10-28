@@ -1,4 +1,9 @@
-import { Config, NpdItemDetailsBackup, RequestStatus } from "./Config";
+import {
+  Config,
+  normalizeNpdMaterialTypeLabel,
+  NpdItemDetailsBackup,
+  RequestStatus,
+} from "./Config";
 import type {
   INpdDraftSavePayload,
   INpdItemDetailRecord,
@@ -246,7 +251,9 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     Id: Number(item.Id),
     Title: String(item[FIELDS.Title] ?? ""),
     Brand: String(item[FIELDS.Brand] ?? ""),
-    MaterialType: String(item[FIELDS.MaterialType] ?? ""),
+    MaterialType: normalizeNpdMaterialTypeLabel(
+      String(item[FIELDS.MaterialType] ?? ""),
+    ),
     Plant: String(item[FIELDS.Plant] ?? ""),
     Status: String(item[FIELDS.Status] ?? ""),
     IsDeleted: isDeletedYesFlag(item[SOFT_DELETE_FIELD]),
@@ -684,7 +691,9 @@ export async function submitNpdRequest(
       Boolean((step.UserEmail || "").trim()),
   );
   if (!hasVerticalHead) {
-    throw new Error("Vertical Head is not configured for this brand.");
+    throw new Error(
+      `${Config.Roles.VerticalHead} is not configured for this brand.`,
+    );
   }
 
   const isResubmit = isNpdRequestIdTitle(payload.existingTitle || "");
@@ -1049,7 +1058,7 @@ export async function applyNpdWorkflowAction(params: {
   actorUserId: number;
   access: IResolvedUserAccess;
   items?: INpdItemDetailRecord[];
-  /** MIS Coordinator Other Details — persisted on Approve / Rework / Reject. */
+  /** MIS Coordinator Other Details — persisted only on Post to SAP (Approve). */
   otherDetails?: INpdOtherDetails;
   /** Current NPD web absolute URL for ApproverMail email links. */
   siteUrl?: string;
@@ -1069,6 +1078,12 @@ export async function applyNpdWorkflowAction(params: {
    * skips the blocking NPD_Request re-read before the status update.
    */
   existingRequest?: INpdRequestGeneralInfo;
+  /**
+   * Intended active Item Details count after this action (from the form grid).
+   * VH Approve folds this into the Status/WorkFlowJSON update so a separate
+   * ItemDetailsCount PATCH + recount fetch are not needed.
+   */
+  itemDetailsCount?: number;
   /**
    * MIS Post to SAP progress: report after each successful SAP API call
    * (including 0/total at loop start); finish when the SAP batch ends.
@@ -1119,15 +1134,19 @@ export async function applyNpdWorkflowAction(params: {
   const isMisPostToSap =
     params.action === "Approve" && isMisCoordinatorWorkflowRole(actorRole);
   const isVerticalHeadActor = isVerticalHeadWorkflowRole(actorRole);
+  const isVerticalHeadApprove =
+    params.action === "Approve" && isVerticalHeadActor;
   const isMisReject =
     params.action === "Reject" && isMisCoordinatorWorkflowRole(actorRole);
   const isMisRework =
     params.action === "Rework" && isMisCoordinatorWorkflowRole(actorRole);
 
-  // VH, and MIS Reject / Rework: status/workflow only — never touch Item Details.
-  // MIS Item Details edits are persisted only on Post to SAP.
+  // MIS Reject / Rework and VH Reject / Rework: status/workflow only — never
+  // touch Item Details. VH Approve and MIS Post to SAP persist Item Details.
   const itemsToPersist =
-    isVerticalHeadActor || isMisReject || isMisRework ? undefined : params.items;
+    isMisReject || isMisRework || (isVerticalHeadActor && !isVerticalHeadApprove)
+      ? undefined
+      : params.items;
   const itemSavePartial = Boolean(params.itemSavePartial) || isMisRework;
 
   const actionStatus =
@@ -1171,9 +1190,26 @@ export async function applyNpdWorkflowAction(params: {
     }
   }
 
-  // Final MIS Post to SAP: save items, send each unposted line to SAP,
-  // then add only the successful lines to Material Master. Approve only if every line succeeds.
+  // VH Approve: persist Item Details in one batch before status/workflow write.
+  // Rework / Reject never reach here with items (itemsToPersist cleared above).
+  // skipItemDetailsCountSync — count is written with Status below (one PATCH).
   let itemsAlreadySaved = false;
+  if (
+    isVerticalHeadApprove &&
+    ((params.items && params.items.length > 0) ||
+      (params.deletedItemIds && params.deletedItemIds.length > 0))
+  ) {
+    await saveNpdItemDetailsBatch(params.requestId, params.items || [], {
+      partial: Boolean(params.itemSavePartial),
+      deletedSharePointIds: params.deletedItemIds,
+      skipBackup: Boolean(params.itemSavePartial),
+      skipItemDetailsCountSync: true,
+    });
+    itemsAlreadySaved = true;
+  }
+
+  // Final MIS Post to SAP: save items, post each SAP=false line, set SAP=true
+  // per success, then one Material Master write when every line is SAP=true.
   if (isMisPostToSap && willBeFinalApproval) {
     if (!params.items?.length) {
       throw new Error("Item Details are required before posting to SAP.");
@@ -1241,7 +1277,23 @@ export async function applyNpdWorkflowAction(params: {
     [FIELDS.WorkFlowJSON]: stringifyWorkflowJson(updatedSteps),
   };
 
-  if (params.otherDetails) {
+  // VH Approve with Item Details changes: write ItemDetailsCount on the same
+  // request PATCH (avoids recount fetch + second items(id) update).
+  if (
+    isVerticalHeadApprove &&
+    itemsAlreadySaved &&
+    typeof params.itemDetailsCount === "number" &&
+    Number.isFinite(params.itemDetailsCount)
+  ) {
+    updatePayload[FIELDS.ItemDetailsCount] = Math.max(
+      0,
+      Math.floor(params.itemDetailsCount),
+    );
+  }
+
+  // Other Details columns on NPD_Request are written only with Post to SAP.
+  // MIS Rework / Reject (and VH) must not update Plant Code, Profit Center, etc.
+  if (isMisPostToSap && params.otherDetails) {
     Object.assign(
       updatePayload,
       buildOtherDetailsUpdatePayload(params.otherDetails),
@@ -1256,7 +1308,7 @@ export async function applyNpdWorkflowAction(params: {
     });
   } catch (updateError) {
     // Status / workflow must still persist even if Other Details columns fail.
-    if (params.otherDetails) {
+    if (isMisPostToSap && params.otherDetails) {
       await SPServices.SPUpdateItem({
         Listname: LIST_NAME(),
         ID: params.requestId,
@@ -1339,9 +1391,17 @@ export async function applyNpdWorkflowAction(params: {
     }
 
     let requestForNotify = saved;
-    // VH / MIS Reject / Rework return before Initiator email is known — load
-    // once in the background so Initiator notification still sends.
+    const nextPendingRole = getFirstPendingApproverRole(
+      requestForNotify.WorkflowSteps,
+    );
+    const isFinalApproval = params.action === "Approve" && !nextPendingRole;
+
+    // Owner email is only needed for Initiator notifications (Reject / Rework /
+    // final Approve). VH Approve → next MIS must not re-read NPD_Request.
+    const needsOwnerEmailForNotify =
+      params.action !== "Approve" || isFinalApproval;
     if (
+      needsOwnerEmailForNotify &&
       (isVerticalHeadActor || isMisReject || isMisRework) &&
       !getNpdRequestOwnerEmail(requestForNotify).trim()
     ) {
@@ -1351,11 +1411,6 @@ export async function applyNpdWorkflowAction(params: {
         // Notification best-effort only.
       }
     }
-
-    const nextPendingRole = getFirstPendingApproverRole(
-      requestForNotify.WorkflowSteps,
-    );
-    const isFinalApproval = params.action === "Approve" && !nextPendingRole;
 
     let recipients: string[];
     let recipientRole: string;

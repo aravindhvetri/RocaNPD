@@ -19,13 +19,13 @@ export interface IPostNpdItemsToSapParams {
   otherDetails: INpdOtherDetails;
   items: INpdItemDetailRecord[];
   siteUrl?: string;
-  /** Fired at 0/total and after each successful SAP API + SAP flag write. */
+  /** Fired at 0/total and after each successful SAP API + SAP flag write (remaining SAP=false count). */
   onProgress?: (posted: number, total: number) => void;
 }
 
 /**
- * Sends each SAP=false Item Details line to createZMatMast.
- * Material Master insert and the SAP flag run only after that line's response is success.
+ * Sends each SAP=false Item Details line to createZMatMast and sets SAP=true
+ * per success. NPD_MaterialMaster is written once after every line is SAP=true.
  */
 export async function postNpdItemsToSap(
   params: IPostNpdItemsToSapParams,
@@ -51,12 +51,12 @@ export async function postNpdItemsToSap(
       postRow: (row) => postSapMaterialMasterRow(apiUrl, row),
       assertSuccess: assertSapMaterialMasterSuccess,
       markPosted: markNpdItemDetailPostedToSap,
-      insertMaster: (item) =>
+      insertMaster: (items) =>
         insertMaterialMasterFromNpdItems({
           requestId: params.requestId,
           brand: params.brand,
           materialType: params.materialType,
-          items: [item],
+          items,
         }),
       onProgress: params.onProgress,
     },

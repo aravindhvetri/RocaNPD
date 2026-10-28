@@ -250,7 +250,6 @@ export interface INpdItemDetailRecord {
   hsnCode: string;
   weightKg: number | null;
   uom: string[];
-  minQtyBoxQty: string;
   /** True when the line item was added by the MIS Coordinator, highlighted in Item Details table. */
   isMisAdded?: boolean;
   /** NPD_ItemDetails.SAP — true after SAP accepted this line. */
@@ -307,7 +306,7 @@ export interface IRoleBrandAssignment {
 
 /**
  * Session access context. A user can hold multiple roles at once
- * (e.g. Admin + Initiator + Vertical Head). Permissions are a union.
+ * (e.g. Admin + Initiator + VH-Marketing Manager). Permissions are a union.
  */
 export interface IResolvedUserAccess {
   assignedRoles: string[];
@@ -325,7 +324,7 @@ export interface IRequestViewScope {
   /**
    * When true, the row is visible only if the logged-in user is the request
    * Initiator (Initiator person, else Author). Used for Initiator lists.
-   * Admin, MIS Coordinator, and Vertical Head keep this false.
+   * Admin, MIS Coordinator, and VH-Marketing Manager keep this false.
    */
   ownerOnly: boolean;
   /**
@@ -413,7 +412,6 @@ export interface IMaterialMasterRow extends Record<string, unknown> {
   Weight: string;
   UOMCode: string;
   UOM: string;
-  MinQty: string;
   NpdRequestId: number;
   Initiator: string;
   InitiatorEmail: string;

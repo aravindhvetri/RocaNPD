@@ -57,7 +57,6 @@ const SELECT_FIELDS = [
   FIELDS.HSNCode,
   FIELDS.Weight,
   FIELDS.UOM,
-  FIELDS.MinQty,
   FIELDS.SAP,
   FIELDS.IsDeleted,
   FIELDS.RequestGeneralInfoId,
@@ -197,7 +196,6 @@ function mapItem(item: Record<string, unknown>): INpdItemDetailRecord {
           ? weightNumber
           : null,
     uom: splitMultiValue(item[FIELDS.UOM]),
-    minQtyBoxQty: readText(item, FIELDS.MinQty),
     isMisAdded: readText(item, FIELDS.Title) === "MIS_ADDED",
     sapPosted: readSapFlag(item[FIELDS.SAP]),
   };
@@ -238,7 +236,6 @@ function toSharePointPayload(
     [FIELDS.ClassNumberPcsName]: joinMultiValue(record.classNumberPcsName),
     [FIELDS.HSNCode]: record.hsnCode.trim(),
     [FIELDS.UOM]: joinMultiValue(record.uom),
-    [FIELDS.MinQty]: record.minQtyBoxQty.trim(),
     [FIELDS.RequestGeneralInfoId]: requestId,
   };
 

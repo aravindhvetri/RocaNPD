@@ -65,7 +65,6 @@ const MM_FIELDS = {
   Weight: "Weight",
   UOMCode: "UOMCode",
   UOM: "UOM",
-  MinQty: "MinQty",
   NPDRequest: "NPDRequest",
   IsDeleted: "IsDeleted",
 } as const;
@@ -144,10 +143,14 @@ export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
   },
   {
     field: "MaterialGroupCode",
-    header: "Material Group Code",
-    minWidth: "8rem",
+    header: "Material / Business Group Code",
+    minWidth: "11.5rem",
   },
-  { field: "MaterialGroup", header: "Material Group", minWidth: "9rem" },
+  {
+    field: "MaterialGroup",
+    header: "Material / Business Group",
+    minWidth: "9rem",
+  },
   {
     field: "ExtMaterialGroupCode",
     header: "Ext. Material Group Code",
@@ -180,7 +183,6 @@ export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
   { field: "Weight", header: "Weight", minWidth: "6rem" },
   { field: "UOMCode", header: "UOM Code", minWidth: "6rem" },
   { field: "UOM", header: "UOM", minWidth: "6rem" },
-  { field: "MinQty", header: "Min Qty", minWidth: "6rem" },
 ];
 
 export const MATERIAL_MASTER_META_COLUMNS: IMaterialMasterColumnDef[] = [
@@ -462,7 +464,6 @@ function mapCatalogRow(
     Weight: readField(item, schema, "Weight"),
     UOMCode: readField(item, schema, "UOMCode"),
     UOM: readField(item, schema, "UOM"),
-    MinQty: readField(item, schema, "MinQty"),
     NpdRequestId: getLookupId(npdRequest, npdRequestIdField),
     Initiator: "",
     InitiatorEmail: "",
@@ -1191,7 +1192,6 @@ function buildMaterialMasterInsertPayload(
     SapItemDetailsLookupFieldHints.uom,
     item.uom,
   );
-  field("MinQty", item.minQtyBoxQty.trim());
   field("ItemType", MaterialMasterItemTypes.New);
 
   if (schema.isDeletedInternal) {

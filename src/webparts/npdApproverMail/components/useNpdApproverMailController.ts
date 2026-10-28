@@ -18,6 +18,7 @@ import {
 } from "../../../External/CommonServices/networkConnectivity";
 import {
   getFirstPendingApproverRole,
+  isVerticalHeadWorkflowRole,
   resolveActorWorkflowRole,
   userCanActOnPendingWorkflow,
 } from "../../../External/CommonServices/npdWorkflowJsonService";
@@ -64,11 +65,7 @@ function defaultComments(action: NpdWorkflowAction): string {
 function getVerticalHeadStep(
   steps: INpdWorkflowStepJson[],
 ): INpdWorkflowStepJson | undefined {
-  return steps.find(
-    (step) =>
-      step.Role.trim().toLowerCase() ===
-      Config.Roles.VerticalHead.toLowerCase(),
-  );
+  return steps.find((step) => isVerticalHeadWorkflowRole(step.Role));
 }
 
 function isTerminalRequestStatus(status: string): boolean {
@@ -204,9 +201,7 @@ export function isNpdEmailActionAlreadyCompleted(
     return true;
   }
 
-  return (
-    pendingRole.toLowerCase() !== Config.Roles.VerticalHead.toLowerCase()
-  );
+  return !isVerticalHeadWorkflowRole(pendingRole);
 }
 
 export function getNpdApproverMailPageTitle(

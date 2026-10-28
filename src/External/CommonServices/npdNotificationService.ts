@@ -1,4 +1,3 @@
-import { Config } from "./Config";
 import type { INpdRequestGeneralInfo } from "./Interface";
 import {
   buildNpdApprovalEmailHtml,
@@ -8,6 +7,7 @@ import {
 } from "./npdApprovalEmailTemplate";
 import { resolveNpdWebAbsoluteUrl } from "./npdAppUrl";
 import { getRocaLogoInlineAttachment } from "./npdEmailLogo";
+import { isVerticalHeadWorkflowRole } from "./npdWorkflowJsonService";
 import SPServices from "./SPServices";
 
 export interface INpdNotificationPayload {
@@ -76,5 +76,5 @@ export async function sendNpdApprovalNotification(
 }
 
 export function shouldIncludeNpdEmailActions(role: string): boolean {
-  return role.trim().toLowerCase() === Config.Roles.VerticalHead.toLowerCase();
+  return isVerticalHeadWorkflowRole(role);
 }

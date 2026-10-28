@@ -163,7 +163,6 @@ export function serializeNpdItemDetailsBackup(
         ? null
         : Number(item.weightKg),
     uom: [...(item.uom || [])],
-    minQtyBoxQty: String(item.minQtyBoxQty ?? ""),
     isMisAdded: Boolean(item.isMisAdded),
     sapPosted: Boolean(item.sapPosted),
   }));
@@ -217,7 +216,6 @@ function parseBackupJson(raw: string): INpdItemDetailRecord[] {
               ? weightNumber
               : null,
         uom: asStringArray(row.uom),
-        minQtyBoxQty: String(row.minQtyBoxQty ?? ""),
         isMisAdded: Boolean(row.isMisAdded),
         sapPosted: Boolean(row.sapPosted),
       };

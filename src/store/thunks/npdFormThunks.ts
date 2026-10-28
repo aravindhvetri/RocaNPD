@@ -203,9 +203,9 @@ export const fetchNpdPlantSourceOptions = createAsyncThunk<
       if (npdForm.plantSourceStatus === "loading") {
         return false;
       }
-      // Reuse an already-loaded PlantMaster list for the same Finished Products session.
+      // Reuse an already-loaded PlantMaster list for the same Own Manufacture Products session.
       if (
-        materialType === Config.NpdMaterialTypes.FinishedProducts &&
+        Config.isOwnManufactureProductsMaterialType(materialType) &&
         npdForm.plantSourceOptions.length > 0
       ) {
         return false;
@@ -249,7 +249,7 @@ export const fetchNpdLookupOptions = createAsyncThunk<
 
 /**
  * Loads Other Details for the open request.
- * Once values exist on NPD_Request (after MIS Rework / Reject / Post),
+ * Once values exist on NPD_Request (after MIS Post to SAP),
  * list fields are the source of truth — including intentionally blank
  * Material Extension. Brand / PlantMaster auto-fill only runs the first time.
  */
@@ -532,6 +532,8 @@ export const applyNpdWorkflowAction = createAsyncThunk<
     deletedItemIds?: number[];
     /** MIS Post to SAP: only these rows are checked against Material Master. */
     materialMasterCheckItems?: INpdItemDetailRecord[];
+    /** VH Approve: fold ItemDetailsCount into the Status PATCH. */
+    itemDetailsCount?: number;
   },
   { rejectValue: string; state: RootState }
 >("npdForm/workflowAction", async (input, { getState, dispatch, rejectWithValue }) => {
@@ -597,12 +599,17 @@ export const applyNpdWorkflowAction = createAsyncThunk<
           actorUserId: state.app.userId,
           access: selectResolvedAccess(state),
           items: input.items,
-          otherDetails: isMisActor ? state.npdForm.otherDetails : undefined,
+          // Other Details persist only on MIS Post to SAP (includeOtherDetails).
+          // Rework / Reject must not write Plant Code, Profit Center, etc.
+          otherDetails: input.includeOtherDetails
+            ? state.npdForm.otherDetails
+            : undefined,
           siteUrl: state.app.siteUrl || undefined,
           actionVia: input.actionVia || "System",
           itemSavePartial: input.itemSavePartial,
           deletedItemIds: input.deletedItemIds,
           materialMasterCheckItems: input.materialMasterCheckItems,
+          itemDetailsCount: input.itemDetailsCount,
           existingRequest,
           sapProgress:
             isMisActor && input.action === "Approve"

@@ -156,7 +156,7 @@ export async function fetchActiveBrandMasterOptions(
   }
 }
 
-export async function fetchFinishedProductPlantSourceOptions(
+export async function fetchOwnManufactureProductPlantSourceOptions(
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
   const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
@@ -206,8 +206,8 @@ export function getTradedProductPlantSourceOptions(): ISelectOption[] {
 export function getNpdMaterialTypeOptions(): ISelectOption[] {
   return [
     {
-      label: Config.NpdMaterialTypes.FinishedProducts,
-      value: Config.NpdMaterialTypes.FinishedProducts,
+      label: Config.NpdMaterialTypes.OwnManufactureProducts,
+      value: Config.NpdMaterialTypes.OwnManufactureProducts,
     },
     {
       label: Config.NpdMaterialTypes.TradedProducts,
@@ -220,8 +220,8 @@ export async function fetchPlantSourceOptionsForMaterialType(
   materialType: string,
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
-  if (materialType === Config.NpdMaterialTypes.FinishedProducts) {
-    return fetchFinishedProductPlantSourceOptions(contextSiteUrl);
+  if (Config.isOwnManufactureProductsMaterialType(materialType)) {
+    return fetchOwnManufactureProductPlantSourceOptions(contextSiteUrl);
   }
 
   if (materialType === Config.NpdMaterialTypes.TradedProducts) {

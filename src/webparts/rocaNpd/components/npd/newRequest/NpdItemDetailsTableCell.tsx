@@ -4,10 +4,7 @@ import {
   lookupOptionSelectValue,
   lookupOptionStoredValue,
 } from "../../../../../External/CommonServices/lookupOptionUtils";
-import {
-  sanitizeAlphanumericTextInput,
-  sanitizeDigitsOnlyTextInput,
-} from "../../../../../External/CommonServices/textInputSanitize";
+import { sanitizeAlphanumericTextInput } from "../../../../../External/CommonServices/textInputSanitize";
 import { InputNumber, InputText, MultiSelect } from "../../common/controls";
 import {
   hasLookupImportAttention,
@@ -41,13 +38,10 @@ function sanitizeTextFieldValue(
   value: string,
   textFilter: INpdItemDetailsFieldDef["textFilter"],
 ): string {
-  if (textFilter === "digits") {
-    return sanitizeDigitsOnlyTextInput(value);
-  }
   if (textFilter === "alphanumeric") {
     return sanitizeAlphanumericTextInput(value);
   }
-  // Default: allow special characters (Roca Global Code, Material Code,
+  // Default: allow special characters (CMA / Global code, Material Code,
   // Material Description, HSN Code, etc.).
   return value;
 }
@@ -75,34 +69,38 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
 
   if (controlType === "text") {
     return (
-      <InputText
-        id={id}
-        value={String(row[field] ?? "")}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        readOnly={readOnly}
-        disabled={readOnly}
-        className={attentionClassName}
-        onChange={(value) =>
-          handleChange(sanitizeTextFieldValue(value, textFilter))
-        }
-      />
+      <div className={styles.cellControlHost}>
+        <InputText
+          id={id}
+          value={String(row[field] ?? "")}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          readOnly={readOnly}
+          disabled={readOnly}
+          className={attentionClassName}
+          onChange={(value) =>
+            handleChange(sanitizeTextFieldValue(value, textFilter))
+          }
+        />
+      </div>
     );
   }
 
   if (controlType === "number") {
     return (
-      <InputNumber
-        id={id}
-        value={toNumberValue(row[field])}
-        placeholder={placeholder}
-        min={0}
-        maxFractionDigits={3}
-        readOnly={readOnly}
-        disabled={readOnly}
-        className={attentionClassName}
-        onChange={handleChange}
-      />
+      <div className={styles.cellControlHost}>
+        <InputNumber
+          id={id}
+          value={toNumberValue(row[field])}
+          placeholder={placeholder}
+          min={0}
+          maxFractionDigits={3}
+          readOnly={readOnly}
+          disabled={readOnly}
+          className={attentionClassName}
+          onChange={handleChange}
+        />
+      </div>
     );
   }
 
@@ -137,40 +135,39 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
     .filter(Boolean);
 
   return (
-    <>
-      <span title={readOnly ? multiValue[0] : ""} style={{ cursor: "pointer" }}>
-        <MultiSelect
-          id={id}
-          value={selectValues}
-          options={optionsWithSelected}
-          placeholder={placeholder}
-          filter={!readOnly}
-          display="comma"
-          selectAll={false}
-          selectionLimit={1}
-          readOnly={readOnly}
-          disabled={readOnly}
-          className={attentionClassName}
-          panelClassName={styles.itemDetailsMultiSelectPanel}
-          onChange={(value) =>
-            handleChange(
-              value
-                .map((entry) =>
-                  lookupOptionStoredValue(String(entry ?? ""), optionsWithSelected),
-                )
-                .map((entry) => entry.trim())
-                .filter((entry) => {
-                  const key = entry.toLowerCase();
-                  return (
-                    Boolean(entry) && key !== "null" && key !== "undefined"
-                  );
-                })
-                .slice(0, 1),
-            )
-          }
-        />
-      </span>
-    </>
+    <div className={styles.cellControlHost}>
+      <MultiSelect
+        id={id}
+        value={selectValues}
+        options={optionsWithSelected}
+        placeholder={placeholder}
+        filter={!readOnly}
+        display="comma"
+        selectAll={false}
+        selectionLimit={1}
+        readOnly={readOnly}
+        disabled={readOnly}
+        className={attentionClassName}
+        panelClassName={styles.itemDetailsMultiSelectPanel}
+        onChange={(value) =>
+          handleChange(
+            value
+              .map((entry) =>
+                lookupOptionStoredValue(
+                  String(entry ?? ""),
+                  optionsWithSelected,
+                ),
+              )
+              .map((entry) => entry.trim())
+              .filter((entry) => {
+                const key = entry.toLowerCase();
+                return Boolean(entry) && key !== "null" && key !== "undefined";
+              })
+              .slice(0, 1),
+          )
+        }
+      />
+    </div>
   );
 };
 

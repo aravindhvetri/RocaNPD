@@ -10,10 +10,15 @@ export interface ISapMaterialMasterPostDependencies {
   postRow: (row: ISapMaterialMasterRequestRow) => Promise<string>;
   assertSuccess: (responseText: string, materialCode: string) => void;
   markPosted: (sharePointId: number) => Promise<void>;
-  insertMaster: (item: INpdItemDetailRecord) => Promise<void>;
+  /**
+   * Called once after every persistable Item Details line has SAP=true.
+   * Must not run while any SAP=false targets remain.
+   */
+  insertMaster: (items: INpdItemDetailRecord[]) => Promise<void>;
   /**
    * Called when SAP posting starts (0/total) and after each successful
    * createZMatMast + SAP flag write. Failures do not increment current.
+   * `total` is the count of SAP=false lines for this attempt only.
    */
   onProgress?: (posted: number, total: number) => void;
 }
@@ -30,22 +35,20 @@ function errorText(error: unknown): string {
 }
 
 /**
- * Posts each Item Details line with SAP=false, then inserts that line into Material Master.
- * Lines already marked SAP=true are not sent again; their Material Master row is ensured.
- * When sapData.STATUS is false (or createZMatMast / markPosted / insertMaster fails for a
- * line), stop immediately and show that record's message — do not continue remaining lines.
- * Retry skips SAP=true lines. Network loss also fails immediately.
- * Reconnecting does not resume this batch — the caller must start a new action.
- * An in-flight line that still succeeds after a brief reconnect is not interrupted.
+ * Posts each Item Details line with SAP=false to createZMatMast.
+ * On success, sets that line's NPD_ItemDetails.SAP = true.
+ * Material Master is written once after every persistable line is SAP=true —
+ * never mid-batch when a later line fails.
+ * Retry skips SAP=true lines; progress total is remaining SAP=false count only.
+ * Network loss fails immediately. Reconnecting does not resume this batch.
  */
 export async function postItemDetailsToSap(
   items: INpdItemDetailRecord[],
   buildRow: (item: INpdItemDetailRecord) => ISapMaterialMasterRequestRow,
   deps: ISapMaterialMasterPostDependencies,
 ): Promise<void> {
-  const sapTargets = items.filter(
-    (item) => isPersistableItem(item) && !item.sapPosted,
-  );
+  const persistable = items.filter(isPersistableItem);
+  const sapTargets = persistable.filter((item) => !item.sapPosted);
   const total = sapTargets.length;
   let posted = 0;
   deps.onProgress?.(0, total);
@@ -95,27 +98,13 @@ export async function postItemDetailsToSap(
   }
 
   try {
-    for (const item of items.filter(isPersistableItem)) {
+    for (const item of sapTargets) {
       // Do not start the next line after offline, even if the network is back.
       if (shouldStop()) {
         throw new Error(NETWORK_OFFLINE_MESSAGE);
       }
 
       const label = item.materialCode.trim() || item.materialDescription.trim();
-
-      if (item.sapPosted) {
-        try {
-          await deps.insertMaster(item);
-        } catch (error) {
-          if (isNetworkError(error)) {
-            throw error instanceof Error
-              ? error
-              : new Error(NETWORK_OFFLINE_MESSAGE);
-          }
-          throw new Error(`${label}: ${errorText(error)}`);
-        }
-        continue;
-      }
 
       if (!item.sharePointId) {
         throw new Error(
@@ -135,12 +124,8 @@ export async function postItemDetailsToSap(
         if (shouldStop()) {
           throw new Error(NETWORK_OFFLINE_MESSAGE);
         }
-        await deps.insertMaster(item);
-        if (shouldStop()) {
-          throw new Error(NETWORK_OFFLINE_MESSAGE);
-        }
       } catch (error) {
-        // Stop immediately — do not process remaining records.
+        // Stop immediately — do not process remaining records or Material Master.
         if (isNetworkError(error) || shouldStop()) {
           throw error instanceof Error
             ? error
@@ -153,6 +138,14 @@ export async function postItemDetailsToSap(
             : `${label}: ${detail}`,
         );
       }
+    }
+
+    // All SAP=false lines succeeded (or none remained). One Material Master write.
+    if (shouldStop()) {
+      throw new Error(NETWORK_OFFLINE_MESSAGE);
+    }
+    if (persistable.length) {
+      await deps.insertMaster(persistable);
     }
   } finally {
     stopWatch();
