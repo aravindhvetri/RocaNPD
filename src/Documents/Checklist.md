@@ -417,9 +417,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 ### G.2 Initiator — New NPD Request Form
 
 - [x] **CHK-G09** Brand (MG1) dropdown populated from ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users matched by `EMail` (+ `UsersId` site-user map fallback); options seeded on app init so available on first NPD Form open
-- [x] **CHK-G10** Material Type dropdown populated from `Config.NpdMaterialTypes` (Finished Products, Traded Products)
+- [x] **CHK-G10** Material Type dropdown populated from `Config.NpdMaterialTypes` (Own Manufacture Products, Traded Products)
 - [x] **CHK-G11** Plant/Source disabled until Material Type selected (Finished or Traded Products)
-- [x] **CHK-G12a** Plant/Source (Finished Products) from ROCA `PlantMaster` — `PlantType`=Factory, active plants, options=`PlantCode`
+- [x] **CHK-G12a** Plant/Source (Own Manufacture Products) from ROCA `PlantMaster` — `PlantType`=Factory, active plants, options=`PlantCode`
 - [x] **CHK-G12b** Plant/Source (Traded Products) shows `Imported` and `Domestic` from `Config.NpdTradedPlantSources`
 - [x] **CHK-G12c** ROCA cross-site URL resolves from SPFx context site URL (works on localhost workbench + deployed tenants)
 - [ ] **CHK-G12** Plant/Source filtered by Brand Material Extension for selected Brand
@@ -498,7 +498,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G39** Storage Location auto-populated from ROCA `PlantMaster`
 - [x] **CHK-G40** MRP Group and MRP Controller auto-populated from ROCA `PlantMaster`
 - [x] **CHK-G41** Material Extension auto-populated from Brand Material Extension (editable)
-- [x] **CHK-G42** Finished Products → Plant Code = Plant/Source, Valuation Class = 6000
+- [x] **CHK-G42** Own Manufacture Products → Plant Code = Plant/Source, Valuation Class = 6000
 - [x] **CHK-G43** Traded + Domestic → Plant Code = CCWH, Valuation Class = 5000
 - [x] **CHK-G44** Traded + Imported → Plant Code = CCWH, Valuation Class = 5100
 - [x] **CHK-G45** Class Type always set to 001

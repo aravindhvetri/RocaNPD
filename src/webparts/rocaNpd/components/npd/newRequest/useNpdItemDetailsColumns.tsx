@@ -61,30 +61,45 @@ export function useNpdItemDetailsColumns({
     });
 
     const fieldColumns: IDataTableColumn<INpdItemDetailRow>[] =
-      visibleFields.map((fieldDef) => ({
-        field: fieldDef.field,
-        header: renderColumnHeader(fieldDef),
-        style: { minWidth: fieldDef.minWidth, width: fieldDef.minWidth },
-        headerStyle: { minWidth: fieldDef.minWidth, width: fieldDef.minWidth },
-        body: (row) => (
-          <NpdItemDetailsTableCell
-            id={`${row.id}-${fieldDef.field}`}
-            fieldDef={fieldDef}
-            row={row}
-            lookupOptions={optionsByField[fieldDef.field] ?? EMPTY_LOOKUP_OPTIONS}
-            onFieldChange={onFieldChange}
-            readOnly={readOnly}
-          />
-        ),
-      }));
+      visibleFields.map((fieldDef) => {
+        // Lock column width so long MultiSelect / text values ellipsis
+        // instead of expanding the cell.
+        const columnWidth = {
+          minWidth: fieldDef.minWidth,
+          width: fieldDef.minWidth,
+          maxWidth: fieldDef.minWidth,
+        };
+        return {
+          field: fieldDef.field,
+          header: renderColumnHeader(fieldDef),
+          style: columnWidth,
+          headerStyle: columnWidth,
+          body: (row) => (
+            <NpdItemDetailsTableCell
+              id={`${row.id}-${fieldDef.field}`}
+              fieldDef={fieldDef}
+              row={row}
+              lookupOptions={optionsByField[fieldDef.field] ?? EMPTY_LOOKUP_OPTIONS}
+              onFieldChange={onFieldChange}
+              readOnly={readOnly}
+            />
+          ),
+        };
+      });
 
     const serialColumn: IDataTableColumn<INpdItemDetailRow> = {
       field: "id",
       header: "S.No",
-      style: { width: "3.25rem", minWidth: "3.25rem", textAlign: CENTER_ALIGN },
+      style: {
+        width: "3.25rem",
+        minWidth: "3.25rem",
+        maxWidth: "3.25rem",
+        textAlign: CENTER_ALIGN,
+      },
       headerStyle: {
         width: "3.25rem",
         minWidth: "3.25rem",
+        maxWidth: "3.25rem",
         textAlign: CENTER_ALIGN,
       },
       body: (_row, rowIndex) => (
@@ -99,10 +114,16 @@ export function useNpdItemDetailsColumns({
       field: "actions",
       columnKey: `npd-item-actions-${allowDeleteRows ? "multi" : "single"}`,
       header: "Actions",
-      style: { width: "5rem", minWidth: "5rem", textAlign: CENTER_ALIGN },
+      style: {
+        width: "5rem",
+        minWidth: "5rem",
+        maxWidth: "5rem",
+        textAlign: CENTER_ALIGN,
+      },
       headerStyle: {
         width: "5rem",
         minWidth: "5rem",
+        maxWidth: "5rem",
         textAlign: CENTER_ALIGN,
       },
       body: (row) => <NpdItemDetailsActionCell rowId={row.id} />,

@@ -19,7 +19,6 @@ export type INpdItemDetailRow = {
   hsnCode: string;
   weightKg: number | null;
   uom: string[];
-  minQtyBoxQty: string;
   isMisAdded?: boolean;
   /**
    * Field keys left blank/invalid after Excel import (text, number, or Lookup).

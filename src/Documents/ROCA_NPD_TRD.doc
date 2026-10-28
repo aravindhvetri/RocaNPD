@@ -32,8 +32,8 @@
 <div class="cover">
   <h1 class="first">ROCA NPD</h1>
   <div class="sub">End-to-End Code Review Guide — Complete Implementation</div>
-  <p class="meta">Project start → Sprint 1 → Sprint 2 → Material Master / SAP Post to SAP / Audit Log &nbsp;|&nbsp; 05 October 2026</p>
-  <p class="meta">Covers every implemented <code>.tsx</code> / <code>.ts</code> module under <code>src/webparts</code>, <code>src/store</code>, and <code>src/External</code></p>
+  <p class="meta">Project start → Sprint 1 → Sprint 2 → Material Master / SAP Post to SAP / Audit Log → Import / Offline backup / Stale-email gating &nbsp;|&nbsp; 21 October 2026</p>
+  <p class="meta">Covers every implemented <code>.tsx</code> / <code>.ts</code> module under <code>src/webparts</code>, <code>src/store</code>, and <code>src/External</code>, aligned to the live codebase</p>
 </div>
 
 <div class="note">
@@ -60,6 +60,9 @@
   <li>NPDApproverMail components</li>
   <li>End-to-end lifecycle flows</li>
   <li>Code review checklist</li>
+  <li>Implemented behaviours missing from earlier TRD revisions</li>
+  <li>Module → functionality map (where things live)</li>
+  <li>Email, deep-link, and stale-link behaviour</li>
 </ol>
 
 <h1>1. Application overview</h1>
@@ -68,10 +71,13 @@
   <li><b>RocaNpd</b> — main workbench: NPD requests, Material Group requests, Admin masters, Material Master.</li>
   <li><b>NpdApproverMail</b> — Outlook / SafeLinks action page for Approve / Rework / Reject with <code>ActionVia = Mail</code>.</li>
 </ul>
-<p><b>NPD:</b> Initiator create → Draft / Submit (Material Master duplicate validation + progress) → Vertical Head Approve / Rework / Reject →
-MIS Other Details → Post to SAP (<code>createZMatMast</code>, one call per Item Details line) → set <code>NPD_ItemDetails.SAP</code> → insert
-<code>NPD_MaterialMaster</code> (<code>ItemType=New</code>, display + LookupCode columns) → Approve only when all lines succeed.</p>
-<p><b>Material Group:</b> Category cards → grids → Draft / Submit → VH → Consultant Complete → auto-insert <code>NPD_Lookup</code> (<code>LookupCode = Code</code>).</p>
+<p><b>NPD:</b> Initiator create → Draft / Submit (Material Master duplicate validation + progress; offline Item Details backup attachment) →
+VH-Marketing Manager Approve / Rework / Reject → MIS Other Details → Post to SAP (<code>createZMatMast</code>, one call per Item Details line) →
+set <code>NPD_ItemDetails.SAP</code> → insert <code>NPD_MaterialMaster</code> (<code>ItemType=New</code>, display + LookupCode columns) →
+Approve only when all lines succeed. MIS Rework / Reject update status only (Item Details are not persisted on those actions).</p>
+<p><b>Material Group (default Workflow Config):</b> Category cards → grids → Draft / Submit → <b>Pending with Consultant</b>
+(not VH-Marketing Manager — <code>WorkflowDefaults.MgNextRole = Consultant</code>) → Consultant Complete / Rework / Reject →
+on Complete only, insert <code>NPD_Lookup</code> (<code>LookupCode = Code</code>). Stale email deep links resolve to view (Cancel only).</p>
 
 <h1>2. Architecture &amp; data flow</h1>
 <table>
@@ -151,16 +157,16 @@ WebPart.render → RocaNpd / NpdApproverMail
 <h1>4. Data stores — lists, masters, SAP, Config, Interface</h1>
 <table>
   <tr><th>List / API</th><th>Site</th><th>Primary services / UI</th><th>Key fields / notes</th></tr>
-  <tr><td>NPD_LookupType</td><td>NPD</td><td>lookupTypeService + LookupTypeMaster</td><td>Name/Title; IsDeleted soft delete</td></tr>
-  <tr><td>NPD_Lookup</td><td>NPD</td><td>lookupService; MG Consultant insert</td><td>Title, LookupCode, LookupTypeId, IsDeleted</td></tr>
+  <tr><td>NPD_LookupType</td><td>NPD</td><td>lookupTypeService + LookupTypeMaster</td><td>Name/Title; IsDeleted soft delete; uniqueness ignores spaces/case</td></tr>
+  <tr><td>NPD_Lookup</td><td>NPD</td><td>lookupService; MG Consultant Complete insert</td><td>Title (name may duplicate), LookupCode unique per type, LookupTypeId, IsDeleted</td></tr>
   <tr><td>NPD_BrandMaterialExtensionMaster</td><td>NPD</td><td>brandMaterialExtensionService</td><td>Brand → Material Extension for MIS</td></tr>
   <tr><td>NPD_WorkflowConfig</td><td>NPD</td><td>workflowConfigurationService</td><td>Role sequences NPD / MG</td></tr>
-  <tr><td>NPD_Request</td><td>NPD</td><td>npdRequestGeneralInfoService</td><td>RequestId, Status, WorkFlowJSON, Other Details; Title empty</td></tr>
-  <tr><td>NPD_ItemDetails</td><td>NPD</td><td>npdItemDetailsService</td><td>Line items; SAP boolean; request lookup</td></tr>
+  <tr><td>NPD_Request</td><td>NPD</td><td>npdRequestGeneralInfoService</td><td>RequestId, Status, WorkFlowJSON, Other Details; Title empty; may hold NpdItemDetailsBackup.json attachment</td></tr>
+  <tr><td>NPD_ItemDetails</td><td>NPD</td><td>npdItemDetailsService (+ backup service)</td><td>Line items; SAP boolean; request lookup</td></tr>
   <tr><td>NPD_ApproverComments</td><td>NPD</td><td>npdApproverCommentsService</td><td>ApproverRole, Action, ActionVia, ActionOn; Title empty</td></tr>
   <tr><td>NPD_MaterialMaster</td><td>NPD</td><td>materialMasterService + MaterialMaster UI</td><td>ItemType Old/New; display + *Code; NPDRequest</td></tr>
   <tr><td>NPD_MaterialGroupConfig</td><td>NPD</td><td>materialGroupService</td><td>Category definitions</td></tr>
-  <tr><td>NPD_MaterialGroupRequests</td><td>NPD</td><td>materialGroupService</td><td>JSON entries, Status; Title empty</td></tr>
+  <tr><td>NPD_MaterialGroupRequests</td><td>NPD</td><td>materialGroupService</td><td>JSON entries; Status Draft|Pending|Rework|Rejected|Completed; Title empty; default next actor Consultant</td></tr>
   <tr><td>NPD_MaterialGroupAuditLogs</td><td>NPD</td><td>materialGroupAuditLogService</td><td>ActionVia System|Mail</td></tr>
   <tr><td>ApproversMaster, BrandMaster, PlantMaster, RoleMaster</td><td>ROCA</td><td>roleService, rocaMasterDataService</td><td>Roles/brands/plants</td></tr>
   <tr><td>createZMatMast</td><td>External</td><td>sapMaterialMasterService</td><td>POST body = [one TY_DATA object]; status True/False</td></tr>
@@ -183,12 +189,12 @@ Material Group payloads, ApproversMaster / resolved access.</p>
   <tr><td><code>slices/npdRequestSlice.ts</code> + types</td><td>Dashboard list collections</td><td>NpdRequestDashboard, NpdDraftRework</td></tr>
   <tr><td><code>slices/materialGroupSlice.ts</code></td><td>MG form + dashboard state</td><td>MG form + dashboard</td></tr>
   <tr><td><code>slices/materialMasterSlice.ts</code></td><td>MM rows, tab, filters, load status</td><td>MaterialMaster admin</td></tr>
-  <tr><td><code>thunks/appThunks.ts</code></td><td>initializeApp → resolveUserAccess</td><td>MainComponent</td></tr>
+  <tr><td><code>thunks/appThunks.ts</code></td><td>initializeApp → <b>syncNpdPendingReworkApprovers</b> (before roles) → resolveUserAccess → fetchNpdLookupOptions; caches ROCA site-user emails</td><td>MainComponent</td></tr>
   <tr><td><code>thunks/lookupThunks.ts</code></td><td>Lookup fetch/CRUD/import/export</td><td>LookupMaster</td></tr>
   <tr><td><code>thunks/lookupTypeThunks.ts</code></td><td>Lookup Type CRUD</td><td>LookupTypeMaster</td></tr>
   <tr><td><code>thunks/workflowConfigurationThunks.ts</code></td><td>Workflow config CRUD</td><td>WorkflowConfigurationMaster</td></tr>
   <tr><td><code>thunks/brandMaterialExtensionThunks.ts</code></td><td>Brand extension CRUD</td><td>BrandMaterialExtensionMaster</td></tr>
-  <tr><td><code>thunks/npdFormThunks.ts</code></td><td>Hydrate, options, draft, submit, workflow actions, other details, Post to SAP orchestration</td><td>useNpdRequestFormController</td></tr>
+  <tr><td><code>thunks/npdFormThunks.ts</code></td><td>Hydrate (incl. Item Details backup merge), options, draft, submit, workflow actions, other details, Post to SAP orchestration</td><td>useNpdRequestFormController</td></tr>
   <tr><td><code>thunks/npdRequestThunks.ts</code></td><td>Fetch All / Pending / Draft-Rework / Approved lists</td><td>NPD list screens</td></tr>
   <tr><td><code>thunks/materialGroupThunks.ts</code></td><td>Configs, hydrate, draft, submit, consultant, lists</td><td>MG controller / dashboard</td></tr>
   <tr><td><code>thunks/index.ts</code></td><td>Barrel re-exports</td><td>Import convenience</td></tr>
@@ -207,17 +213,21 @@ Material Group payloads, ApproversMaster / resolved access.</p>
   <tr><td><code>navigationConfig.ts</code></td><td>NAV_SECTIONS; buildNavHref; viewRoleSlug</td><td>SideNavigation, controllers</td></tr>
   <tr><td><code>rocaSiteUrlResolver.ts</code></td><td>Current + ROCA master site URLs</td><td>rocaMasterDataService</td></tr>
   <tr><td><code>rocaMasterDataService.ts</code></td><td>Brand/Plant/Role options from ROCA</td><td>Admin + NPD</td></tr>
-  <tr><td><code>lookupTypeService.ts</code></td><td>Lookup Type CRUD soft-delete</td><td>lookupTypeThunks</td></tr>
-  <tr><td><code>lookupService.ts</code></td><td>Lookup CRUD, import/export, active lookups</td><td>lookupThunks, forms</td></tr>
+  <tr><td><code>lookupTypeService.ts</code></td><td>Lookup Type CRUD soft-delete; Title uniqueness ignores all whitespace + case</td><td>lookupTypeThunks</td></tr>
+  <tr><td><code>lookupService.ts</code></td><td>Lookup CRUD, import/export, active lookups; Lookup Name may repeat within a type (Code unique)</td><td>lookupThunks, forms</td></tr>
   <tr><td><code>lookupFieldUtils.ts</code></td><td>Lookup field helpers</td><td>Forms / payloads</td></tr>
-  <tr><td><code>lookupOptionUtils.ts</code></td><td>Dropdown option builders</td><td>Forms</td></tr>
+  <tr><td><code>lookupOptionUtils.ts</code></td><td>Dropdown/MultiSelect option builders; <b>duplicate Lookup Names kept</b> via <code>value = id + \u001f + title</code>, label = name; persist label not value</td><td>Forms / Item Details</td></tr>
+  <tr><td><code>rocaApproversMasterCache.ts</code></td><td>Session cache of ApproversMaster rows</td><td>roleService, approver sync</td></tr>
+  <tr><td><code>rocaSiteUserEmailCache.ts</code></td><td>ROCA siteUsers Id→Email map for the session</td><td>appThunks, person matching</td></tr>
+  <tr><td><code>networkConnectivity.ts</code></td><td>Online / offline detection for draft/submit/SAP stop</td><td>NPD save / Post to SAP</td></tr>
   <tr><td><code>brandMaterialExtensionService.ts</code></td><td>CRUD + export</td><td>Admin + MIS Other Details</td></tr>
   <tr><td><code>workflowConfigurationService.ts</code></td><td>Workflow config list CRUD</td><td>Admin + workflow build</td></tr>
   <tr><td><code>workflowConfigurationUtils.ts</code></td><td>Step/sequence helpers</td><td>Workflow UI + NPD/MG</td></tr>
   <tr><td><code>dependencyValidationService.ts</code></td><td>Block delete when dependents exist</td><td>Admin deletes</td></tr>
   <tr><td><code>softDelete.ts</code></td><td>IsDeleted helpers</td><td>Masters</td></tr>
-  <tr><td><code>npdRequestGeneralInfoService.ts</code></td><td>Draft/submit/update NPD_Request; Post to SAP before approve</td><td>npdFormThunks</td></tr>
-  <tr><td><code>npdItemDetailsService.ts</code></td><td>Item Details CRUD; mark SAP</td><td>npdFormThunks, SAP flow</td></tr>
+  <tr><td><code>npdRequestGeneralInfoService.ts</code></td><td>Draft/submit/update NPD_Request; Post to SAP before final approve; <b>VH + MIS Reject/Rework = status-only</b> (no Item Details write); Initiator email fetch for notifications when hydrate skipped</td><td>npdFormThunks</td></tr>
+  <tr><td><code>npdItemDetailsService.ts</code></td><td>Item Details CRUD / $batch; mark SAP; wait for in-flight mutate; remaining-row caps after soft-delete</td><td>npdFormThunks, SAP flow</td></tr>
+  <tr><td><code>npdItemDetailsBackupService.ts</code></td><td>Offline <code>NpdItemDetailsBackup.json</code> attachment on NPD_Request; write before item batches; hydrate merge when Draft/Rework count short; clear after successful draft/submit</td><td>Draft/Submit/hydrate</td></tr>
   <tr><td><code>npdFormDataService.ts</code></td><td>Map list ↔ form DTOs</td><td>Hydrate/save</td></tr>
   <tr><td><code>npdRequestIdService.ts</code></td><td>NPD-YYYY-####</td><td>Submit</td></tr>
   <tr><td><code>npdRequestListService.ts</code></td><td>Dashboard queries</td><td>npdRequestThunks</td></tr>
@@ -226,9 +236,9 @@ Material Group payloads, ApproversMaster / resolved access.</p>
   <tr><td><code>npdWorkflowStatusView.ts</code></td><td>Workflow status dialog rows</td><td>NpdWorkflowStatusDialog</td></tr>
   <tr><td><code>npdApproverCommentsService.ts</code></td><td>Write/read audit comments; ActionVia</td><td>Workflow + Audit table</td></tr>
   <tr><td><code>npdApproverAssignmentService.ts</code></td><td>Emails for workflow roles</td><td>Notifications / sync</td></tr>
-  <tr><td><code>npdApproverSyncService.ts</code></td><td>Sync workflow emails with masters</td><td>Submit / assign</td></tr>
+  <tr><td><code>npdApproverSyncService.ts</code></td><td>On login: refresh Pending/Rework WorkFlowJSON emails from ApproversMaster (VH brand-scoped; MIS/Consultant ignore Brand; Initiator never rewritten; historical actors kept)</td><td>appThunks initializeApp</td></tr>
   <tr><td><code>npdOtherDetailsService.ts</code></td><td>Plant code, valuation, profit center, material extension</td><td>MIS section</td></tr>
-  <tr><td><code>npdItemDetailsImportService.ts</code></td><td>Parse/validate Item Details Excel import</td><td>NpdItemDetailsImport</td></tr>
+  <tr><td><code>npdItemDetailsImportService.ts</code></td><td>Parse Item Details Excel; Material Code duplicates (hard block); blank required → red-border attention; lookup match = exact label (case/trim); no Roca Global Code uniqueness</td><td>NpdItemDetailsImport</td></tr>
   <tr><td><code>npdNotificationService.ts</code></td><td>Send NPD emails</td><td>Submit / approve</td></tr>
   <tr><td><code>npdApprovalEmailTemplate.ts</code></td><td>HTML email body + action links</td><td>Notifications</td></tr>
   <tr><td><code>npdEmailLogo.ts</code></td><td>Inline logo attachment</td><td>Emails</td></tr>
@@ -243,13 +253,13 @@ Material Group payloads, ApproversMaster / resolved access.</p>
   <tr><td><code>sapMaterialMasterService.ts</code></td><td>HTTP POST createZMatMast; body [row]</td><td>Post flow</td></tr>
   <tr><td><code>sapMaterialMasterResponse.ts</code></td><td>Parse status True/False</td><td>Post flow</td></tr>
   <tr><td><code>sapMaterialMasterPostFlow.ts</code></td><td>Per-line post → mark SAP → MM insert; collect failures</td><td>Approve path</td></tr>
-  <tr><td><code>materialGroupService.ts</code></td><td>Configs, draft, submit, lists, consultant → Lookup insert</td><td>MG thunks</td></tr>
+  <tr><td><code>materialGroupService.ts</code></td><td>Configs, draft, submit (→ Pending), lists; Consultant Complete/Rework/Reject; Lookup insert on Complete only; default next role = Consultant</td><td>MG thunks</td></tr>
   <tr><td><code>materialGroupIdService.ts</code></td><td>MG-YYYY-####</td><td>MG submit</td></tr>
-  <tr><td><code>materialGroupValidation.ts</code></td><td>Duplicate code/description</td><td>MG form</td></tr>
-  <tr><td><code>materialGroupAuditLogService.ts</code></td><td>MG audit CRUD</td><td>MG controller / table</td></tr>
-  <tr><td><code>materialGroupNotificationService.ts</code></td><td>MG emails</td><td>MG workflow</td></tr>
-  <tr><td><code>mgAppUrl.ts</code></td><td>MG deep links</td><td>MG emails</td></tr>
-  <tr><td><code>importService.ts</code></td><td>Generic Excel parse helpers</td><td>Import UIs</td></tr>
+  <tr><td><code>materialGroupValidation.ts</code></td><td>Within-request Code/Description duplicates; Code-vs-Lookup uniqueness enforced at Consultant Complete</td><td>MG form</td></tr>
+  <tr><td><code>materialGroupAuditLogService.ts</code></td><td>MG audit CRUD; ActionVia System|Mail; terminal Consultant email map for lists</td><td>MG controller / table</td></tr>
+  <tr><td><code>materialGroupNotificationService.ts</code></td><td>Submit → Consultant deep link; Rework/Reject/Completed → Initiator</td><td>MG workflow</td></tr>
+  <tr><td><code>mgAppUrl.ts</code></td><td>MG deep links (<code>buildMgConsultantEmailLoginUrl</code>, <code>buildMgReworkEditUrl</code>, view/list URLs); SafeLinks via <code>npdRoute</code></td><td>MG emails</td></tr>
+  <tr><td><code>importService.ts</code></td><td>Generic Excel parse helpers; <code>importDigitsOnlyError</code> / numeric helpers</td><td>Import UIs</td></tr>
   <tr><td><code>exportService.ts</code></td><td>Excel export helpers</td><td>Admin + MM export</td></tr>
   <tr><td><code>templateService.ts</code></td><td>Download import templates from library</td><td>Import dialogs</td></tr>
   <tr><td><code>personFieldUtils.ts</code></td><td>Email normalize, personas, ApproversMaster match</td><td>Roles + tables</td></tr>
@@ -289,8 +299,10 @@ Material Group payloads, ApproversMaster / resolved access.</p>
   <tr><td><code>common/master/MasterTablePanel/*</code></td><td>Admin page chrome around DataTable</td><td>Lookup / LookupType / Workflow / BrandExtension</td></tr>
   <tr><td><code>common/master/MasterToolbar/MasterToolbarSearch.tsx</code></td><td>Search control</td><td>Admin toolbars</td></tr>
   <tr><td><code>common/importExport/ImportDialog/*</code></td><td>Import file dialog</td><td>Lookup + Item Details import</td></tr>
-  <tr><td><code>common/importExport/ImportValidationDialog/*</code></td><td>Validation error dialog</td><td>Import flows</td></tr>
+  <tr><td><code>common/importExport/ImportValidationDialog/*</code></td><td>Validation error dialog (field + row messages; Proceed gated on duplicates/errors)</td><td>Import flows</td></tr>
+  <tr><td><code>common/importExport/awaitUiPaint.ts</code></td><td>Yield so loader stays visible until React commits</td><td>Import / save busy UX</td></tr>
   <tr><td><code>common/hooks/useListPageFetch.ts</code></td><td>Reusable list fetch hook</td><td>List screens</td></tr>
+  <tr><td><code>common/appRootTarget.ts</code></td><td>Mount / root target helper</td><td>App shell</td></tr>
 </table>
 
 <h1>8. Layout &amp; navigation — every component</h1>
@@ -341,20 +353,20 @@ Material Group payloads, ApproversMaster / resolved access.</p>
   <tr>
     <td>useNpdRequestFormController.ts</td>
     <td>.ts</td>
-    <td>Hydrate by id; mode/viewAs; read-only flags; draft/submit; VH/MIS actions; Other Details; tab lock; email action; validations; MM duplicate check + UI processing</td>
+    <td>Hydrate by id; mode/viewAs; read-only via <code>resolveNpdFooterMode</code> (live status — Draft/Rework only for Initiator edit); draft/submit; VH/MIS actions; MIS Reject/Rework <code>persistItems:false</code>; Other Details; tab lock; email action; validations; MM duplicate check + UI processing; former-Initiator access gate</td>
     <td>npdFormThunks, materialMasterService, workflow/permission helpers, useNpdEmailAction, useNpdRequestTabLock</td>
   </tr>
-  <tr><td>npdRequestFormHelpers.ts</td><td>.ts</td><td>Footer mode, cancel route, other-details visibility, persistable rows, view mode, action parse</td><td>Controller</td></tr>
-  <tr><td>npdItemDetails.types.ts</td><td>.ts</td><td>INpdItemDetailRow</td><td>Item Details</td></tr>
-  <tr><td>npdItemDetailsConfig.ts</td><td>.ts</td><td>Empty row; row↔record mapping</td><td>Controller + section</td></tr>
-  <tr><td>npdItemDetailsValidation.ts</td><td>.ts</td><td>Draft/submit/MIS validations</td><td>Controller</td></tr>
+  <tr><td>npdRequestFormHelpers.ts</td><td>.ts</td><td>Footer mode (initiator-edit / VH / MIS / read-only), cancel route, other-details visibility, persistable rows, dirty fingerprint, view mode, action parse</td><td>Controller</td></tr>
+  <tr><td>npdItemDetails.types.ts</td><td>.ts</td><td>INpdItemDetailRow; import attention field flags</td><td>Item Details</td></tr>
+  <tr><td>npdItemDetailsConfig.ts</td><td>.ts</td><td>Empty row; row↔record mapping; Roca Global Code brand gate</td><td>Controller + section</td></tr>
+  <tr><td>npdItemDetailsValidation.ts</td><td>.ts</td><td>Draft/submit validations; Material Code uniqueness only (Roca Global Code not unique); MIS Post completeness; MIS Rework/Reject empty gates</td><td>Controller</td></tr>
   <tr><td>NpdGeneralInfoSection.tsx</td><td>.tsx</td><td>Brand, Material Type, Plant/Source</td><td>Dropdown, ControlField</td></tr>
   <tr><td>NpdFormSectionPanel.tsx</td><td>.tsx</td><td>Section chrome</td><td>Form sections</td></tr>
   <tr><td>NpdItemDetailsSection.tsx</td><td>.tsx</td><td>Item Details grid; add/remove; open import</td><td>columns hook, cells, DataTable</td></tr>
   <tr><td>useNpdItemDetailsColumns.tsx</td><td>hook</td><td>Column defs + editors from lookups/brand rules</td><td>npdItemDetailsConfig</td></tr>
-  <tr><td>NpdItemDetailsTableCell.tsx</td><td>.tsx</td><td>Per-cell editor/display</td><td>controls</td></tr>
+  <tr><td>NpdItemDetailsTableCell.tsx</td><td>.tsx</td><td>Per-cell editor/display; red-border attention until value filled; MultiSelect value/label mapping</td><td>controls</td></tr>
   <tr><td>NpdItemDetailsActionCell.tsx</td><td>.tsx</td><td>Row actions (delete)</td><td>Button</td></tr>
-  <tr><td>NpdItemDetailsImport.tsx</td><td>.tsx</td><td>Excel import UI for lines</td><td>ImportDialog; import service</td></tr>
+  <tr><td>NpdItemDetailsImport.tsx</td><td>.tsx</td><td>Excel import UI; shows validation dialog for Material Code duplicates; Proceed blocked while duplicates/errors exist</td><td>ImportDialog; ImportValidationDialog; import service</td></tr>
   <tr><td>NpdOtherDetailsSection.tsx</td><td>.tsx</td><td>MIS Plant Code, Profit Center, Material Extension, Valuation Class, Class Type</td><td>MultiSelect/Dropdown; Redux otherDetails</td></tr>
   <tr><td>NpdApproverRemarks.tsx</td><td>.tsx</td><td>Approver remarks textarea</td><td>InputTextarea</td></tr>
   <tr><td>NpdApproverCommentDialog.tsx</td><td>.tsx</td><td>Comments dialog when needed</td><td>Dialog</td></tr>
@@ -393,19 +405,22 @@ Material Group payloads, ApproversMaster / resolved access.</p>
 </table>
 
 <h1>11. Material Group module — every component</h1>
+<p class="note"><b>Workflow (as implemented):</b> Initiator Draft → Submit → Status <b>Pending</b> → <b>Consultant</b>
+Complete / Rework / Reject. Default config uses <code>WorkflowDefaults.MgNextRole = Consultant</code> — there is
+<b>no VH-Marketing Manager step</b> in the Material Group path. Statuses: Draft | Pending | Rework | Rejected | Completed.</p>
 <table>
   <tr><th>File</th><th>Kind</th><th>Functionality</th><th>Children / services</th></tr>
-  <tr><td>MaterialGroupRequestForm.tsx</td><td>.tsx</td><td>Create/edit/view/consultant composition</td><td>SelectMasters, MasterDetails, Remarks, AuditLog, Footer, Consultant dialog; controller</td></tr>
-  <tr><td>useMaterialGroupFormController.ts</td><td>.ts</td><td>Configs; toggle categories; rows; draft/submit; VH/consultant; validation</td><td>materialGroupThunks/services</td></tr>
-  <tr><td>materialGroupTypes.ts</td><td>.ts</td><td>Local types</td><td>Form</td></tr>
-  <tr><td>SelectMastersSection.tsx</td><td>.tsx</td><td>Category cards / select all</td><td>Checkbox cards</td></tr>
-  <tr><td>MasterDetailsSection.tsx</td><td>.tsx</td><td>Dynamic grids; add/remove row</td><td>DataTable / inputs</td></tr>
-  <tr><td>MaterialGroupApproverRemarks.tsx</td><td>.tsx</td><td>Remarks</td><td>InputTextarea</td></tr>
+  <tr><td>MaterialGroupRequestForm.tsx</td><td>.tsx</td><td>Create/edit/view/consultant composition; footer <code>showSaveDraft</code> / Resubmit from live status</td><td>SelectMasters, MasterDetails, Remarks, AuditLog, Footer, Consultant dialog; controller</td></tr>
+  <tr><td>useMaterialGroupFormController.ts</td><td>.ts</td><td>Configs; rows; draft/submit; Consultant actions; <b>mode from live status</b> (stale Initiator Rework email after resubmit → view; stale Consultant email when not Pending → view); former-Initiator access gate</td><td>materialGroupThunks/services</td></tr>
+  <tr><td>materialGroupTypes.ts</td><td>.ts</td><td>Form modes: create | edit | view | consultant-edit</td><td>Form</td></tr>
+  <tr><td>SelectMastersSection.tsx</td><td>.tsx</td><td>Category cards / select all; read-only in view/consultant</td><td>Checkbox cards</td></tr>
+  <tr><td>MasterDetailsSection.tsx</td><td>.tsx</td><td>Dynamic grids; Initiator edits Code/Description; Consultant enters SAP Code</td><td>DataTable / inputs</td></tr>
+  <tr><td>MaterialGroupApproverRemarks.tsx</td><td>.tsx</td><td>Remarks (required for Consultant Rework/Reject)</td><td>InputTextarea</td></tr>
   <tr><td>MaterialGroupAuditLogTable.tsx</td><td>.tsx</td><td>MG audit history</td><td>DataTable; audit service</td></tr>
-  <tr><td>MaterialGroupFormFooter.tsx</td><td>.tsx</td><td>Draft/Submit or VH/Consultant buttons</td><td>Button</td></tr>
-  <tr><td>MaterialGroupConsultantActionDialog.tsx</td><td>.tsx</td><td>SAP configuration note + Complete</td><td>Dialog</td></tr>
-  <tr><td>MaterialGroupDashboard.tsx</td><td>.tsx</td><td>variants all/draft-rework/pending/completed</td><td>MaterialGroupTable</td></tr>
-  <tr><td>MaterialGroupTable.tsx</td><td>.tsx</td><td>Grouped requests + actions</td><td>DataTable</td></tr>
+  <tr><td>MaterialGroupFormFooter.tsx</td><td>.tsx</td><td>view = Cancel only; consultant-edit = Cancel + Rework + Reject + Complete; edit/create = Cancel + optional Save as Draft + Submit/Resubmit</td><td>Button</td></tr>
+  <tr><td>MaterialGroupConsultantActionDialog.tsx</td><td>.tsx</td><td>Confirm Complete / Rework / Reject with remarks</td><td>Dialog</td></tr>
+  <tr><td>MaterialGroupDashboard.tsx</td><td>.tsx</td><td>variants all / draft-rework / pending / completed; navigates consultant-edit only when Pending</td><td>MaterialGroupTable</td></tr>
+  <tr><td>MaterialGroupTable.tsx</td><td>.tsx</td><td>Grouped requests; <code>canEditMaterialGroupRow</code> (Pending→Consultant; Draft/Rework→Initiator owner)</td><td>DataTable</td></tr>
 </table>
 
 <h1>12. Administration — every master</h1>
@@ -417,13 +432,13 @@ data via adminSlice thunks → CommonServices.</p>
   <tr>
     <td>Lookup Type</td>
     <td>LookupTypeMaster.tsx, LookupTypeToolbar.tsx, LookupTypeTable.tsx, LookupTypeFormDialog.tsx, lookupTypeValidation.ts</td>
-    <td>CRUD soft-delete; uniqueness; search</td>
+    <td>CRUD soft-delete; Title uniqueness ignores spaces + case (Add/Edit/Import); table display preserves multi-spaces (<code>white-space: pre-wrap</code>)</td>
     <td>NPD_LookupType</td>
   </tr>
   <tr>
     <td>Lookup</td>
     <td>LookupMaster.tsx, LookupToolbar.tsx, LookupTable.tsx, LookupFormDialog.tsx, lookupValidation.ts</td>
-    <td>CRUD; LookupCode; LookupType link; import/export</td>
+    <td>CRUD; LookupCode unique per type; Lookup Name may repeat; import/export</td>
     <td>NPD_Lookup</td>
   </tr>
   <tr>
@@ -452,10 +467,11 @@ data via adminSlice thunks → CommonServices.</p>
 <h1>13. NPDApproverMail behaviour</h1>
 <ul>
   <li>Query params: requestId, action, token, approverEmail, system (Config.NpdApproverMail / NpdEmail).</li>
-  <li>Controller validates token &amp; identity; blocks duplicate / already-acted.</li>
+  <li>Controller (<code>useNpdApproverMailController.ts</code>) validates token &amp; identity; blocks duplicate / already-acted / terminal status.</li>
   <li>Uses same workflow + ApproverComments services as in-app; ActionVia = Mail.</li>
-  <li>Loader: viewport-centered dual rings; Result: top banners.</li>
-  <li>Reuses rocaNpd Toast helpers.</li>
+  <li>Applies action only while the signed-in user still owns the Pending VH-Marketing Manager step; otherwise shows already-submitted / not-required result.</li>
+  <li>Loader: viewport-centered dual rings; Result: top banners (success / already submitted / error).</li>
+  <li>Reuses rocaNpd Toast helpers. Does not host the full NPD form — remarks panel for Rework/Reject only.</li>
 </ul>
 
 <h1>14. End-to-end lifecycle flows</h1>
@@ -463,20 +479,39 @@ data via adminSlice thunks → CommonServices.</p>
 <pre>Initiator /npd/new
   → NpdRequestForm + useNpdRequestFormController
   → Save Draft (Title="") / Submit
+       → write NpdItemDetailsBackup.json attachment → Item Details $batch
        → validate → validateItemsAgainstMaterialMaster → progress UI
-       → RequestId + WorkFlowJSON pending VH → email
-VH /npd/pending → Approve|Rework|Reject → ApproverComments → Audit Log
-MIS → Other Details → Post to SAP
-  → createZMatMast per SAP=false line → SAP=true → MM ItemType=New (+ Code columns)
+       → RequestId + WorkFlowJSON pending VH → email (VH gets ApproverMail action links)
+VH /npd/pending → Approve|Rework|Reject → ApproverComments (ActionVia=System|Mail) → Audit Log
+  → VH Rework/Reject: status/workflow only — Item Details not rewritten
+MIS → Other Details → Post to SAP (Approve)
+  → save Item Details → createZMatMast per SAP=false line → SAP=true → MM ItemType=New (+ Code columns)
+  → fail/offline stops immediately; retry skips already SAP=true lines
   → all success → Status=Approved; else keep partial + do not approve
-Approved /npd/approved → Other Details read-only for all roles</pre>
+MIS Rework/Reject → status + comments (+ Other Details as applicable); Item Details NOT persisted
+Approved /npd/approved → Other Details read-only for all roles
+Stale Initiator Rework deep link after resubmit → resolveNpdFooterMode → read-only (Cancel only)</pre>
 <h2>14.2 Material Group</h2>
-<pre>/mg/new → SelectMasters → MasterDetails → Draft/Submit
-VH → Consultant / Rework / Reject
-Consultant Complete → NPD_Lookup insert (LookupCode=Code) → Completed</pre>
+<pre>/mg/new → SelectMasters → MasterDetails → Draft / Submit
+  → Status=Pending → email Consultant (buildMgConsultantEmailLoginUrl, mode=consultant-edit)
+Consultant while Pending → Complete | Rework | Reject
+  → Complete: Code unique vs Lookup Type → insert NPD_Lookup (LookupCode=Code) → Completed → email Initiator
+  → Rework: Status=Rework → email Initiator (buildMgReworkEditUrl, mode=edit)
+  → Reject: Status=Rejected → email Initiator (view)
+Initiator on Rework → Resubmit → Pending again → Consultant
+Stale Initiator Rework email after resubmit (Pending) → mode view (Cancel only)
+Stale Consultant email after Rework/Reject/Complete → mode view (Cancel only)
+(No VH-Marketing Manager step in default MG Workflow Config)</pre>
 <h2>14.3 Admin</h2>
 <pre>Admins → /admin/* masters → thunks → services → soft delete / dependency checks
+Lookup Type uniqueness: normalize(remove all whitespace + lowercase)
+Lookup MultiSelect options: duplicate Names allowed (id\u001f title values)
 Material Master catalog Old + New (New from SAP success)</pre>
+<h2>14.4 Login bootstrap</h2>
+<pre>MainComponent → initializeApp
+  → syncNpdPendingReworkApprovers (Pending + Rework NPD only; Initiator emails never rewritten)
+  → resolveUserAccess + fetchNpdLookupOptions (parallel)
+  → setInitialized → AppShell → AppRoutes</pre>
 
 <h1>15. Code review checklist</h1>
 <ul>
@@ -485,15 +520,138 @@ Material Master catalog Old + New (New from SAP success)</pre>
   <li>Title empty on NPD_Request, ApproverComments, MG request/audit adds.</li>
   <li>ActionVia Mail vs System on NPD and MG audit lists.</li>
   <li>Post to SAP: array-of-one body; FERT/HAWA; LookupCode; SAP flag; MM insert; approve only if all succeed.</li>
+  <li>MIS Rework/Reject and VH Rework/Reject do not persist Item Details.</li>
+  <li>Item Details Excel: Material Code duplicates block import; blank required fields get red-border attention; lookup exact label match.</li>
+  <li>Offline Item Details backup attachment written before batches; hydrate merges when count short.</li>
+  <li>MG and NPD footer modes use <b>live status</b>, not email URL alone (stale links → Cancel only).</li>
   <li>Audit Pending placeholders match by ApproverRole only (dual-role safe).</li>
-  <li>Lookup auto-refresh on navigation.</li>
+  <li>Lookup Type Title uniqueness ignores spaces/case; Lookup Name may duplicate; MultiSelect keeps duplicate names.</li>
+  <li>Roca Global Code required for configured brands only — not uniqueness-validated.</li>
+  <li>Login syncs Pending/Rework approver emails before UI.</li>
   <li>Tab lock prevents dual-edit corruption.</li>
   <li>ProtectedRoute + filterNavigationByRoles + brand scopes.</li>
   <li>Material Master Existing vs New column rules and paging.</li>
+  <li>MG default next role is Consultant (not VH-Marketing Manager).</li>
 </ul>
 
+<h1>16. Implemented behaviours (code-backed detail)</h1>
+<p>This section documents behaviours that are implemented in code and were incomplete or incorrect in earlier TRD revisions.</p>
+
+<h2>16.1 Item Details Excel import</h2>
+<p><b>UI:</b> <code>NpdItemDetailsImport.tsx</code> → <b>Service:</b> <code>npdItemDetailsImportService.ts</code> (+ <code>importService.ts</code> helpers).</p>
+<ul>
+  <li><b>Material Code duplicates</b> (case-insensitive) against existing grid rows and within the file → validation message with field + row; row not imported; Proceed disabled while duplicates/errors remain.</li>
+  <li><b>Roca Global Code</b> and Material Description duplicates are allowed (no uniqueness gate).</li>
+  <li><b>Blank required</b> text/number/lookup cells import with <code>lookupImportAttentionFields</code> → red border in grid until the user supplies a value (hover keeps border).</li>
+  <li><b>Lookup match</b> — exact label after normalize (trim + case-insensitive). No fuzzy match on option value (<code>id\u001f title</code>). Unmatched → cleared + attention flag.</li>
+  <li>Multi-value cells split on <code>;</code> / newline only (commas inside Lookup Names preserved).</li>
+</ul>
+
+<h2>16.2 Offline Item Details backup</h2>
+<p><b>Service:</b> <code>npdItemDetailsBackupService.ts</code> (<code>Config.NpdItemDetailsBackup</code>). Used from draft/submit paths in <code>npdRequestGeneralInfoService.ts</code>.</p>
+<ul>
+  <li>Before Item Details $batch, write writes attachment <code>NpdItemDetailsBackup.json</code> on the <code>NPD_Request</code> item.</li>
+  <li>Hydrate merges backup when Draft/Rework live count is short of intended (match Material Code → Description → Roca Global Code; dedupe; intended-count cap).</li>
+  <li>Cleared after successful Save Draft / Submit. Partial MIS Post saves use <code>skipBackup</code> so a partial grid does not overwrite a full backup.</li>
+</ul>
+
+<h2>16.3 MIS / VH Item Details persist rules</h2>
+<p><b>Service:</b> <code>applyNpdWorkflowAction</code> in <code>npdRequestGeneralInfoService.ts</code>. <b>Controller:</b> <code>useNpdRequestFormController.ts</code> passes <code>persistItems:false</code> for MIS Reject/Rework.</p>
+<ul>
+  <li>VH-Marketing Manager Approve / Rework / Reject — status + workflow + comments; Item Details not rewritten from the form payload.</li>
+  <li>MIS Rework / Reject — same: status/comments path only; Item Details edits are discarded for that action.</li>
+  <li>MIS Post to SAP (Approve) — validates completeness + Profit Center; saves Item Details; runs SAP loop; then advances workflow.</li>
+</ul>
+
+<h2>16.4 Post to SAP (per line)</h2>
+<p><b>Orchestration:</b> <code>npdRequestGeneralInfoService.ts</code> → <code>sapMaterialMasterPostFlow.ts</code> → <code>sapMaterialMasterService.ts</code> / payload / response → <code>materialMasterService.ts</code>.</p>
+<ol>
+  <li>Gate: Item Details required; Material Master duplicate check on changed rows.</li>
+  <li>Persist all Item Details first.</li>
+  <li>For each line with <code>SAP ≠ true</code>: build TY_DATA → POST <code>createZMatMast</code> (body = array of one) → assert status → mark Item Details SAP → insert Material Master New (+ Code columns).</li>
+  <li>Already-posted lines: ensure Material Master row only.</li>
+  <li>Failure or offline → stop immediately; reconnect does not auto-resume; retry skips <code>SAP=true</code>.</li>
+  <li>Final Approve only when every line succeeded.</li>
+</ol>
+
+<h2>16.5 Login approver sync</h2>
+<p><b>Thunk:</b> <code>appThunks.initializeApp</code> → <b>Service:</b> <code>npdApproverSyncService.syncNpdPendingReworkApprovers</code>.</p>
+<ul>
+  <li>Runs before role resolution / UI for NPD requests in Pending or Rework only.</li>
+  <li>Refreshes emails for roles that still have a Pending step from ApproversMaster (VH brand-scoped; MIS + Consultant ignore Brand).</li>
+  <li>Initiator email on the request is never rewritten. Historical Approved/Rejected/Rework actors kept. Already-sent emails are not recalled.</li>
+</ul>
+
+<h2>16.6 Stale email / deep-link button gating</h2>
+<table>
+  <tr><th>Flow</th><th>Where enforced</th><th>Behaviour</th></tr>
+  <tr>
+    <td>NPD Initiator Rework link after resubmit</td>
+    <td><code>resolveNpdFooterMode</code> (Draft/Rework only → initiator-edit; else read-only)</td>
+    <td>Cancel only</td>
+  </tr>
+  <tr>
+    <td>NPD VH ApproverMail</td>
+    <td><code>useNpdApproverMailController</code> + already-acted checks</td>
+    <td>Already submitted / not required messaging</td>
+  </tr>
+  <tr>
+    <td>NPD SPA email action query</td>
+    <td><code>useNpdEmailAction.ts</code></td>
+    <td>Auto-apply only while footer is VH/MIS pending; else redirect</td>
+  </tr>
+  <tr>
+    <td>MG Initiator Rework link after resubmit (Pending)</td>
+    <td><code>useMaterialGroupFormController</code> mode memo</td>
+    <td>Force <code>view</code> (Cancel only) when status not Draft/Rework</td>
+  </tr>
+  <tr>
+    <td>MG Consultant link after Rework/Reject/Complete</td>
+    <td>Same mode memo: <code>consultant-edit</code> only if Consultant + Pending; else if URL is consultant-edit → <code>view</code></td>
+    <td>Cancel only — Rework/Reject/Complete hidden</td>
+  </tr>
+</table>
+
+<h2>16.7 Lookup Type / Lookup MultiSelect</h2>
+<ul>
+  <li><b>Lookup Type</b> — <code>normalizeLookupTypeTitleKey</code> removes all whitespace and lowercases before uniqueness (UI validation + service + import).</li>
+  <li>Display of Title in Lookup Type table uses <code>white-space: pre-wrap</code> so multiple spaces remain visible.</li>
+  <li><b>Lookup options</b> — <code>lookupOptionUtils</code> keeps one option per Lookup Id; duplicate Names appear in MultiSelect; stored form value is the Lookup Name (label), not the composite value.</li>
+</ul>
+
+<h1>17. Module → functionality map</h1>
+<p>Quick “where does this live?” index for code review.</p>
+<table>
+  <tr><th>Capability</th><th>Primary UI</th><th>Controller / thunk</th><th>Service</th></tr>
+  <tr><td>NPD create / draft / submit</td><td><code>NpdRequestForm.tsx</code></td><td><code>useNpdRequestFormController</code> / <code>npdFormThunks</code></td><td><code>npdRequestGeneralInfoService</code>, <code>npdItemDetailsService</code>, backup</td></tr>
+  <tr><td>NPD Item Details grid + import</td><td><code>NpdItemDetailsSection</code>, <code>NpdItemDetailsImport</code></td><td>controller + validation/config</td><td><code>npdItemDetailsImportService</code></td></tr>
+  <tr><td>NPD VH / MIS workflow</td><td><code>NpdRequestFormFooter</code>, ApproverMail web part</td><td>controller / <code>useNpdApproverMailController</code></td><td><code>npdWorkflowJsonService</code>, comments, notifications</td></tr>
+  <tr><td>Post to SAP</td><td>MIS footer Post to SAP</td><td>npdFormThunks → general info service</td><td><code>sapMaterialMaster*</code>, <code>materialMasterService</code></td></tr>
+  <tr><td>NPD lists</td><td><code>NpdRequestDashboard</code>, <code>NpdDraftRework</code></td><td><code>npdRequestThunks</code></td><td><code>npdRequestListService</code></td></tr>
+  <tr><td>MG request</td><td><code>MaterialGroupRequestForm</code></td><td><code>useMaterialGroupFormController</code> / <code>materialGroupThunks</code></td><td><code>materialGroupService</code>, audit, notifications, <code>mgAppUrl</code></td></tr>
+  <tr><td>MG lists</td><td><code>MaterialGroupDashboard</code></td><td>materialGroupThunks</td><td>materialGroupService</td></tr>
+  <tr><td>Admin Lookup Type / Lookup / Workflow / BME</td><td><code>components/admin/*</code></td><td>admin thunks</td><td>matching *Service.ts</td></tr>
+  <tr><td>Material Master catalog</td><td><code>MaterialMaster.tsx</code></td><td><code>materialMasterSlice</code></td><td><code>materialMasterService</code></td></tr>
+  <tr><td>Roles / nav / route guard</td><td>SideNavigation, ProtectedRoute</td><td><code>appThunks</code>, <code>useFilteredNavigation</code></td><td><code>roleService</code>, <code>permissionService</code>, <code>navigationConfig</code></td></tr>
+  <tr><td>Email HTML + deep links</td><td>—</td><td>—</td><td><code>npdNotificationService</code>, <code>npdApprovalEmailTemplate</code>, <code>npdAppUrl</code>, <code>materialGroupNotificationService</code>, <code>mgAppUrl</code></td></tr>
+  <tr><td>Multi-tab edit lock</td><td><code>NpdEditingRestrictedDialog</code></td><td><code>useNpdRequestTabLock</code></td><td><code>npdRequestTabSync</code></td></tr>
+</table>
+
+<h1>18. Email, deep-link, and notification matrix</h1>
+<table>
+  <tr><th>Event</th><th>Recipients</th><th>Link / actions</th><th>Notes</th></tr>
+  <tr><td>NPD Submit / Resubmit</td><td>First pending role emails</td><td>ApproverMail action buttons only when pending role is VH-Marketing Manager; others typically login/list links</td><td>Best-effort; failure does not roll back status</td></tr>
+  <tr><td>NPD intermediate Approve</td><td>Next pending role</td><td>Same VH rule</td><td></td></tr>
+  <tr><td>NPD final Approve / Rework / Reject</td><td>Initiator</td><td>No action buttons (informational / rework edit for Rework)</td><td>MIS Reject/Rework may background-fetch Initiator email if skipped hydrate left it empty</td></tr>
+  <tr><td>MG Submit / Resubmit</td><td>Consultant(s) from ApproversMaster (System = New Material Group)</td><td><code>buildMgConsultantEmailLoginUrl</code> → <code>mode=consultant-edit</code></td><td>Live status must be Pending for buttons</td></tr>
+  <tr><td>MG Rework</td><td>Initiator</td><td><code>buildMgReworkEditUrl</code> → <code>mode=edit</code></td><td>After resubmit, same URL becomes view</td></tr>
+  <tr><td>MG Reject</td><td>Initiator</td><td>View URL</td><td></td></tr>
+  <tr><td>MG Completed</td><td>Initiator</td><td>List / informational</td><td>After Lookup sync</td></tr>
+</table>
+<p>SafeLinks: email URLs put the app hash route in the site query as <code>npdRoute</code>; <code>MainComponent</code> restores it to the HashRouter location on load.</p>
+
 <p class="meta" style="text-align:center;margin-top:24pt;">
-ROCA NPD • Complete End-to-End Code Review • All implemented .tsx / .ts modules • 05 October 2026
+ROCA NPD • Complete End-to-End Code Review • All implemented .tsx / .ts modules • Updated 21 October 2026
 </p>
 </body>
 </html>

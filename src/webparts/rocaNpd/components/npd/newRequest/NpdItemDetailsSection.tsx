@@ -10,6 +10,7 @@ import {
   clearLookupImportAttention,
   createEmptyNpdItemDetailRow,
   getVisibleNpdItemDetailFields,
+  isEmptyItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
@@ -27,6 +28,9 @@ export interface INpdItemDetailsSectionProps {
   isMisCoordinatorActing?: boolean;
   onRowsChange: React.Dispatch<React.SetStateAction<INpdItemDetailRow[]>>;
   onImportClick?: () => void;
+  onExportClick?: () => void;
+  /** When false, Export is hidden (e.g. Initiator New Request). Default true. */
+  showExport?: boolean;
 }
 
 const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
@@ -37,6 +41,8 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   isMisCoordinatorActing = false,
   onRowsChange,
   onImportClick,
+  onExportClick,
+  showExport = true,
 }) => {
   const visibleFields = React.useMemo(
     () => getVisibleNpdItemDetailFields(brand),
@@ -224,7 +230,23 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     onFieldChange: handleFieldChange,
   });
 
-  const headerActions = readOnly ? null : (
+  const hasExportableRows = rows.some((row) => !isEmptyItemDetailRow(row));
+
+  const exportButton = showExport ? (
+    <Button
+      label={Config.Export}
+      icon="pi pi-download"
+      size="xs"
+      className={styles.headerExportButton}
+      disabled={!hasExportableRows}
+      onClick={onExportClick}
+    />
+  ) : null;
+
+  // View mode: Export only (no Add / Import / Delete). Edit: full actions.
+  const headerActions = readOnly ? (
+    exportButton
+  ) : (
     <>
       <Button
         label={Config.Add}
@@ -240,6 +262,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         className={styles.headerImportButton}
         onClick={onImportClick}
       />
+      {exportButton}
       <Button
         label={Config.Delete}
         icon="pi pi-trash"

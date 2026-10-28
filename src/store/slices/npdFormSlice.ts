@@ -350,10 +350,9 @@ export const {
   setNpdOtherDetails,
 } = npdFormSlice.actions;
 
-export const selectIsFinishedProductsMaterialType = (
+export const selectIsOwnManufactureProductsMaterialType = (
   materialType: string | null,
-): boolean =>
-  materialType === Config.NpdMaterialTypes.FinishedProducts;
+): boolean => Config.isOwnManufactureProductsMaterialType(materialType);
 
 export const selectIsTradedProductsMaterialType = (
   materialType: string | null,
@@ -362,7 +361,7 @@ export const selectIsTradedProductsMaterialType = (
 export const selectHasPlantSourceMaterialType = (
   materialType: string | null,
 ): boolean =>
-  selectIsFinishedProductsMaterialType(materialType) ||
+  selectIsOwnManufactureProductsMaterialType(materialType) ||
   selectIsTradedProductsMaterialType(materialType);
 
 export default npdFormSlice.reducer;

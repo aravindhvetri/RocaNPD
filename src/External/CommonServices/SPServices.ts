@@ -512,8 +512,7 @@ const batchMutate = async (params: {
     return;
   }
 
-  // Deletes and updates first (full sets, chunked), then inserts — keeps
-  // Lookup import / Item Details resubmit at 100 ops per $batch.
+  // Deletes first (full sets, chunked) — then updates + inserts.
   await runBatchedChunks(toDelete, async (chunk) => {
     const [batchedWeb, execute] = getSP().web.batched();
     const list = batchedWeb.lists.getByTitle(params.ListName);
@@ -523,6 +522,31 @@ const batchMutate = async (params: {
     await execute();
   });
 
+  // Prefer one $batch when updates + inserts fit the SharePoint mutate limit
+  // (VH Approve / Draft / Import often touch both in one save).
+  if (
+    toUpdate.length > 0 &&
+    toInsert.length > 0 &&
+    toUpdate.length + toInsert.length <= MUTATE_BATCH_SIZE
+  ) {
+    const [batchedWeb, execute] = getSP().web.batched();
+    const list = batchedWeb.lists.getByTitle(params.ListName);
+    toUpdate.forEach((row) => {
+      const id = Number(row.ID ?? row.Id ?? row.id);
+      const rest = { ...row };
+      delete rest.ID;
+      delete rest.Id;
+      delete rest.id;
+      list.items.getById(id).update(rest);
+    });
+    toInsert.forEach((data) => {
+      list.items.add(data);
+    });
+    await execute();
+    return;
+  }
+
+  // Fallback: chunked updates, then inserts (Lookup import / large resubmit).
   await runBatchedChunks(toUpdate, async (chunk) => {
     const [batchedWeb, execute] = getSP().web.batched();
     const list = batchedWeb.lists.getByTitle(params.ListName);

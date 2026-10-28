@@ -141,7 +141,7 @@ export function getNpdEmailIntro(
   if (action === "Approve") {
     return includeActionButtons
       ? "An NPD request requires your approval."
-      : "An NPD request has been approved by the Vertical Head and is awaiting your review.";
+      : `An NPD request has been approved by the ${Config.Roles.VerticalHead} and is awaiting your review.`;
   }
   if (action === "Rework") {
     return "An NPD request has been sent back for rework.";
@@ -160,7 +160,10 @@ function resolveEmailLoginViewAs(
   if (normalized === Config.Roles.MisCoordinator.toLowerCase()) {
     return Config.Roles.MisCoordinator;
   }
-  if (normalized === Config.Roles.VerticalHead.toLowerCase()) {
+  if (
+    normalized === Config.Roles.VerticalHead.toLowerCase() ||
+    normalized === "vertical head"
+  ) {
     return Config.Roles.VerticalHead;
   }
   if (normalized === Config.Roles.Initiator.toLowerCase()) {

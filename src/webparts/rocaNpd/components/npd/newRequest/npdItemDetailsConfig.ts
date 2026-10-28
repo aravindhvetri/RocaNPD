@@ -1,5 +1,5 @@
-import { NpdRocaGlobalCodeBrands } from "../../../../../External/CommonServices/Config";
 import type { INpdItemDetailRecord } from "../../../../../External/CommonServices/Interface";
+import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type {
   INpdItemDetailRow,
   NpdItemDetailFieldKey,
@@ -15,9 +15,8 @@ export interface INpdItemDetailsFieldDef {
   minWidth: string;
   controlType: NpdItemDetailsControlType;
   maxLength?: number;
-  conditional?: "rocaGlobalCode";
-  /** For `text` controls: digits-only when set (still InputText / SP text column). */
-  textFilter?: "alphanumeric" | "digits";
+  /** For `text` controls: alphanumeric sanitize when set. */
+  textFilter?: "alphanumeric";
 }
 
 let nextRowId = 1;
@@ -52,7 +51,6 @@ export function createEmptyNpdItemDetailRow(
     hsnCode: "",
     weightKg: null,
     uom: [],
-    minQtyBoxQty: "",
   };
 }
 
@@ -137,7 +135,6 @@ export function toNpdItemDetailRecord(
     hsnCode: row.hsnCode,
     weightKg: row.weightKg,
     uom: row.uom,
-    minQtyBoxQty: row.minQtyBoxQty,
   };
 }
 
@@ -148,26 +145,14 @@ export function isEmptyItemDetailRow(row: INpdItemDetailRow): boolean {
   );
 }
 
-export function isRocaGlobalCodeBrand(brand: string | null): boolean {
-  if (!brand) {
-    return false;
-  }
-
-  const normalizedBrand = brand.trim().toLowerCase();
-  return NpdRocaGlobalCodeBrands.some(
-    (value) => value.toLowerCase() === normalizedBrand,
-  );
-}
-
 export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
   {
     field: "rocaGlobalCode",
-    header: "Roca Global Code",
+    header: FieldLabels.RocaGlobalCode,
     required: true,
-    placeholder: "Enter Roca Global Code",
-    minWidth: "12rem",
+    placeholder: "Enter the Code",
+    minWidth: "14rem",
     controlType: "text",
-    conditional: "rocaGlobalCode",
   },
   {
     field: "materialCode",
@@ -245,10 +230,10 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
   },
   {
     field: "materialGroup",
-    header: "Material Group",
+    header: "Material / Business Group",
     required: true,
     placeholder: "Select Material Group",
-    minWidth: "11.5rem",
+    minWidth: "14.5rem",
     controlType: "multiselect",
   },
   {
@@ -308,27 +293,11 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     minWidth: "9rem",
     controlType: "multiselect",
   },
-  {
-    field: "minQtyBoxQty",
-    header: "Min. Qty/Box Qty",
-    required: false,
-    placeholder: "Enter Min.Qty",
-    minWidth: "3rem",
-    controlType: "text",
-    textFilter: "digits",
-  },
 ];
 
+/** All Item Details columns — CMA - ROCA Global Code is visible for every brand. */
 export function getVisibleNpdItemDetailFields(
-  brand: string | null,
+  _brand: string | null,
 ): INpdItemDetailsFieldDef[] {
-  const showRocaGlobalCode = isRocaGlobalCodeBrand(brand);
-
-  return NPD_ITEM_DETAILS_FIELDS.filter((fieldDef) => {
-    if (fieldDef.conditional === "rocaGlobalCode") {
-      return showRocaGlobalCode;
-    }
-
-    return true;
-  });
+  return NPD_ITEM_DETAILS_FIELDS;
 }

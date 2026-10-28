@@ -21,7 +21,7 @@ export function sanitizeAlphanumericTextInput(value: string): string {
 
 /**
  * Digits only — for text fields backed by Single Line of Text that must
- * accept numeric values only (e.g. Min. Qty/Box Qty). Keeps string type.
+ * accept numeric values only. Keeps string type.
  */
 export function sanitizeDigitsOnlyTextInput(value: string): string {
   return stripLeadingSpaces(

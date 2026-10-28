@@ -1,13 +1,14 @@
 import { Config, FieldLabels, FieldNames } from "./Config";
 import type {
+  IExportColumn,
   INpdItemDetailRecord,
   INpdItemDetailsImportParseResult,
   ISelectOption,
 } from "./Interface";
+import { buildExportFileName, exportToExcel } from "./exportService";
 import {
   findBestHeaderRowIndex,
   findColumnIndex,
-  importDigitsOnlyError,
   parseImportNumericValue,
   readSpreadsheetWorkbook,
   validateRequiredImportHeaders,
@@ -26,9 +27,6 @@ interface IImportColumn {
   controlType: "text" | "number" | "multiselect";
   required: boolean;
   maxLength?: number;
-  conditional?: "rocaGlobalCode";
-  /** Digits-only text columns (still stored as Single Line of Text). */
-  textFilter?: "digits";
 }
 
 const IMPORT_COLUMNS: IImportColumn[] = [
@@ -37,7 +35,8 @@ const IMPORT_COLUMNS: IImportColumn[] = [
     field: "rocaGlobalCode",
     controlType: "text",
     required: true,
-    conditional: "rocaGlobalCode",
+    // Legacy Excel headers still match via lowercase + trim (hyphen kept).
+    aliases: ["Roca Global Code", "CMA-ROCA Global Code"],
   },
   {
     header: FieldLabels.MaterialCode,
@@ -143,17 +142,11 @@ const IMPORT_COLUMNS: IImportColumn[] = [
     controlType: "multiselect",
     required: true,
   },
-  {
-    header: FieldLabels.MinQtyBoxQty,
-    field: "minQtyBoxQty",
-    controlType: "text",
-    required: false,
-    textFilter: "digits",
-  },
 ];
 
 const SP_HEADER_ALIASES: Partial<Record<keyof INpdItemDetailRecord, string[]>> = {
-  rocaGlobalCode: [ITEM_FIELDS.RocaGlobalCode, "rocaGlobalCode"],
+  // SharePoint internal name stays RocaGlobalCode; UI/Excel use FieldLabels.
+  rocaGlobalCode: [ITEM_FIELDS.RocaGlobalCode, "rocaGlobalCode", "Roca Global Code"],
   materialCode: [ITEM_FIELDS.MaterialCode, "materialCode"],
   materialDescription: [ITEM_FIELDS.MaterialDescription, "materialDescription"],
   productGroupMg2: [ITEM_FIELDS.ProductGroupMG2, "Product Group MG2", "productGroupMg2"],
@@ -197,23 +190,15 @@ const SP_HEADER_ALIASES: Partial<Record<keyof INpdItemDetailRecord, string[]>> =
   hsnCode: [ITEM_FIELDS.HSNCode, "hsnCode"],
   weightKg: [ITEM_FIELDS.Weight, "Weight", "Weight Kg", "weightKg"],
   uom: [ITEM_FIELDS.UOM, "uom"],
-  minQtyBoxQty: [ITEM_FIELDS.MinQty, "MinQty", "Min Qty/Box Qty", "minQtyBoxQty"],
 };
 
-function requiresRocaGlobalCode(brand: string | null): boolean {
-  return Config.NpdRocaGlobalCodeBrands.some(
-    (value) => value.toLowerCase() === (brand ?? "").trim().toLowerCase(),
+/** FieldLabels headers required for Item Details Import (all brands). */
+export function getNpdItemDetailsRequiredHeaders(
+  _brand?: string | null,
+): string[] {
+  return IMPORT_COLUMNS.filter((column) => column.required).map(
+    (column) => column.header,
   );
-}
-
-/** FieldLabels headers required for Item Details Import (brand may add Roca Global Code). */
-export function getNpdItemDetailsRequiredHeaders(brand: string | null): string[] {
-  const requireRocaGlobalCode = requiresRocaGlobalCode(brand);
-  return IMPORT_COLUMNS.filter(
-    (column) =>
-      column.required &&
-      (column.conditional !== "rocaGlobalCode" || requireRocaGlobalCode),
-  ).map((column) => column.header);
 }
 
 /** Early ImportDialog gate — required FieldLabels must be present before preview/import. */
@@ -330,7 +315,6 @@ function createEmptyRecord(): INpdItemDetailRecord {
     hsnCode: "",
     weightKg: null,
     uom: [],
-    minQtyBoxQty: "",
   };
 }
 
@@ -362,22 +346,61 @@ function collectUniqueFieldDuplicates(
   return [];
 }
 
+function formatExportMultiValue(values: string[]): string {
+  return values
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean)
+    .join(Config.NpdItemImport.MultiValueSeparator);
+}
+
+type INpdItemDetailsExportRow = INpdItemDetailRecord & Record<string, unknown>;
+
+/**
+ * Export Item Details with the same FieldLabels headers as Import,
+ * and the shared Excel header style from exportService.
+ */
+export function exportNpdItemDetailsToExcel(
+  records: INpdItemDetailRecord[],
+  _brand: string | null,
+): void {
+  const columns: IExportColumn<INpdItemDetailsExportRow>[] = IMPORT_COLUMNS.map(
+    (column) => ({
+      header: column.header,
+      value: (row) => {
+        if (column.controlType === "multiselect") {
+          return formatExportMultiValue(
+            (row[column.field] as string[] | undefined) ?? [],
+          );
+        }
+        if (column.controlType === "number") {
+          const weight = row.weightKg;
+          return weight === null || weight === undefined ? "" : weight;
+        }
+        return String(row[column.field] ?? "");
+      },
+    }),
+  );
+
+  exportToExcel({
+    fileName: buildExportFileName("NPD_ItemDetails"),
+    sheetName: "Item Details",
+    columns,
+    rows: records as INpdItemDetailsExportRow[],
+  });
+}
+
 export async function parseNpdItemDetailsImportFile(
   file: File,
   existingRecords: INpdItemDetailRecord[],
   lookupOptionsByType: Record<string, ISelectOption[]>,
-  brand: string | null,
+  _brand: string | null,
 ): Promise<INpdItemDetailsImportParseResult> {
   const sheets = await readSpreadsheetWorkbook(file);
   if (!sheets.some((sheet) => sheet.rows.length)) {
     throw new Error("The uploaded file is empty.");
   }
 
-  const requireRocaGlobalCode = requiresRocaGlobalCode(brand);
-  const expectedColumns = IMPORT_COLUMNS.filter(
-    (column) =>
-      column.conditional !== "rocaGlobalCode" || requireRocaGlobalCode,
-  );
+  const expectedColumns = IMPORT_COLUMNS;
   const expectedHeaders = expectedColumns.flatMap(getColumnMatchLabels);
 
   let headerRow: string[] = [];
@@ -434,41 +457,17 @@ export async function parseNpdItemDetailsImportFile(
     const record = createEmptyRecord();
     const excelRowNumber = rowIndex + 1;
     const importAttentionFields: Array<keyof INpdItemDetailRecord> = [];
-    let rowBlocked = false;
 
     columnIndexes.forEach(({ column, index }) => {
       if (index < 0) {
-        return;
-      }
-      if (column.conditional === "rocaGlobalCode" && !requireRocaGlobalCode) {
         return;
       }
 
       const raw = String(row[index] ?? "").trim();
 
       // Material Code duplicates are validated separately. Blank / unmatched
-      // required fields keep the red-border flag. Min. Qty/Box Qty is optional.
+      // required fields keep the red-border attention flag.
       if (column.controlType === "text") {
-        if (column.textFilter === "digits") {
-          // Optional: blank is allowed with no red border.
-          if (!raw) {
-            (record[column.field] as string) = "";
-            return;
-          }
-          const formatError = importDigitsOnlyError(
-            raw,
-            column.header,
-            excelRowNumber,
-          );
-          if (formatError) {
-            errors.push(formatError);
-            rowBlocked = true;
-            return;
-          }
-          (record[column.field] as string) = raw;
-          return;
-        }
-
         (record[column.field] as string) = raw;
         if (!raw) {
           importAttentionFields.push(column.field);
@@ -507,10 +506,6 @@ export async function parseNpdItemDetailsImportFile(
         importAttentionFields.push(column.field);
       }
     });
-
-    if (rowBlocked) {
-      continue;
-    }
 
     if (importAttentionFields.length) {
       Object.assign(record, {

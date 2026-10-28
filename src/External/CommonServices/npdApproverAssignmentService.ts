@@ -14,6 +14,16 @@ import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
+/** Local VH match (avoids circular import with npdWorkflowJsonService). */
+function isVhMarketingManagerRole(role: string): boolean {
+  const normalized = role.trim().toLowerCase();
+  return (
+    normalized === Config.Roles.VerticalHead.toLowerCase() ||
+    normalized === "vertical head" ||
+    normalized === "vh-marketing manager"
+  );
+}
+
 function uniqueEmails(emails: string[]): string[] {
   const seen = new Set<string>();
   const unique: string[] = [];
@@ -48,7 +58,16 @@ function rowMatchesNpdSystem(row: Record<string, unknown>): boolean {
 }
 
 function rowMatchesRole(row: Record<string, unknown>, role: string): boolean {
-  return lookupTitlesInclude(row.Role, role);
+  if (lookupTitlesInclude(row.Role, role)) {
+    return true;
+  }
+  // Workflow / ApproversMaster may mix legacy "Vertical Head" with the new title.
+  if (isVhMarketingManagerRole(role)) {
+    return getLookupTitles(row.Role).some((title) =>
+      isVhMarketingManagerRole(title),
+    );
+  }
+  return false;
 }
 
 function rowMatchesBrand(row: Record<string, unknown>, brand: string): boolean {
@@ -148,8 +167,7 @@ export function getEmailsForNpdWorkflowRole(
 
   const brandRows = activeRows.filter((row) => rowMatchesBrand(row, brand));
   if (
-    role.trim().toLowerCase() === Config.Roles.VerticalHead.toLowerCase() ||
-    brandRows.length
+    isVhMarketingManagerRole(role) || brandRows.length
   ) {
     return uniqueEmails(
       brandRows.flatMap((row) => collectRowEmails(row, userEmailById)),

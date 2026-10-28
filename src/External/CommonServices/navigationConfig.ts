@@ -14,7 +14,7 @@ export type NavSelectedBarTone =
 /** Mirrors Config.Roles without importing Config (avoids circular deps). */
 export type NavViewRole =
   | "Initiator"
-  | "Vertical Head"
+  | "VH-Marketing Manager"
   | "MIS Coordinator"
   | "Consultant"
   | "Admin";
@@ -51,7 +51,7 @@ export interface INavSectionConfig {
 }
 
 const Initiator: NavViewRole = "Initiator";
-const VerticalHead: NavViewRole = "Vertical Head";
+const VerticalHead: NavViewRole = "VH-Marketing Manager";
 const MisCoordinator: NavViewRole = "MIS Coordinator";
 const Consultant: NavViewRole = "Consultant";
 const Admin: NavViewRole = "Admin";

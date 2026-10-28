@@ -346,7 +346,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 
 - [x] **T-0510** Implement General Information section (Brand, Material Type, Plant/Source) — Brand from ROCA `ApproversMaster` (client-filter: System, Role, Users email); Material Type from `Config.NpdMaterialTypes`; Plant/Source per material type
 - [x] **T-0510a** Seed Brand options on `initializeApp` so NPD Form Brand dropdown is ready on first open
-- [x] **T-0511** Implement cascading Plant/Source — disabled until Material Type selected; Finished Products → ROCA `PlantMaster` (Factory + active); Traded Products → `Config.NpdTradedPlantSources` (Imported, Domestic)
+- [x] **T-0511** Implement cascading Plant/Source — disabled until Material Type selected; Own Manufacture Products → ROCA `PlantMaster` (Factory + active); Traded Products → `Config.NpdTradedPlantSources` (Imported, Domestic)
 - [ ] **T-0512** Filter Plant/Source by Brand Material Extension
 - [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
 - [x] **T-0514** Implement Item Details grid (all BRD columns; MultiSelect options from `NPD_Lookup` by Lookup Type matching field name); paginate at 7 rows when there are more than 7 items

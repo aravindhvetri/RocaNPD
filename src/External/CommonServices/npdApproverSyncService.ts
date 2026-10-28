@@ -5,6 +5,7 @@ import {
   getEmailsForNpdApproverSync,
 } from "./npdApproverAssignmentService";
 import {
+  isVerticalHeadWorkflowRole,
   parseWorkflowJson,
   stringifyWorkflowJson,
 } from "./npdWorkflowJsonService";
@@ -54,7 +55,11 @@ export function replaceWorkflowRoleEmails(
   const roleKey = role.trim().toLowerCase();
   const matches = steps
     .map((step, index) => ({ step, index }))
-    .filter(({ step }) => step.Role.trim().toLowerCase() === roleKey);
+    .filter(({ step }) =>
+      isVerticalHeadWorkflowRole(role)
+        ? isVerticalHeadWorkflowRole(step.Role)
+        : step.Role.trim().toLowerCase() === roleKey,
+    );
 
   const emails = nextEmails.map((email) => email.trim()).filter((email) => email.includes("@"));
   if (!matches.length || !emails.length) {
@@ -68,7 +73,10 @@ export function replaceWorkflowRoleEmails(
   const statuses = matches.map(({ step }) => step.Status);
   const pendingStatus = statuses.find((status) => isPendingStepStatus(status));
   const fallbackStatus = statuses[statuses.length - 1] ?? "";
-  const roleLabel = matches[0].step.Role;
+  // Migrate legacy "Vertical Head" label to VH-Marketing Manager on sync write.
+  const roleLabel = isVerticalHeadWorkflowRole(role)
+    ? Config.Roles.VerticalHead
+    : matches[0].step.Role;
 
   const replacement: INpdWorkflowStepJson[] = emails.map((email, index) => ({
     Role: roleLabel,
@@ -99,7 +107,7 @@ export function replaceWorkflowRoleEmails(
 
 /**
  * Align VH / MIS / Consultant emails with ApproversMaster.
- * Vertical Head uses the request Brand. MIS and Consultant do not.
+ * VH-Marketing Manager uses the request Brand. MIS and Consultant do not.
  * Other roles, including Initiator, are left as stored.
  * Returns null when WorkFlowJSON does not need a write.
  */
@@ -116,8 +124,10 @@ export function syncWorkflowStepsFromApproverMaster(
   let changed = false;
 
   SYNC_ROLES.forEach((role) => {
-    const roleSteps = current.filter(
-      (step) => step.Role.trim().toLowerCase() === role.toLowerCase(),
+    const roleSteps = current.filter((step) =>
+      isVerticalHeadWorkflowRole(role)
+        ? isVerticalHeadWorkflowRole(step.Role)
+        : step.Role.trim().toLowerCase() === role.toLowerCase(),
     );
     // Only refresh roles that still have a Pending step. Never overwrite
     // Approved / Rejected / Rework actors on historical ownership steps.

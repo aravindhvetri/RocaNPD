@@ -34,10 +34,7 @@ export const SapBrandLookupFieldHints = ["Brand", "Brand (MG1)", "brand"] as con
 export function mapSapMaterialTypeCode(materialType: string): string {
   const normalized = materialType.trim().toLowerCase();
 
-  if (
-    normalized === Config.NpdMaterialTypes.FinishedProducts.toLowerCase() ||
-    normalized === "finished product"
-  ) {
+  if (Config.isOwnManufactureProductsMaterialType(materialType)) {
     return "FERT";
   }
 

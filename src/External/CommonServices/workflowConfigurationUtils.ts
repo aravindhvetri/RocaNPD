@@ -49,7 +49,7 @@ export function orderWorkflowSteps(
   return [...ordered, ...remaining];
 }
 
-/** Builds the display string: Initiator → Vertical Head → MIS Coordinator */
+/** Builds the display string: Initiator → VH-Marketing Manager → MIS Coordinator */
 export function buildApprovalChainLabel(
   steps: IWorkflowConfigStep[],
   requestType: string,

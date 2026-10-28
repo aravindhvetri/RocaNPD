@@ -58,7 +58,6 @@ import {
 } from "../../common/controls";
 import {
   createEmptyNpdItemDetailRow,
-  isEmptyItemDetailRow,
   toNpdItemDetailRecord,
   toNpdItemDetailRow,
 } from "./npdItemDetailsConfig";
@@ -603,6 +602,7 @@ export function useNpdRequestFormController(
         itemSavePartial?: boolean;
         deletedItemIds?: number[];
         materialMasterCheckItems?: ReturnType<typeof toPersistableItemRecords>;
+        itemDetailsCount?: number;
       },
     ): void => {
       if (!pendingRole) {
@@ -683,6 +683,7 @@ export function useNpdRequestFormController(
           itemSavePartial: options?.itemSavePartial,
           deletedItemIds: options?.deletedItemIds,
           materialMasterCheckItems: options?.materialMasterCheckItems,
+          itemDetailsCount: options?.itemDetailsCount,
         }),
       )
         .unwrap()
@@ -772,12 +773,9 @@ export function useNpdRequestFormController(
     // Include recovery rows (sharePointId 0 from Attachments backup) so Save
     // Draft inserts missing Item Details after an offline mid-Submit.
     const items = isExistingRequest ? diff!.changedRecords : backupItems;
-    const persistableCount = isExistingRequest
-      ? Math.max(items.length + (diff?.deletedSharePointIds.length || 0), 1)
-      : itemRows.reduce(
-          (count, row) => (isEmptyItemDetailRow(row) ? count : count + 1),
-          0,
-        );
+    // Progress total = current grid size only (not inserts + soft-deletes).
+    // After Import/Replace, 4 new rows replacing 4 old must show 1/4, not 1/8.
+    const persistableCount = Math.max(backupItems.length, 1);
     const headerBaseline = headerBaselineRef.current;
     const normalizeHeaderPart = (value: string | null | undefined): string =>
       String(value ?? "").trim();
@@ -1130,10 +1128,13 @@ export function useNpdRequestFormController(
     const remarks = approverRemarks.trim();
     const isMisPostToSap =
       lockedFooterMode === "mis-pending" && action === "Approve";
+    const isVhApprove =
+      lockedFooterMode === "vertical-head-pending" && action === "Approve";
 
-    // Post to SAP validates comments after Item Details + Profit Center.
+    // Post to SAP / VH Approve validate comments after Item Details.
     if (
       !isMisPostToSap &&
+      !isVhApprove &&
       workflowActionRequiresComments(action) &&
       !remarks
     ) {
@@ -1152,10 +1153,90 @@ export function useNpdRequestFormController(
       return;
     }
 
-    // Vertical Head: status/workflow only — never re-save Item Details.
+    // VH-Marketing Manager: Item Details persist only on Approve (one batch).
+    // Rework / Reject keep status + comments only — discard grid edits.
     if (lockedFooterMode === "vertical-head-pending") {
-      dispatchWorkflowAction(action, remarks, { persistItems: false });
-      return;
+      if (action === "Reject" || action === "Rework") {
+        dispatchWorkflowAction(action, remarks, { persistItems: false });
+        return;
+      }
+      if (action === "Approve") {
+        const firstMessage = firstValidationMessage(
+          validateNpdItemDetailsRows(npdForm.generalInfo.brand, itemRows),
+        );
+        if (firstMessage) {
+          showErrorToast(toastRef, firstMessage, "Validation");
+          return;
+        }
+        if (workflowActionRequiresComments(action) && !remarks) {
+          showActionValidationToast(
+            toastRef,
+            action,
+            "Please enter approver remarks before approving.",
+            "Validation",
+          );
+          return;
+        }
+        const itemDiff = diffNpdItemDetailRows(
+          itemRows,
+          itemBaselineRef.current,
+        );
+        const hasItemChanges =
+          itemDiff.changedRecords.length > 0 ||
+          itemDiff.deletedSharePointIds.length > 0;
+        const persistableItems = toPersistableItemRecords(itemRows);
+
+        // Same Material Master Material Code check as Initiator Submit Request.
+        void (async () => {
+          flushSync(() => {
+            beginUiProcessing(dispatch, 1, { showItemProgress: false });
+          });
+          try {
+            if (persistableItems.length) {
+              const materialMasterDuplicates =
+                await validateItemsAgainstMaterialMaster(persistableItems, {
+                  excludeRequestId:
+                    npdForm.requestId && npdForm.requestId > 0
+                      ? npdForm.requestId
+                      : undefined,
+                });
+              const materialMasterMessage = firstValidationMessage(
+                materialMasterDuplicates,
+              );
+              if (materialMasterMessage) {
+                finishUiProcessing(dispatch, false);
+                showErrorToast(toastRef, materialMasterMessage, "Validation");
+                return;
+              }
+            }
+          } catch (error: unknown) {
+            finishUiProcessing(dispatch, false);
+            showErrorToast(
+              toastRef,
+              toUserActionErrorMessage(
+                error,
+                "Unable to validate Item Details against Material Master. Please try again.",
+              ),
+              "Validation",
+            );
+            return;
+          }
+
+          dispatchWorkflowAction(action, remarks, {
+            persistItems: hasItemChanges,
+            items: hasItemChanges ? itemDiff.changedRecords : undefined,
+            itemSavePartial: hasItemChanges,
+            deletedItemIds: hasItemChanges
+              ? itemDiff.deletedSharePointIds
+              : undefined,
+            // Fold Products count into the Status PATCH (no separate sync call).
+            itemDetailsCount: hasItemChanges
+              ? persistableItems.length
+              : undefined,
+          });
+        })();
+        return;
+      }
     }
 
     if (lockedFooterMode === "mis-pending") {
@@ -1235,7 +1316,15 @@ export function useNpdRequestFormController(
         : "View NPD Request",
     generalInfoReadOnly: lockedFooterMode !== "initiator-edit",
     itemDetailsReadOnly: isTabLocked || itemDetailsReadOnly,
-    isMisCoordinatorActing: lockedFooterMode === "mis-pending",
+    // Initiator: Export only on Edit/View of an existing request (not New).
+    // VH / MIS keep Export whenever Item Details actions are available.
+    showItemDetailsExport:
+      lockedFooterMode !== "initiator-edit" ||
+      Boolean(editId || npdForm.requestId),
+    // Marks newly added Item Details rows (yellow) for VH or MIS pending edit.
+    isMisCoordinatorActing:
+      lockedFooterMode === "mis-pending" ||
+      lockedFooterMode === "vertical-head-pending",
     showOtherDetails,
     otherDetailsReadOnly,
     tabRestriction: tabLock.restriction,

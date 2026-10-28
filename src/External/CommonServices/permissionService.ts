@@ -17,6 +17,7 @@ import type {
 import {
   getFirstPendingApproverRole,
   getRejectedApproverRole,
+  isVerticalHeadWorkflowRole,
   workflowRoleIncludesEmail,
 } from "./npdWorkflowJsonService";
 import { normalizeEmail } from "./personFieldUtils";
@@ -55,7 +56,7 @@ const ACTION_ROLES: Record<PermissionAction, UserRole[]> = {
   "npd.approve": [VerticalHead, MisCoordinator],
   "npd.rework": [VerticalHead, MisCoordinator],
   "npd.reject": [VerticalHead, MisCoordinator],
-  "npd.editItemDetailsPending": [MisCoordinator],
+  "npd.editItemDetailsPending": [VerticalHead, MisCoordinator],
   "npd.configureSap": [MisCoordinator],
   "npd.postToSap": [MisCoordinator],
   "mg.create": [Initiator],
@@ -265,6 +266,11 @@ export function parseViewAsRole(
   const trimmed = (value || "").trim();
   if (!trimmed) {
     return undefined;
+  }
+
+  // Legacy ?as=Vertical%20Head deep links → VH-Marketing Manager.
+  if (trimmed.toLowerCase() === "vertical head") {
+    return VerticalHead;
   }
 
   const roles: UserRole[] = [
@@ -664,7 +670,7 @@ export function canActOnPendingNpdStep(
     return false;
   }
 
-  if (role.toLowerCase() === VerticalHead.toLowerCase()) {
+  if (isVerticalHeadWorkflowRole(role)) {
     return (
       hasSystemRole(
         access,
@@ -842,16 +848,15 @@ function isNpdStageVisibleToApprover(
 ): boolean {
   const steps = request.workflowSteps ?? [];
   const status = (request.status || "").trim().toLowerCase();
-  const pendingRole = getFirstPendingApproverRole(steps).trim().toLowerCase();
+  const pendingRole = getFirstPendingApproverRole(steps).trim();
   const rejectedRole = getRejectedApproverRole(steps).trim().toLowerCase();
-  const vh = VerticalHead.toLowerCase();
   const mis = MisCoordinator.toLowerCase();
   const isPending = status === Config.RequestStatus.Pending.toLowerCase();
   const isRejected = status === Config.RequestStatus.Rejected.toLowerCase();
 
   if (stageRole === MisCoordinator) {
-    // Still with Vertical Head, or rejected by Vertical Head — not MIS yet.
-    if (isPending && pendingRole === vh) {
+    // Still with VH-Marketing Manager, or rejected by that role — not MIS yet.
+    if (isPending && isVerticalHeadWorkflowRole(pendingRole)) {
       return false;
     }
     if (isRejected && rejectedRole !== mis) {
@@ -859,8 +864,8 @@ function isNpdStageVisibleToApprover(
     }
   }
 
-  // Vertical Head keeps Pending-with-MIS on All Requests and Approved Requests.
-  // The Pending queue is limited to the Vertical Head step separately.
+  // VH-Marketing Manager keeps Pending-with-MIS on All Requests and Approved.
+  // The Pending queue is limited to the VH-Marketing Manager step separately.
   return true;
 }
 
