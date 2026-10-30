@@ -149,6 +149,7 @@ const NpdItemDetailsTableCell: React.FC<INpdItemDetailsTableCellProps> = ({
         disabled={readOnly}
         className={attentionClassName}
         panelClassName={styles.itemDetailsMultiSelectPanel}
+        closeOnScroll
         onChange={(value) =>
           handleChange(
             value

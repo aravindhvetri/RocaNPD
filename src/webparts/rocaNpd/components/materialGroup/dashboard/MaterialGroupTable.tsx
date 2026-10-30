@@ -285,6 +285,17 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
     ];
   }, [canEditRow, isConsultant, isAdmin, onEdit, onView]);
 
+  const openRow = React.useCallback(
+    (row: IMaterialGroupGroupedRequest): void => {
+      if (canEditRow(row)) {
+        onEdit(row);
+        return;
+      }
+      onView(row);
+    },
+    [canEditRow, onEdit, onView],
+  );
+
   return (
     <DataTable
       value={requests}
@@ -295,6 +306,17 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
       paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
       paginatorPosition="bottom"
       rows={10}
+      rowClassName={() => styles.clickableRow}
+      onRowClick={(event) => {
+        const target = event.originalEvent.target;
+        if (
+          target instanceof Element &&
+          target.closest("button, a, input, textarea, select")
+        ) {
+          return;
+        }
+        openRow(event.data);
+      }}
     />
   );
 };

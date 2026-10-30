@@ -14,4 +14,6 @@ export interface IMultiSelectProps extends IBaseControlProps {
   emptyMessage?: string;
   /** Extra class on the portaled overlay panel (e.g. Item Details-only filter chrome). */
   panelClassName?: string;
+  /** When true, hide the open overlay if the page or another scroll parent scrolls. */
+  closeOnScroll?: boolean;
 }

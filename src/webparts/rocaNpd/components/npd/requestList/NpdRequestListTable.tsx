@@ -253,6 +253,17 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
     [canEditRow, handleEdit, handleView, workflow.openWorkflow],
   );
 
+  const openRow = React.useCallback(
+    (row: INpdRequestListItemRow): void => {
+      if (canEditRow(row)) {
+        handleEdit(row);
+        return;
+      }
+      handleView(row);
+    },
+    [canEditRow, handleEdit, handleView],
+  );
+
   return (
     <>
       <DataTable
@@ -264,6 +275,17 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
         paginator
         paginatorPosition="bottom"
         paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+        rowClassName={() => styles.clickableRow}
+        onRowClick={(event) => {
+          const target = event.originalEvent.target;
+          if (
+            target instanceof Element &&
+            target.closest("button, a, input, textarea, select")
+          ) {
+            return;
+          }
+          openRow(event.data);
+        }}
       />
       <NpdWorkflowStatusDialog
         visible={workflow.visible}

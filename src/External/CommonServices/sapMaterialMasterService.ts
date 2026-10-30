@@ -13,14 +13,24 @@ import {
 
 export interface IPostNpdItemsToSapParams {
   requestId: number;
+  /**
+   * BrandMaster.BrandCode — used by the SAP payload (unchanged).
+   * Also written to NPD_MaterialMaster.BrandCode.
+   */
   brand: string;
+  /** Selected Brand title for NPD_MaterialMaster.Brand (not sent to SAP). */
+  brandTitle?: string;
   materialType: string;
   plant: string;
   otherDetails: INpdOtherDetails;
   items: INpdItemDetailRecord[];
   siteUrl?: string;
   /** Fired at 0/total and after each successful SAP API + SAP flag write (remaining SAP=false count). */
-  onProgress?: (posted: number, total: number) => void;
+  onProgress?: (
+    posted: number,
+    total: number,
+    postedSharePointId?: number,
+  ) => void;
 }
 
 /**
@@ -33,6 +43,8 @@ export async function postNpdItemsToSap(
   const apiUrl = resolveSapMaterialMasterApiUrl(params.siteUrl);
   const lookups = await fetchActiveLookups();
   const lookupResolver = createSapLookupCodeResolver(lookups);
+  const brandCode = params.brand.trim();
+  const brandTitle = (params.brandTitle || params.brand).trim();
 
   await postItemDetailsToSap(
     params.items,
@@ -54,7 +66,8 @@ export async function postNpdItemsToSap(
       insertMaster: (items) =>
         insertMaterialMasterFromNpdItems({
           requestId: params.requestId,
-          brand: params.brand,
+          brand: brandTitle,
+          brandCode,
           materialType: params.materialType,
           items,
         }),

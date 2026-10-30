@@ -31,6 +31,7 @@ import {
 import { selectResolvedAccess } from "../slices/appSlice";
 import { bindNpdFormDraftRequest } from "../slices/npdFormSlice";
 import type { RootState } from "../rootState";
+import { notifySapPostedRow } from "../npdSapPostedRowSync";
 import {
   beginSapUiProcessing,
   finishUiProcessing,
@@ -614,13 +615,16 @@ export const applyNpdWorkflowAction = createAsyncThunk<
           sapProgress:
             isMisActor && input.action === "Approve"
               ? {
-                  onProgress: (posted, total) => {
+                  onProgress: (posted, total, postedSharePointId) => {
                     if (total <= 0) {
                       return;
                     }
                     if (posted === 0) {
                       beginSapUiProcessing(dispatch, total);
                       return;
+                    }
+                    if (postedSharePointId && postedSharePointId > 0) {
+                      notifySapPostedRow(postedSharePointId);
                     }
                     reportSapUiProcessing(dispatch, posted, total);
                   },

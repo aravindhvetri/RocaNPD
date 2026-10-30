@@ -20,6 +20,8 @@ export type INpdItemDetailRow = {
   weightKg: number | null;
   uom: string[];
   isMisAdded?: boolean;
+  /** NPD_ItemDetails.SAP — true after this line was accepted by SAP. */
+  sapPosted?: boolean;
   /**
    * Field keys left blank/invalid after Excel import (text, number, or Lookup).
    * UI-only red-border attention; not persisted.
@@ -29,7 +31,11 @@ export type INpdItemDetailRow = {
 
 export type NpdItemDetailFieldKey = Exclude<
   keyof INpdItemDetailRow,
-  "id" | "sharePointId" | "isMisAdded" | "lookupImportAttentionFields"
+  | "id"
+  | "sharePointId"
+  | "isMisAdded"
+  | "sapPosted"
+  | "lookupImportAttentionFields"
 >;
 
 export type NpdItemDetailFieldValue = string | string[] | number | null;

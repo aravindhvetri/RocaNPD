@@ -20,7 +20,11 @@ export interface ISapMaterialMasterPostDependencies {
    * createZMatMast + SAP flag write. Failures do not increment current.
    * `total` is the count of SAP=false lines for this attempt only.
    */
-  onProgress?: (posted: number, total: number) => void;
+  onProgress?: (
+    posted: number,
+    total: number,
+    postedSharePointId?: number,
+  ) => void;
 }
 
 function isPersistableItem(item: INpdItemDetailRecord): boolean {
@@ -120,7 +124,7 @@ export async function postItemDetailsToSap(
         await deps.markPosted(item.sharePointId);
         item.sapPosted = true;
         posted += 1;
-        deps.onProgress?.(posted, total);
+        deps.onProgress?.(posted, total, item.sharePointId);
         if (shouldStop()) {
           throw new Error(NETWORK_OFFLINE_MESSAGE);
         }

@@ -16,6 +16,11 @@ export interface INpdRequestFormFooterProps {
   isResubmit?: boolean;
   /** Rework keeps Resubmit and Cancel only. */
   showSaveDraft?: boolean;
+  /**
+   * MIS Coordinator only: hide Reject and Rework after at least one Item Detail
+   * has been posted to SAP. Cancel and Post to SAP stay.
+   */
+  hideMisRejectRework?: boolean;
   onCancel: () => void;
   onSaveDraft: () => void;
   onSubmit: () => void;
@@ -29,6 +34,7 @@ const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
   mode,
   isResubmit = false,
   showSaveDraft = true,
+  hideMisRejectRework = false,
   onCancel,
   onSaveDraft,
   onSubmit,
@@ -101,22 +107,26 @@ const NpdRequestFormFooter: React.FC<INpdRequestFormFooterProps> = ({
     ) : null}
     {mode === "mis-pending" ? (
       <div className={styles.primaryActions}>
-        <div className={styles.reworkButton}>
-          <Button
-            label={Config.Rework}
-            size="sm"
-            disabled={saving}
-            onClick={onRework}
-          />
-        </div>
-        <div className={styles.rejectButton}>
-          <Button
-            label={Config.Reject}
-            size="sm"
-            disabled={saving}
-            onClick={onReject}
-          />
-        </div>
+        {hideMisRejectRework ? null : (
+          <div className={styles.reworkButton}>
+            <Button
+              label={Config.Rework}
+              size="sm"
+              disabled={saving}
+              onClick={onRework}
+            />
+          </div>
+        )}
+        {hideMisRejectRework ? null : (
+          <div className={styles.rejectButton}>
+            <Button
+              label={Config.Reject}
+              size="sm"
+              disabled={saving}
+              onClick={onReject}
+            />
+          </div>
+        )}
         <div className={styles.approveButton}>
           <Button
             label="Post to SAP"

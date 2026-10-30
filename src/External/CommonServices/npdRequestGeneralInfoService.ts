@@ -1089,7 +1089,11 @@ export async function applyNpdWorkflowAction(params: {
    * (including 0/total at loop start); finish when the SAP batch ends.
    */
   sapProgress?: {
-    onProgress?: (posted: number, total: number) => void;
+    onProgress?: (
+      posted: number,
+      total: number,
+      postedSharePointId?: number,
+    ) => void;
     onFinish?: (success: boolean) => void;
   };
 }): Promise<INpdRequestGeneralInfo> {
@@ -1255,7 +1259,10 @@ export async function applyNpdWorkflowAction(params: {
 
       await postNpdItemsToSap({
         requestId: params.requestId,
+        // SAP payload continues to receive BrandMaster.BrandCode.
         brand: _brandCode,
+        // Material Master Brand column stores the selected Brand title.
+        brandTitle: request.Brand,
         materialType: request.MaterialType,
         plant: request.Plant,
         otherDetails,
