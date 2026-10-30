@@ -518,7 +518,7 @@ export const FieldLabels = {
   ColorMgp1a: "Color (MGP1A)",
   ProductRangeMgp2a: "Product Range (MGP2A)",
   ProductSubCategoryMgp3a: "Product Sub Category (MGP3A)",
-  MaterialGroup: "Material / Business group",
+  MaterialGroup: "Business / Material Group",
   ExtMaterialGroup: "Ext. Material Group",
   ProductSegment: "Product Segment",
   TaxClassification: "Tax Classification",
@@ -668,7 +668,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V2.4",
+  AppVersion: "V2.7",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

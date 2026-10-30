@@ -55,6 +55,7 @@ const NpdRequestForm: React.FC = () => {
     isMisCoordinatorActing,
     showOtherDetails,
     otherDetailsReadOnly,
+    hasAnyItemPostedToSap,
     handleCancel,
     handleSaveDraft,
     handleSubmit,
@@ -109,6 +110,7 @@ const NpdRequestForm: React.FC = () => {
           readOnly={itemDetailsReadOnly}
           isMisCoordinatorActing={isMisCoordinatorActing}
           showExport={showItemDetailsExport}
+          showSapStatus={showOtherDetails}
           onRowsChange={setItemRows}
           onImportClick={() => setImportVisible(true)}
           onExportClick={() => {
@@ -165,6 +167,9 @@ const NpdRequestForm: React.FC = () => {
         showSaveDraft={
           (npdForm.requestStatus || "").trim().toLowerCase() !== "rework" &&
           (npdForm.requestStatus || "").trim().toLowerCase() !== "in rework"
+        }
+        hideMisRejectRework={
+          footerMode === "mis-pending" && hasAnyItemPostedToSap
         }
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}

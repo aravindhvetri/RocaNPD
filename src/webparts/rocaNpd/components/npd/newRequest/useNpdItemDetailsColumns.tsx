@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
 import { getLookupOptionsByFieldName } from "../../../../../External/CommonServices/lookupOptionUtils";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
+import { Tag } from "../../common/controls";
 import NpdItemDetailsActionCell from "./NpdItemDetailsActionCell";
 import NpdItemDetailsTableCell from "./NpdItemDetailsTableCell";
 import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
@@ -30,6 +31,8 @@ export interface IUseNpdItemDetailsColumnsParams {
   allowDeleteRows: boolean;
   lookupOptionsByType: Record<string, ISelectOption[]>;
   readOnly?: boolean;
+  /** Same visibility as Other Details. Display-only; not an editable field. */
+  showSapStatus?: boolean;
   onFieldChange: (
     rowId: string,
     field: NpdItemDetailFieldKey,
@@ -46,6 +49,7 @@ export function useNpdItemDetailsColumns({
   lookupOptionsByType,
   onFieldChange,
   readOnly = false,
+  showSapStatus = false,
 }: IUseNpdItemDetailsColumnsParams): IDataTableColumn<INpdItemDetailRow>[] {
   return React.useMemo(() => {
     const optionsByField: Partial<Record<NpdItemDetailFieldKey, ISelectOption[]>> =
@@ -56,6 +60,13 @@ export function useNpdItemDetailsColumns({
           lookupOptionsByType,
           fieldDef.header,
           fieldDef.field,
+          ...(fieldDef.field === "materialGroup"
+            ? [
+                "Material Group",
+                "Material / Business Group",
+                "Material / Business group",
+              ]
+            : []),
         );
       }
     });
@@ -129,10 +140,39 @@ export function useNpdItemDetailsColumns({
       body: (row) => <NpdItemDetailsActionCell rowId={row.id} />,
     };
 
+    const sapStatusWidth = {
+      width: "8.75rem",
+      minWidth: "8.75rem",
+      maxWidth: "8.75rem",
+    };
+    const sapStatusColumn: IDataTableColumn<INpdItemDetailRow> = {
+      field: "sapPosted",
+      header: <span className={styles.columnTitle}>SAP Status</span>,
+      style: sapStatusWidth,
+      headerStyle: sapStatusWidth,
+      body: (row) =>
+        row.sapPosted === true ? (
+          <Tag
+            value="Posted"
+            icon="pi pi-check-circle"
+            className={styles.statusApproved}
+          />
+        ) : (
+          <Tag
+            value="Pending"
+            icon="pi pi-clock"
+            className={styles.statusPending}
+          />
+        ),
+    };
+
     const columns: IDataTableColumn<INpdItemDetailRow>[] = [
       serialColumn,
       ...fieldColumns,
     ];
+    if (showSapStatus) {
+      columns.push(sapStatusColumn);
+    }
     if (!readOnly) {
       columns.push(actionColumn);
     }
@@ -143,6 +183,7 @@ export function useNpdItemDetailsColumns({
     lookupOptionsByType,
     onFieldChange,
     readOnly,
+    showSapStatus,
     visibleFields,
   ]);
 }

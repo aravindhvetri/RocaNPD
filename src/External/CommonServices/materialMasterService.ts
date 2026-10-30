@@ -14,10 +14,7 @@ import { fetchActiveLookups } from "./lookupService";
 import { matchesAnySearchField } from "./searchTextUtils";
 import { isActiveRecord } from "./softDelete";
 import { isDeletedYesFlag } from "./lookupFieldUtils";
-import {
-  SapBrandLookupFieldHints,
-  SapItemDetailsLookupFieldHints,
-} from "./sapMaterialMasterLookupFieldHints";
+import { SapItemDetailsLookupFieldHints } from "./sapMaterialMasterLookupFieldHints";
 import {
   createSapLookupCodeResolver,
   type ISapLookupCodeResolver,
@@ -143,12 +140,12 @@ export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
   },
   {
     field: "MaterialGroupCode",
-    header: "Material / Business Group Code",
+    header: "Business / Material Group Code",
     minWidth: "11.5rem",
   },
   {
     field: "MaterialGroup",
-    header: "Material / Business Group",
+    header: "Business / Material Group",
     minWidth: "9rem",
   },
   {
@@ -315,7 +312,14 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
           logical === "ColorMG1ACode" ? "ColorMG1ACode" : "",
           logical === "ColorMG1A" ? "ColorMG1A" : "",
           logical === "MaterialGroupCode" ? "Material GroupCode" : "",
+          logical === "MaterialGroupCode" ? "Material Group Code" : "",
+          logical === "MaterialGroupCode" ? "Material / Business Group Code" : "",
+          logical === "MaterialGroupCode" ? "Material / Business group Code" : "",
+          logical === "MaterialGroupCode" ? "Business / Material Group Code" : "",
           logical === "MaterialGroup" ? "Material Group" : "",
+          logical === "MaterialGroup" ? "Material / Business Group" : "",
+          logical === "MaterialGroup" ? "Material / Business group" : "",
+          logical === "MaterialGroup" ? "Business / Material Group" : "",
         ].filter(Boolean),
       );
       if (internal) {
@@ -1065,6 +1069,8 @@ function buildMaterialMasterInsertPayload(
   params: {
     requestId: number;
     brand: string;
+    /** BrandMaster.BrandCode — stored in NPD_MaterialMaster.BrandCode. */
+    brandCode?: string;
     materialType: string;
     schema: IMaterialMasterSchema;
     lookupResolver: ISapLookupCodeResolver;
@@ -1096,17 +1102,15 @@ function buildMaterialMasterInsertPayload(
     );
   };
 
+  const brandTitle = params.brand.trim();
+  const brandCode = String(params.brandCode ?? "").trim();
+
   field("MaterialCode", item.materialCode.trim());
   field("MaterialType", params.materialType.trim());
   field("MaterialDescription", item.materialDescription.trim());
-  field("Brand", params.brand.trim());
-  field(
-    "BrandCode",
-    lookupResolver.matchedLookupCode(
-      [...SapBrandLookupFieldHints],
-      params.brand.trim(),
-    ),
-  );
+  field("Brand", brandTitle);
+  // BrandCode must come from Brand Master (caller), not NPD_Lookup.
+  field("BrandCode", brandCode);
   lookupValueAndCode(
     "ProductGroupMG2",
     "ProductGroupMG2Code",
@@ -1152,7 +1156,14 @@ function buildMaterialMasterInsertPayload(
   lookupValueAndCode(
     "MaterialGroup",
     "MaterialGroupCode",
-    SapItemDetailsLookupFieldHints.materialGroup,
+    // Display labels used as Lookup Type titles. SAP payload keeps its own
+    // hints in sapMaterialMasterPayload and is not changed here.
+    [
+      ...SapItemDetailsLookupFieldHints.materialGroup,
+      "Material / Business Group",
+      "Material / Business group",
+      "Business / Material Group",
+    ],
     item.materialGroup,
   );
   lookupValueAndCode(
@@ -1271,6 +1282,8 @@ async function excludeMaterialMasterRowsAlreadyStored(
 export async function insertMaterialMasterFromNpdItems(params: {
   requestId: number;
   brand: string;
+  /** BrandMaster.BrandCode for NPD_MaterialMaster.BrandCode. */
+  brandCode?: string;
   materialType: string;
   items: INpdItemDetailRecord[];
 }): Promise<void> {
@@ -1303,6 +1316,7 @@ export async function insertMaterialMasterFromNpdItems(params: {
     buildMaterialMasterInsertPayload(item, {
       requestId: params.requestId,
       brand: params.brand,
+      brandCode: params.brandCode,
       materialType: params.materialType,
       schema,
       lookupResolver,

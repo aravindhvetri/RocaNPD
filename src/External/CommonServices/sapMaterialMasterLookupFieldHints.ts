@@ -15,7 +15,7 @@ export const SapItemDetailsLookupFieldHints = {
     "Product Sub Category (MGP3A)",
     "productSubCategoryMgp3a",
   ],
-  materialGroup: ["Material Group", "materialGroup"],
+  materialGroup: ["Business / Material Group", "materialGroup"],
   extMaterialGroup: ["Ext. Material Group", "extMaterialGroup"],
   productSegment: ["Product Segment", "productSegment"],
   taxClassification: ["Tax Classification", "taxClassification"],
@@ -24,11 +24,19 @@ export const SapItemDetailsLookupFieldHints = {
 } as const;
 
 export const SapOtherDetailsLookupFieldHints = {
-  profitCenter: [NpdMisLookupTypes.ProfitCenter, "Profit Center", "profitCenter"],
+  profitCenter: [
+    NpdMisLookupTypes.ProfitCenter,
+    "Profit Center",
+    "profitCenter",
+  ],
 } as const;
 
 /** Brand (MG1) may exist as an NPD_Lookup type for Material Master BrandCode. */
-export const SapBrandLookupFieldHints = ["Brand", "Brand (MG1)", "brand"] as const;
+export const SapBrandLookupFieldHints = [
+  "Brand",
+  "Brand (MG1)",
+  "brand",
+] as const;
 
 /** Maps UI Material Type labels to SAP MTART codes. */
 export function mapSapMaterialTypeCode(materialType: string): string {

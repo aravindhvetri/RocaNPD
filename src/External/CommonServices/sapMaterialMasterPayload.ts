@@ -66,7 +66,11 @@ function charField(key: SapMaterialMasterFieldKey, value: string): string {
 }
 
 function firstValue(values: string[] | undefined): string {
-  return (values ?? []).map((value) => String(value ?? "").trim()).filter(Boolean)[0] ?? "";
+  return (
+    (values ?? [])
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)[0] ?? ""
+  );
 }
 
 function lookupSapValue(
@@ -119,7 +123,10 @@ export function buildSapMaterialMasterRequestRow(
   return {
     material: charField("material", item.materialCode),
     matl_desc: charField("matl_desc", item.materialDescription),
-    matl_type: charField("matl_type", mapSapMaterialTypeCode(source.materialType)),
+    matl_type: charField(
+      "matl_type",
+      mapSapMaterialTypeCode(source.materialType),
+    ),
     matl_group: lookupSapValue(
       lookupResolver,
       SapItemDetailsLookupFieldHints.materialGroup,
@@ -134,7 +141,7 @@ export function buildSapMaterialMasterRequestRow(
     ),
     plant: charField("plant", resolveSapPlant(source)),
     stge_loc: charField("stge_loc", otherDetails.storageLocation),
-    old_mat_no: "",
+    old_mat_no: item?.rocaGlobalCode,
     extmatlgrp: lookupSapValue(
       lookupResolver,
       SapItemDetailsLookupFieldHints.extMaterialGroup,

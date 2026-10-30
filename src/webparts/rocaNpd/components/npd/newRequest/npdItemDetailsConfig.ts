@@ -68,6 +68,7 @@ export function toNpdItemDetailRow(
     id: createNpdItemDetailRowId(),
     sharePointId: record.sharePointId || 0,
     isMisAdded: Boolean(record.isMisAdded),
+    sapPosted: Boolean(record.sapPosted),
     ...(Array.isArray(attention) && attention.length
       ? { lookupImportAttentionFields: attention }
       : {}),
@@ -230,7 +231,7 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
   },
   {
     field: "materialGroup",
-    header: "Material / Business Group",
+    header: FieldLabels.MaterialGroup,
     required: true,
     placeholder: "Select Material Group",
     minWidth: "14.5rem",

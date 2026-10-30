@@ -97,6 +97,10 @@ import {
   toPersistableItemRecords,
   workflowActionRequiresComments,
 } from "./npdRequestFormHelpers";
+import {
+  subscribeSapPostedRow,
+  withSapPostedRow,
+} from "../../../../../store/npdSapPostedRowSync";
 import { useNpdEmailAction } from "./useNpdEmailAction";
 import { useNpdRequestTabLock } from "../tabLock/useNpdRequestTabLock";
 import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
@@ -131,6 +135,16 @@ export function useNpdRequestFormController(
   ]);
   /** Snapshot after hydrate — used to persist only added/edited Item Details. */
   const itemBaselineRef = React.useRef<INpdItemDetailRow[]>([]);
+
+  // Apply SAP=true on the open grid as soon as that line succeeds, before a
+  // later line's error clears the progress overlay.
+  React.useEffect(() => {
+    return subscribeSapPostedRow((sharePointId) => {
+      flushSync(() => {
+        setItemRows((current) => withSapPostedRow(current, sharePointId));
+      });
+    });
+  }, []);
   /** General Information + Products count at last hydrate (skip unchanged NPD_Request writes). */
   const headerBaselineRef = React.useRef<{
     brand: string;
@@ -1327,6 +1341,7 @@ export function useNpdRequestFormController(
       lockedFooterMode === "vertical-head-pending",
     showOtherDetails,
     otherDetailsReadOnly,
+    hasAnyItemPostedToSap: itemRows.some((row) => row.sapPosted === true),
     tabRestriction: tabLock.restriction,
     handleCancel: () =>
       navigate(

@@ -99,6 +99,11 @@ const IMPORT_COLUMNS: IImportColumn[] = [
     field: "materialGroup",
     controlType: "multiselect",
     required: true,
+    aliases: [
+      "Material / Business Group",
+      "Material / Business group",
+      "Material Group",
+    ],
   },
   {
     header: FieldLabels.ExtMaterialGroup,

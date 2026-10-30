@@ -36,6 +36,7 @@ function DataTable<T extends Record<string, unknown>>({
   first,
   onPage,
   rowClassName,
+  onRowClick,
 }: IDataTableProps<T>): React.ReactElement {
   const mergedClassName = [styles.dataTable, className].filter(Boolean).join(" ");
   const pageSize = rows > 0 ? rows : 15;
@@ -60,6 +61,16 @@ function DataTable<T extends Record<string, unknown>>({
       paginatorTemplate={paginatorTemplate}
       currentPageReportTemplate={currentPageReportTemplate}
       rowClassName={rowClassName}
+      onRowClick={
+        onRowClick
+          ? (event) => {
+              onRowClick({
+                data: event.data as T,
+                originalEvent: event.originalEvent,
+              });
+            }
+          : undefined
+      }
       {...(typeof first === "number" ? { first, onPage } : {})}
       stripedRows
       showGridlines={false}

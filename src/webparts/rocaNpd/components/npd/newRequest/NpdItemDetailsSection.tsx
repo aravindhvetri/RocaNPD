@@ -31,6 +31,8 @@ export interface INpdItemDetailsSectionProps {
   onExportClick?: () => void;
   /** When false, Export is hidden (e.g. Initiator New Request). Default true. */
   showExport?: boolean;
+  /** Same visibility as Other Details. */
+  showSapStatus?: boolean;
 }
 
 const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
@@ -43,6 +45,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   onImportClick,
   onExportClick,
   showExport = true,
+  showSapStatus = false,
 }) => {
   const visibleFields = React.useMemo(
     () => getVisibleNpdItemDetailFields(brand),
@@ -227,6 +230,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     allowDeleteRows,
     lookupOptionsByType,
     readOnly,
+    showSapStatus,
     onFieldChange: handleFieldChange,
   });
 

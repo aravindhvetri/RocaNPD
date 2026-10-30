@@ -176,6 +176,36 @@
   text-align: center;
 }
 
+/* Same Pending / Approved chip styles as the NPD request list Status column. */
+.statusPending,
+.statusApproved {
+  max-width: 100%;
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  border-radius: 4px !important;
+  padding: 0.2rem 0.55rem !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+
+  :global(.p-tag-value) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.statusPending {
+  background: $roca-color-status-pending-bg !important;
+  color: $roca-color-warning !important;
+  border-color: #f59e0b !important;
+}
+
+.statusApproved {
+  background: $roca-color-status-approved-bg !important;
+  color: $roca-color-success !important;
+  border-color: #10b981 !important;
+}
+
 .cellControlHost {
   width: 100%;
   max-width: 100%;
