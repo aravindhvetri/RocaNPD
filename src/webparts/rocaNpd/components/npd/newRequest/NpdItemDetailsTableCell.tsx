@@ -182,7 +182,8 @@ function areCellPropsEqual(
     prev.fieldDef !== next.fieldDef ||
     prev.lookupOptions !== next.lookupOptions ||
     prev.onFieldChange !== next.onFieldChange ||
-    prev.row.id !== next.row.id
+    prev.row.id !== next.row.id ||
+    prev.row.sapPosted !== next.row.sapPosted
   ) {
     return false;
   }

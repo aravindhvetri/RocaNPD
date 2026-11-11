@@ -92,7 +92,7 @@ export function useNpdItemDetailsColumns({
               row={row}
               lookupOptions={optionsByField[fieldDef.field] ?? EMPTY_LOOKUP_OPTIONS}
               onFieldChange={onFieldChange}
-              readOnly={readOnly}
+              readOnly={readOnly || row.sapPosted === true}
             />
           ),
         };
@@ -137,7 +137,12 @@ export function useNpdItemDetailsColumns({
         maxWidth: "5rem",
         textAlign: CENTER_ALIGN,
       },
-      body: (row) => <NpdItemDetailsActionCell rowId={row.id} />,
+      body: (row) => (
+        <NpdItemDetailsActionCell
+          rowId={row.id}
+          posted={row.sapPosted === true}
+        />
+      ),
     };
 
     const sapStatusWidth = {

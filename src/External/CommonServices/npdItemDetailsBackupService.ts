@@ -449,13 +449,18 @@ export function mergeNpdItemDetailsWithBackup(
   });
 
   const combined = merged;
-  // MIS-added rows first; then remaining by SharePoint Id.
+  // Same order as the Item Details grid: MIS, then VH, then Initiator.
   return combined.sort((left, right) => {
-    const leftMis = left.isMisAdded ? 0 : 1;
-    const rightMis = right.isMisAdded ? 0 : 1;
-    if (leftMis !== rightMis) {
-      return leftMis - rightMis;
+    const leftGroup = left.isMisAdded ? 0 : 1;
+    const rightGroup = right.isMisAdded ? 0 : 1;
+    if (leftGroup !== rightGroup) {
+      return leftGroup - rightGroup;
     }
-    return (left.sharePointId || 0) - (right.sharePointId || 0);
+    const leftId = left.sharePointId || 0;
+    const rightId = right.sharePointId || 0;
+    if (left.isMisAdded) {
+      return rightId - leftId;
+    }
+    return leftId - rightId;
   });
 }

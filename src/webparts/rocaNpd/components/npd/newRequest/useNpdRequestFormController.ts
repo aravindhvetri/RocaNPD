@@ -99,7 +99,9 @@ import {
 } from "./npdRequestFormHelpers";
 import {
   subscribeSapPostedRow,
+  subscribeStoredItemDetails,
   withSapPostedRow,
+  withStoredItemIdentity,
 } from "../../../../../store/npdSapPostedRowSync";
 import { useNpdEmailAction } from "./useNpdEmailAction";
 import { useNpdRequestTabLock } from "../tabLock/useNpdRequestTabLock";
@@ -139,10 +141,26 @@ export function useNpdRequestFormController(
   // Apply SAP=true on the open grid as soon as that line succeeds, before a
   // later line's error clears the progress overlay.
   React.useEffect(() => {
+    return subscribeStoredItemDetails((stored) => {
+      flushSync(() => {
+        setItemRows((current) => withStoredItemIdentity(current, stored));
+      });
+      itemBaselineRef.current = withStoredItemIdentity(
+        itemBaselineRef.current,
+        stored,
+      );
+    });
+  }, []);
+
+  React.useEffect(() => {
     return subscribeSapPostedRow((sharePointId) => {
       flushSync(() => {
         setItemRows((current) => withSapPostedRow(current, sharePointId));
       });
+      itemBaselineRef.current = withSapPostedRow(
+        itemBaselineRef.current,
+        sharePointId,
+      );
     });
   }, []);
   /** General Information + Products count at last hydrate (skip unchanged NPD_Request writes). */
