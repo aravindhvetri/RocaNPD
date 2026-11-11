@@ -172,7 +172,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
       }
       onRowsChange((currentRows) =>
         currentRows.map((row) => {
-          if (row.id !== rowId) {
+          if (row.id !== rowId || row.sapPosted === true) {
             return row;
           }
           return clearLookupImportAttention(
@@ -192,6 +192,10 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         return;
       }
       onRowsChange((currentRows) => {
+        const target = currentRows.find((row) => row.id === rowId);
+        if (target?.sapPosted === true) {
+          return currentRows;
+        }
         const filtered = currentRows.filter((row) => row.id !== rowId);
         return filtered.length > 0
           ? filtered
@@ -205,7 +209,12 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     if (readOnly) {
       return;
     }
-    onRowsChange([createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))]);
+    onRowsChange((currentRows) => {
+      const posted = currentRows.filter((row) => row.sapPosted === true);
+      return posted.length > 0
+        ? posted
+        : [createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))];
+    });
     setFirst(0);
   }, [isMisCoordinatorActing, onRowsChange, readOnly]);
 

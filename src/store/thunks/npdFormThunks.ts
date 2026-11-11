@@ -31,7 +31,10 @@ import {
 import { selectResolvedAccess } from "../slices/appSlice";
 import { bindNpdFormDraftRequest } from "../slices/npdFormSlice";
 import type { RootState } from "../rootState";
-import { notifySapPostedRow } from "../npdSapPostedRowSync";
+import {
+  notifySapPostedRow,
+  notifyStoredItemDetails,
+} from "../npdSapPostedRowSync";
 import {
   beginSapUiProcessing,
   finishUiProcessing,
@@ -615,6 +618,9 @@ export const applyNpdWorkflowAction = createAsyncThunk<
           sapProgress:
             isMisActor && input.action === "Approve"
               ? {
+                  onStoredItems: (items) => {
+                    notifyStoredItemDetails(items);
+                  },
                   onProgress: (posted, total, postedSharePointId) => {
                     if (total <= 0) {
                       return;

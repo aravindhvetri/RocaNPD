@@ -62,17 +62,26 @@ const SELECT_FIELDS = [
   FIELDS.RequestGeneralInfoId,
 ].join(",");
 
-/** MIS-added rows first, then remaining rows by SharePoint Id ascending. */
+/**
+ * Display order: MIS-added lines, then VH-added lines, then Initiator lines.
+ * MIS and VH lines share the MIS_ADDED flag; MIS lines are created later so
+ * they have the higher SharePoint Id. Initiator lines stay in Id order.
+ */
 export function sortNpdItemDetailsForDisplay(
   records: INpdItemDetailRecord[],
 ): INpdItemDetailRecord[] {
   return [...records].sort((left, right) => {
-    const leftMis = left.isMisAdded ? 0 : 1;
-    const rightMis = right.isMisAdded ? 0 : 1;
-    if (leftMis !== rightMis) {
-      return leftMis - rightMis;
+    const leftGroup = left.isMisAdded ? 0 : 1;
+    const rightGroup = right.isMisAdded ? 0 : 1;
+    if (leftGroup !== rightGroup) {
+      return leftGroup - rightGroup;
     }
-    return (left.sharePointId || 0) - (right.sharePointId || 0);
+    const leftId = left.sharePointId || 0;
+    const rightId = right.sharePointId || 0;
+    if (left.isMisAdded) {
+      return rightId - leftId;
+    }
+    return leftId - rightId;
   });
 }
 

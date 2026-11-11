@@ -17,6 +17,8 @@ export const NpdItemDetailsActionsContext =
 
 export interface INpdItemDetailsActionCellProps {
   rowId: string;
+  /** Posted lines cannot be removed. */
+  posted?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ export interface INpdItemDetailsActionCellProps {
  */
 const NpdItemDetailsActionCell: React.FC<INpdItemDetailsActionCellProps> = ({
   rowId,
+  posted = false,
 }) => {
   const { allowDeleteRows, onAddRow, onDeleteRow } = React.useContext(
     NpdItemDetailsActionsContext,
@@ -57,6 +60,7 @@ const NpdItemDetailsActionCell: React.FC<INpdItemDetailsActionCellProps> = ({
           title="Delete row"
           aria-label="Delete row"
           className={styles.deleteRowAction}
+          disabled={posted}
           onClick={() => onDeleteRow(rowId)}
         />
       ) : null}

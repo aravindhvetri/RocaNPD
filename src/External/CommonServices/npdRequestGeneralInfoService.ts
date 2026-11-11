@@ -1095,6 +1095,12 @@ export async function applyNpdWorkflowAction(params: {
       postedSharePointId?: number,
     ) => void;
     onFinish?: (success: boolean) => void;
+    /**
+     * Fired with the Item Details just read from SharePoint (including SAP).
+     * Lets the open grid keep those Ids so a later Post to SAP updates them
+     * instead of inserting a second Pending copy.
+     */
+    onStoredItems?: (items: INpdItemDetailRecord[]) => void;
   };
 }): Promise<INpdRequestGeneralInfo> {
   const request =
@@ -1221,6 +1227,7 @@ export async function applyNpdWorkflowAction(params: {
     await saveNpdItemDetailsBatch(params.requestId, params.items);
     itemsAlreadySaved = true;
     const storedItems = await fetchNpdItemDetailsByRequestId(params.requestId);
+    params.sapProgress?.onStoredItems?.(storedItems);
     const otherDetails = params.otherDetails ?? {
       plantCode: String(request.PlantCode ?? "").trim(),
       storageLocation: String(request.StorageLocation ?? "").trim(),
