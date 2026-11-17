@@ -1,5 +1,8 @@
 import * as React from "react";
-import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
+import type {
+  ILookupType,
+  ISelectOption,
+} from "../../../../../External/CommonServices/Interface";
 import { Config } from "../../../../../External/CommonServices/Config";
 import { Button, DataTable } from "../../common/controls";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
@@ -24,6 +27,7 @@ export interface INpdItemDetailsSectionProps {
   brand: string | null;
   rows: INpdItemDetailRow[];
   lookupOptionsByType: Record<string, ISelectOption[]>;
+  lookupTypes?: readonly ILookupType[];
   readOnly?: boolean;
   isMisCoordinatorActing?: boolean;
   onRowsChange: React.Dispatch<React.SetStateAction<INpdItemDetailRow[]>>;
@@ -39,6 +43,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   brand,
   rows,
   lookupOptionsByType,
+  lookupTypes = [],
   readOnly = false,
   isMisCoordinatorActing = false,
   onRowsChange,
@@ -48,8 +53,8 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   showSapStatus = false,
 }) => {
   const visibleFields = React.useMemo(
-    () => getVisibleNpdItemDetailFields(brand),
-    [brand],
+    () => getVisibleNpdItemDetailFields(brand, lookupTypes),
+    [brand, lookupTypes],
   );
   const pageSize = Config.NpdItemDetailsPageSize;
   const [first, setFirst] = React.useState(0);

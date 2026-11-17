@@ -278,6 +278,11 @@ export const NpdFormFrom = {
 export const NpdItemDetailsPageSize = 15;
 
 export const FieldNames = {
+  LookupType: {
+    Title: "Title",
+    /** Yes/No — drives Item Details mandatory validation. */
+    Required: "Required",
+  },
   Lookup: {
     /** Lookup Name in the UI — there is no LookupName column. */
     Title: "Title",
@@ -450,6 +455,9 @@ export const ActionLabels = {
 
 export const FieldLabels = {
   LookupTypeName: "Lookup Type Name",
+  LookupTypeRequired: "Is This Field Mandatory ?",
+  /** Excel / list column header for NPD_LookupType.Required. */
+  Required: "Required",
   LookupType: "Lookup Type",
   LookupName: "Lookup Name",
   LookupCode: "Lookup Code",
@@ -668,7 +676,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V2.8",
+  AppVersion: "V2.9",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type {
+  ILookupType,
   INpdItemDetailRecord,
   INpdOtherDetails,
   INpdRequestGeneralInfo,
@@ -9,6 +10,7 @@ import type {
 } from "../../External/CommonServices/Interface";
 import { Config } from "../../External/CommonServices/Config";
 import * as lookupOptionUtils from "../../External/CommonServices/lookupOptionUtils";
+import * as lookupTypeService from "../../External/CommonServices/lookupTypeService";
 import * as npdFormDataService from "../../External/CommonServices/npdFormDataService";
 import * as npdItemDetailsService from "../../External/CommonServices/npdItemDetailsService";
 import * as npdOtherDetailsService from "../../External/CommonServices/npdOtherDetailsService";
@@ -220,14 +222,21 @@ export const fetchNpdPlantSourceOptions = createAsyncThunk<
 );
 
 export const fetchNpdLookupOptions = createAsyncThunk<
-  Record<string, ISelectOption[]>,
+  {
+    optionsByType: Record<string, ISelectOption[]>;
+    lookupTypes: ILookupType[];
+  },
   void,
   { rejectValue: string; state: RootState }
 >(
   "npdForm/fetchLookupOptions",
   async (_, { rejectWithValue }) => {
     try {
-      return await lookupOptionUtils.fetchLookupOptionsByType();
+      const [optionsByType, lookupTypes] = await Promise.all([
+        lookupOptionUtils.fetchLookupOptionsByType(),
+        lookupTypeService.fetchActiveLookupTypes(),
+      ]);
+      return { optionsByType, lookupTypes };
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
@@ -242,7 +251,8 @@ export const fetchNpdLookupOptions = createAsyncThunk<
       // Keep a successful cache; allow retry when empty or after an error.
       if (
         form.lookupOptionsStatus === "idle" &&
-        Object.keys(form.lookupOptionsByType).length > 0
+        Object.keys(form.lookupOptionsByType).length > 0 &&
+        form.lookupTypes.length > 0
       ) {
         return false;
       }

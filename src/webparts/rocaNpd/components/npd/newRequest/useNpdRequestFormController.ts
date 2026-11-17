@@ -921,7 +921,11 @@ export function useNpdRequestFormController(
       return;
     }
     const firstMessage = firstValidationMessage(
-      validateNpdRequestForm(npdForm.generalInfo, itemRows),
+      validateNpdRequestForm(
+        npdForm.generalInfo,
+        itemRows,
+        npdForm.lookupTypes,
+      ),
     );
     if (firstMessage) {
       showErrorToast(toastRef, firstMessage, "Validation");
@@ -1194,7 +1198,11 @@ export function useNpdRequestFormController(
       }
       if (action === "Approve") {
         const firstMessage = firstValidationMessage(
-          validateNpdItemDetailsRows(npdForm.generalInfo.brand, itemRows),
+          validateNpdItemDetailsRows(
+            npdForm.generalInfo.brand,
+            itemRows,
+            npdForm.lookupTypes,
+          ),
         );
         if (firstMessage) {
           showErrorToast(toastRef, firstMessage, "Validation");
@@ -1287,6 +1295,7 @@ export function useNpdRequestFormController(
             npdForm.generalInfo.brand,
             itemRows,
             npdForm.otherDetails.profitCenter,
+            npdForm.lookupTypes,
           ),
         );
         if (firstMessage) {
@@ -1312,7 +1321,11 @@ export function useNpdRequestFormController(
       }
     } else if (action === "Approve" && !itemDetailsReadOnly) {
       const firstMessage = firstValidationMessage(
-        validateNpdItemDetailsRows(npdForm.generalInfo.brand, itemRows),
+        validateNpdItemDetailsRows(
+          npdForm.generalInfo.brand,
+          itemRows,
+          npdForm.lookupTypes,
+        ),
       );
       if (firstMessage) {
         showErrorToast(toastRef, firstMessage, "Validation");

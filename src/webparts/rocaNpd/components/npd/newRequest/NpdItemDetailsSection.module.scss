@@ -135,6 +135,25 @@
     }
   }
 
+  // Horizontal freeze for Material Code, Material Description, CMA / Global Code.
+  // S.No is pinned with them so sticky left offsets stay contiguous.
+  :global(.p-datatable-thead > tr > th).frozenSerial,
+  :global(.p-datatable-thead > tr > th).frozenMaterialCode,
+  :global(.p-datatable-thead > tr > th).frozenMaterialDescription,
+  :global(.p-datatable-thead > tr > th).frozenRocaGlobalCode {
+    z-index: 5;
+    background-color: $roca-color-master-table-header !important;
+  }
+
+  :global(.p-datatable-tbody > tr > td).frozenSerial,
+  :global(.p-datatable-tbody > tr > td).frozenMaterialCode,
+  :global(.p-datatable-tbody > tr > td).frozenMaterialDescription,
+  :global(.p-datatable-tbody > tr > td).frozenRocaGlobalCode {
+    z-index: 1;
+    // Inherit the row background so hover / odd / MIS styles stay uniform.
+    background-color: inherit;
+  }
+
   :global(.p-datatable-tbody > tr.p-datatable-emptymessage > td) {
     text-align: center !important;
     vertical-align: top !important;
@@ -147,6 +166,30 @@
     flex-shrink: 0;
     padding: 0.375rem 0.5rem 0.25rem;
   }
+}
+
+/* Sticky left offsets: S.No (3.25) + Material Code (12) + Description (22). */
+.frozenSerial,
+.frozenMaterialCode,
+.frozenMaterialDescription,
+.frozenRocaGlobalCode {
+  position: sticky !important;
+}
+
+.frozenSerial {
+  left: 0 !important;
+}
+
+.frozenMaterialCode {
+  left: 3.25rem !important;
+}
+
+.frozenMaterialDescription {
+  left: 15.25rem !important;
+}
+
+.frozenRocaGlobalCode {
+  left: 37.25rem !important;
 }
 
 .columnTitle {

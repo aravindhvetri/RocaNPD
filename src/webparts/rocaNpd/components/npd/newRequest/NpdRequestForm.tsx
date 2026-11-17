@@ -107,6 +107,7 @@ const NpdRequestForm: React.FC = () => {
           brand={generalInfo.brand}
           rows={itemRows}
           lookupOptionsByType={npdForm.lookupOptionsByType}
+          lookupTypes={npdForm.lookupTypes}
           readOnly={itemDetailsReadOnly}
           isMisCoordinatorActing={isMisCoordinatorActing}
           showExport={showItemDetailsExport}

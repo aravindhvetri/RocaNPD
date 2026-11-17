@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Config } from "../../External/CommonServices/Config";
 import type {
+  ILookupType,
   INpdGeneralInfo,
   INpdOtherDetails,
   ISelectOption,
@@ -43,6 +44,7 @@ const initialState: INpdFormState = {
   brandOptions: [],
   plantSourceOptions: [],
   lookupOptionsByType: {},
+  lookupTypes: [] as ILookupType[],
   brandOptionsStatus: "idle",
   plantSourceStatus: "idle",
   lookupOptionsStatus: "idle",
@@ -156,7 +158,8 @@ const npdFormSlice = createSlice({
       })
       .addCase(fetchNpdLookupOptions.fulfilled, (state, action) => {
         state.lookupOptionsStatus = "idle";
-        state.lookupOptionsByType = { ...action.payload };
+        state.lookupOptionsByType = { ...action.payload.optionsByType };
+        state.lookupTypes = action.payload.lookupTypes;
       })
       .addCase(fetchNpdLookupOptions.rejected, (state, action) => {
         state.lookupOptionsStatus = "error";

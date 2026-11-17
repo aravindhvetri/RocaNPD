@@ -43,6 +43,14 @@ export interface IUseNpdItemDetailsColumnsParams {
 const CENTER_ALIGN: React.CSSProperties["textAlign"] = "center";
 const EMPTY_LOOKUP_OPTIONS: ISelectOption[] = [];
 
+/** Horizontal freeze for Material Code → Material Description. */
+const FROZEN_ITEM_DETAIL_FIELDS: Partial<
+  Record<NpdItemDetailFieldKey, string>
+> = {
+  materialCode: styles.frozenMaterialCode,
+  materialDescription: styles.frozenMaterialDescription,
+};
+
 export function useNpdItemDetailsColumns({
   visibleFields,
   allowDeleteRows,
@@ -80,11 +88,14 @@ export function useNpdItemDetailsColumns({
           width: fieldDef.minWidth,
           maxWidth: fieldDef.minWidth,
         };
+        const frozenClass = FROZEN_ITEM_DETAIL_FIELDS[fieldDef.field];
         return {
           field: fieldDef.field,
           header: renderColumnHeader(fieldDef),
           style: columnWidth,
           headerStyle: columnWidth,
+          className: frozenClass,
+          headerClassName: frozenClass,
           body: (row) => (
             <NpdItemDetailsTableCell
               id={`${row.id}-${fieldDef.field}`}
@@ -113,6 +124,9 @@ export function useNpdItemDetailsColumns({
         maxWidth: "3.25rem",
         textAlign: CENTER_ALIGN,
       },
+      // Keep S.No pinned with the three frozen fields so left freeze stays contiguous.
+      className: styles.frozenSerial,
+      headerClassName: styles.frozenSerial,
       body: (_row, rowIndex) => (
         // PrimeReact rowIndex is absolute across the full value array (not page-local).
         <span className={styles.rowIndex}>{rowIndex + 1}</span>
