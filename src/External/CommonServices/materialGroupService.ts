@@ -11,7 +11,6 @@ import { bulkCreateLookups, fetchActiveLookups } from "./lookupService";
 import { fetchActiveLookupTypes } from "./lookupTypeService";
 import {
   addMaterialGroupAuditLog,
-  fetchLatestMaterialGroupAuditComment,
   fetchMaterialGroupAuditLogs,
   fetchMgTerminalConsultantEmailsByRequestId,
 } from "./materialGroupAuditLogService";
@@ -38,11 +37,7 @@ const REQUESTS_LIST = (): string => Config.ListNames.MaterialGroupRequests;
 
 /** Normalize master names for fuzzy match (e.g. "Color(MGP1A)" vs "Color (MGP1A)"). */
 function normalizeMasterKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[()]/g, "")
-    .trim();
+  return value.toLowerCase().replace(/\s+/g, "").replace(/[()]/g, "").trim();
 }
 
 /** Read one RequestsJSON row — supports PascalCase / camelCase keys. */
@@ -84,8 +79,9 @@ function parseRequestsJson(raw: unknown): IMaterialGroupRequestJsonEntry[] {
   }
 
   return parsed
-    .filter((item): item is Record<string, unknown> =>
-      Boolean(item) && typeof item === "object",
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
     )
     .map(normalizeRequestsJsonEntry);
 }
@@ -179,9 +175,7 @@ export async function fetchMaterialGroupConfigs(): Promise<
       if (rf) {
         if (Array.isArray(rf) && rf.length > 0) {
           relatedFieldId = Number(rf[0].Id ?? rf[0].ID ?? relatedFieldId);
-          relatedFieldTitle = String(
-            rf[0].Title ?? relatedFieldTitle,
-          ).trim();
+          relatedFieldTitle = String(rf[0].Title ?? relatedFieldTitle).trim();
         } else if (Array.isArray(rf.results) && rf.results.length > 0) {
           relatedFieldId = Number(
             rf.results[0].Id ?? rf.results[0].ID ?? relatedFieldId,
@@ -297,19 +291,11 @@ function buildRequestsJsonAndLookupIds(
 async function saveOrUpdateMaterialGroupRecord(
   id: number | undefined,
   fields: Record<string, unknown>,
-  configLookupIds: number[],
+  configLookupIds?: number[],
 ): Promise<number> {
-  // PnPjs expects a plain number[] for multi-lookup Id fields (not { results: [] }).
-  const withArray = {
-    ...fields,
-    MaterialGroupConfigId: configLookupIds,
-  };
-  const withResults = {
-    ...fields,
-    MaterialGroupConfigId: { results: configLookupIds },
-  };
-
-  const tryWrite = async (payload: Record<string, unknown>): Promise<number> => {
+  const tryWrite = async (
+    payload: Record<string, unknown>,
+  ): Promise<number> => {
     if (id && id > 0) {
       await SPServices.SPUpdateItem({
         Listname: REQUESTS_LIST(),
@@ -324,15 +310,27 @@ async function saveOrUpdateMaterialGroupRecord(
       RequestJSON: payload,
     });
     const newId = Number(
-      created?.data?.Id ??
-        created?.data?.ID ??
-        created?.Id ??
-        created?.ID,
+      created?.data?.Id ?? created?.data?.ID ?? created?.Id ?? created?.ID,
     );
     if (!newId) {
       throw new Error("Item was created but ID could not be read.");
     }
     return newId;
+  };
+
+  // Promote-only updates omit MaterialGroupConfigId (entries already on the item).
+  if (!configLookupIds) {
+    return tryWrite(fields);
+  }
+
+  // PnPjs expects a plain number[] for multi-lookup Id fields (not { results: [] }).
+  const withArray = {
+    ...fields,
+    MaterialGroupConfigId: configLookupIds,
+  };
+  const withResults = {
+    ...fields,
+    MaterialGroupConfigId: { results: configLookupIds },
   };
 
   try {
@@ -350,6 +348,14 @@ export interface ISaveMaterialGroupDraftParams {
   actorEmail?: string;
   actorId?: number;
   actorName?: string;
+  /** Prefer configs already loaded in Redux — skip MaterialGroupConfig list GET. */
+  configs?: IMaterialGroupConfigOption[];
+  /**
+   * RequestsJSON last saved/hydrated. When equal to the new payload on an
+   * existing Draft, skip the NPD_MaterialGroupRequests update.
+   */
+  previousRequestsJson?: string;
+  previousConfigLookupIds?: number[];
 }
 
 /**
@@ -359,8 +365,14 @@ export interface ISaveMaterialGroupDraftParams {
  */
 export async function saveMaterialGroupDraft(
   params: ISaveMaterialGroupDraftParams,
-): Promise<{ id: number; guid: string }> {
-  const { id, selectedConfigIds, entriesByConfigId, actorEmail, actorId } = params;
+): Promise<{
+  id: number;
+  guid: string;
+  requestsJson: string;
+  configLookupIds: number[];
+}> {
+  const { id, selectedConfigIds, entriesByConfigId, actorEmail, actorId } =
+    params;
 
   let initiatorId = actorId;
   if (actorEmail && !initiatorId) {
@@ -374,18 +386,41 @@ export async function saveMaterialGroupDraft(
     }
   }
 
-  const configs = await fetchMaterialGroupConfigs().catch(() => []);
-  const { requestsJson, configLookupIds, rawEntries } = buildRequestsJsonAndLookupIds(
-    selectedConfigIds,
-    entriesByConfigId,
-    configs,
-  );
+  const configs =
+    params.configs && params.configs.length
+      ? params.configs
+      : await fetchMaterialGroupConfigs().catch(() => []);
+  const { requestsJson, configLookupIds, rawEntries } =
+    buildRequestsJsonAndLookupIds(
+      selectedConfigIds,
+      entriesByConfigId,
+      configs,
+    );
 
   if (!selectedConfigIds.length) {
     throw new Error("Please select at least one master category to configure.");
   }
 
   const targetId = id && id > 0 ? id : Number(params.guid) || undefined;
+
+  // Existing Draft with identical payload — do not PATCH the requests list.
+  if (targetId && targetId > 0 && params.previousRequestsJson != null) {
+    const priorIds = [...(params.previousConfigLookupIds || [])].sort(
+      (a, b) => a - b,
+    );
+    const nextIds = [...configLookupIds].sort((a, b) => a - b);
+    const sameLookups =
+      priorIds.length === nextIds.length &&
+      priorIds.every((value, index) => value === nextIds[index]);
+    if (params.previousRequestsJson === requestsJson && sameLookups) {
+      return {
+        id: targetId,
+        guid: String(targetId),
+        requestsJson,
+        configLookupIds,
+      };
+    }
+  }
 
   const savedId = await saveOrUpdateMaterialGroupRecord(
     targetId,
@@ -398,7 +433,12 @@ export async function saveMaterialGroupDraft(
     configLookupIds,
   );
 
-  return { id: savedId, guid: String(savedId) };
+  return {
+    id: savedId,
+    guid: String(savedId),
+    requestsJson,
+    configLookupIds,
+  };
 }
 
 export interface ISubmitMaterialGroupRequestParams {
@@ -413,6 +453,10 @@ export interface ISubmitMaterialGroupRequestParams {
   existingRequestId?: string;
   existingStatus?: string;
   comments?: string;
+  /** Prefer configs already loaded in Redux — skip MaterialGroupConfig list GET. */
+  configs?: IMaterialGroupConfigOption[];
+  /** Last hydrated/saved RequestsJSON — skip rewriting entries when unchanged. */
+  previousRequestsJson?: string;
 }
 
 /**
@@ -449,25 +493,23 @@ export async function submitMaterialGroupRequest(
     }
   }
 
-  const configs = await fetchMaterialGroupConfigs().catch(() => []);
-  const { requestsJson, configLookupIds, rawEntries } = buildRequestsJsonAndLookupIds(
-    selectedConfigIds,
-    entriesByConfigId,
-    configs,
-  );
+  const configs =
+    params.configs && params.configs.length
+      ? params.configs
+      : await fetchMaterialGroupConfigs().catch(() => []);
+  const { requestsJson, configLookupIds, rawEntries } =
+    buildRequestsJsonAndLookupIds(
+      selectedConfigIds,
+      entriesByConfigId,
+      configs,
+    );
 
   if (!rawEntries.length) {
     throw new Error("Please add at least one entry before submitting.");
   }
 
-  // Code must be unique within each Lookup Type (form batch + NPD_Lookup).
-  await assertMaterialGroupCodesUniqueInLookupTypes(
-    rawEntries.map((entry) => ({
-      lookupTypeId: Number(entry.LookupId) || 0,
-      lookupTypeTitle: entry.LookupName,
-      code: entry.Code,
-    })),
-  );
+  // Duplicate Code vs NPD_Lookup is enforced only on Consultant Complete —
+  // not on Initiator Submit to Consultant.
 
   const requestId =
     existingRequestId && isMgRequestIdTitle(existingRequestId)
@@ -476,15 +518,26 @@ export async function submitMaterialGroupRequest(
 
   const targetId = id && id > 0 ? id : Number(params.guid) || undefined;
 
+  // Existing Draft with identical entry payload: only promote Status/Title.
+  const entriesUnchanged =
+    Boolean(targetId && targetId > 0 && params.previousRequestsJson != null) &&
+    params.previousRequestsJson === requestsJson;
+
   const savedId = await saveOrUpdateMaterialGroupRecord(
     targetId,
-    {
-      Title: requestId,
-      Status: Config.MaterialGroupStatus.Pending,
-      RequestsJSON: requestsJson,
-      ...(initiatorId ? { InitiatorId: initiatorId } : {}),
-    },
-    configLookupIds,
+    entriesUnchanged
+      ? {
+          Title: requestId,
+          Status: Config.MaterialGroupStatus.Pending,
+          ...(initiatorId ? { InitiatorId: initiatorId } : {}),
+        }
+      : {
+          Title: requestId,
+          Status: Config.MaterialGroupStatus.Pending,
+          RequestsJSON: requestsJson,
+          ...(initiatorId ? { InitiatorId: initiatorId } : {}),
+        },
+    entriesUnchanged ? undefined : configLookupIds,
   );
 
   const isRework =
@@ -507,7 +560,10 @@ export async function submitMaterialGroupRequest(
       actionVia: "System",
     });
   } catch (auditErr) {
-    console.warn("Failed to record Initiator audit log for Material Group:", auditErr);
+    console.warn(
+      "Failed to record Initiator audit log for Material Group:",
+      auditErr,
+    );
   }
 
   // Dispatch email notification to Consultant asynchronously
@@ -541,9 +597,11 @@ function statusEquals(actual: string, expected: string): boolean {
   return actual.trim().toLowerCase() === expected.trim().toLowerCase();
 }
 
-function resolveItemOwnerEmail(
-  item: Record<string, unknown>,
-): { name: string; email: string; userId: number } {
+function resolveItemOwnerEmail(item: Record<string, unknown>): {
+  name: string;
+  email: string;
+  userId: number;
+} {
   const initiatorEmails = extractPersonEmails(item.Initiator);
   const authorEmails = extractPersonEmails(item.Author);
   const initiator = item.Initiator as
@@ -668,10 +726,14 @@ export async function fetchGroupedMaterialGroupRequests(
     })) as Record<string, unknown>[];
   } catch (error) {
     // Fallback without person Expand if site schema differs
-    console.warn("MG list fetch with Expand failed, retrying minimal select:", error);
+    console.warn(
+      "MG list fetch with Expand failed, retrying minimal select:",
+      error,
+    );
     rawItems = (await SPServices.SPReadItems({
       Listname: REQUESTS_LIST(),
-      Select: "Id,Title,RequestsJSON,Status,Created,Modified,AuthorId,InitiatorId",
+      Select:
+        "Id,Title,RequestsJSON,Status,Created,Modified,AuthorId,InitiatorId",
       Orderby: "Modified",
       Orderbydecorasc: false,
       Topcount: 5000,
@@ -809,9 +871,11 @@ export async function fetchGroupedMaterialGroupRequests(
 
 /**
  * Loads a Material Group request by list item ID and hydrates the form from RequestsJSON.
+ * Pass `configs` from Redux when already loaded to avoid a second MaterialGroupConfig GET.
  */
 export async function fetchMaterialGroupRequestById(
   idOrGuid: number | string,
+  options?: { configs?: IMaterialGroupConfigOption[] },
 ): Promise<IMaterialGroupHydratePayload> {
   const numericId = Number(idOrGuid);
 
@@ -833,9 +897,7 @@ export async function fetchMaterialGroupRequestById(
 
   let rawItem: Record<string, unknown> | null = null;
 
-  const normalizeItem = (
-    byIdRaw: unknown,
-  ): Record<string, unknown> | null => {
+  const normalizeItem = (byIdRaw: unknown): Record<string, unknown> | null => {
     const byId = Array.isArray(byIdRaw)
       ? (byIdRaw[0] as Record<string, unknown> | undefined)
       : (byIdRaw as Record<string, unknown> | undefined);
@@ -845,7 +907,9 @@ export async function fetchMaterialGroupRequestById(
     return null;
   };
 
-  const readById = async (id: number): Promise<Record<string, unknown> | null> => {
+  const readById = async (
+    id: number,
+  ): Promise<Record<string, unknown> | null> => {
     // Prefer people Expand so Initiator email is available for Rework notifications
     try {
       const item = normalizeItem(
@@ -917,10 +981,7 @@ export async function fetchMaterialGroupRequestById(
           return items[0];
         }
       } catch (error) {
-        console.warn(
-          `MG filter by ${attempt.FilterKey} failed:`,
-          error,
-        );
+        console.warn(`MG filter by ${attempt.FilterKey} failed:`, error);
       }
     }
 
@@ -990,8 +1051,7 @@ export async function fetchMaterialGroupRequestById(
   const author = rawItem.Author as
     | { Title?: string; EMail?: string; Email?: string }
     | undefined;
-  const initiatorName =
-    String(initiator?.Title || author?.Title || "").trim();
+  const initiatorName = String(initiator?.Title || author?.Title || "").trim();
   const initiatorEmail =
     ownerEmails[0] ||
     String(
@@ -1002,9 +1062,12 @@ export async function fetchMaterialGroupRequestById(
         "",
     ).trim();
 
-  const configs = await fetchMaterialGroupConfigs().catch(
-    () => [] as IMaterialGroupConfigOption[],
-  );
+  const configs =
+    options?.configs && options.configs.length
+      ? options.configs
+      : await fetchMaterialGroupConfigs().catch(
+          () => [] as IMaterialGroupConfigOption[],
+        );
 
   // Form population: Status + RequestsJSON only
   const entries = parseRequestsJson(rawItem.RequestsJSON);
@@ -1038,24 +1101,30 @@ export async function fetchMaterialGroupRequestById(
     5000,
     [] as Awaited<ReturnType<typeof fetchMaterialGroupAuditLogs>>,
   );
+  // Prefer first audit log row — do not issue a second comments GET when logs exist.
   const auditComment = auditLogs[0]
     ? {
         comments: auditLogs[0].comments,
         action: auditLogs[0].status,
       }
-    : await withTimeout(
-        fetchLatestMaterialGroupAuditComment(itemId),
-        2000,
-        null,
-      );
+    : null;
+
+  const selectedConfigIds = Array.from(selectedConfigIdSet);
+  const savedFingerprint = buildRequestsJsonAndLookupIds(
+    selectedConfigIds,
+    entriesByConfigId,
+    configs,
+  );
 
   return {
     id: itemId,
     guid: String(itemId),
     requestId,
     status,
-    selectedConfigIds: Array.from(selectedConfigIdSet),
+    selectedConfigIds,
     entriesByConfigId,
+    savedRequestsJson: savedFingerprint.requestsJson,
+    savedConfigLookupIds: savedFingerprint.configLookupIds,
     initiatorName,
     initiatorEmail,
     auditLogs,
@@ -1143,20 +1212,20 @@ export async function assertMaterialGroupCodesUniqueInLookupTypes(
     seenInBatch.add(key);
   }
 
-  const existing = await fetchActiveLookups();
-  for (const entry of filled) {
-    const codeKey = entry.code.toLowerCase();
-    const exists = existing.some(
-      (item) =>
-        item.LookupTypeId === entry.lookupTypeId &&
-        item.LookupCode.trim().toLowerCase() === codeKey,
-    );
-    if (exists) {
-      throw new Error(
-        `"${entry.code}" already exists as a Lookup Code under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
-      );
-    }
-  }
+  // const existing = await fetchActiveLookups();
+  // for (const entry of filled) {
+  //   const codeKey = entry.code.toLowerCase();
+  //   const exists = existing.some(
+  //     (item) =>
+  //       item.LookupTypeId === entry.lookupTypeId &&
+  //       item.LookupCode.trim().toLowerCase() === codeKey,
+  //   );
+  //   if (exists) {
+  //     throw new Error(
+  //       `"${entry.code}" already exists as a Lookup Code under ${entry.lookupTypeTitle || "this Lookup Type"}.`,
+  //     );
+  //   }
+  // }
 }
 
 /**
@@ -1277,11 +1346,15 @@ export async function updateConsultantMaterialGroupAction(
     configs.map((c) => [c.id, c]),
   );
 
-  // Build updated RequestsJSON with SAP codes entered by consultant
+  // Build updated RequestsJSON with SAP codes entered by consultant.
+  // Complete: Code + Description mandatory. Rework / Reject: comments only
+  // (same as MIS) — persist the current grid without field / duplicate checks.
+  const requireEntryFields = params.action === "Completed";
   const rawEntries: IMaterialGroupRequestJsonEntry[] = [];
-  const configLookupIds: number[] = [];
   if (params.entriesByConfigId) {
-    for (const [configIdStr, rows] of Object.entries(params.entriesByConfigId)) {
+    for (const [configIdStr, rows] of Object.entries(
+      params.entriesByConfigId,
+    )) {
       const configId = Number(configIdStr);
       const cfg = configMap.get(configId);
       const relatedLookupTypeId =
@@ -1291,7 +1364,7 @@ export async function updateConsultantMaterialGroupAction(
       const lookupName =
         cfg?.relatedFieldTitle || cfg?.title || `Master (${configId})`;
 
-      if (!rows.length) {
+      if (requireEntryFields && !rows.length) {
         throw new Error(`Please add at least one entry for ${lookupName}.`);
       }
 
@@ -1299,16 +1372,17 @@ export async function updateConsultantMaterialGroupAction(
         const row = rows[i];
         const code = (row.code || "").trim();
         const description = (row.description || "").trim();
-        if (!description) {
-          throw new Error(
-            `Description is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
-          );
-        }
-        // Consultant: Code is mandatory for Complete / Rework / Reject.
-        if (!code) {
-          throw new Error(
-            `Code is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
-          );
+        if (requireEntryFields) {
+          if (!description) {
+            throw new Error(
+              `Description is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+            );
+          }
+          if (!code) {
+            throw new Error(
+              `Code is required for ${lookupName}${rows.length > 1 ? ` (Row ${i + 1})` : ""}.`,
+            );
+          }
         }
         rawEntries.push({
           LookupId: String(relatedLookupTypeId),
@@ -1317,26 +1391,23 @@ export async function updateConsultantMaterialGroupAction(
           Description: description,
         });
       }
-      configLookupIds.push(configId);
     }
-
   }
 
-  // Code unique within Lookup Type for every Consultant action (and on Complete sync).
-  if (rawEntries.length > 0) {
-    await assertMaterialGroupCodesUniqueInLookupTypes(
-      rawEntries.map((entry) => ({
-        lookupTypeId: Number(entry.LookupId) || 0,
-        lookupTypeTitle: entry.LookupName,
-        code: entry.Code,
-      })),
-    );
-  }
-
-  // Complete: sync Lookup Master BEFORE status change.
+  // Complete: duplicate Code check + Lookup Master sync BEFORE status change.
+  // Rework / Reject must not run duplicate Code validation or Lookup APIs.
   if (params.action === "Completed") {
     if (!comments) {
       throw new Error("Comments are required before completing.");
+    }
+    if (rawEntries.length > 0) {
+      await assertMaterialGroupCodesUniqueInLookupTypes(
+        rawEntries.map((entry) => ({
+          lookupTypeId: Number(entry.LookupId) || 0,
+          lookupTypeTitle: entry.LookupName,
+          code: entry.Code,
+        })),
+      );
     }
     await syncLookupMasterFromRequestsJson(rawEntries);
   }
@@ -1355,37 +1426,13 @@ export async function updateConsultantMaterialGroupAction(
     statusPayload.RequestsJSON = JSON.stringify(rawEntries);
   }
 
+  // One items(id) update only. MaterialGroupConfigId is already set on Initiator
+  // Submit — rewriting it here caused a duplicate PATCH on Rework / Reject / Complete.
   await SPServices.SPUpdateItem({
     Listname: REQUESTS_LIST(),
     ID: targetId,
     RequestJSON: statusPayload,
   });
-
-  // Optional MaterialGroupConfig multi-lookup sync (PnP expects number[])
-  if (configLookupIds.length > 0) {
-    try {
-      await SPServices.SPUpdateItem({
-        Listname: REQUESTS_LIST(),
-        ID: targetId,
-        RequestJSON: { MaterialGroupConfigId: configLookupIds },
-      });
-    } catch {
-      try {
-        await SPServices.SPUpdateItem({
-          Listname: REQUESTS_LIST(),
-          ID: targetId,
-          RequestJSON: {
-            MaterialGroupConfigId: { results: configLookupIds },
-          },
-        });
-      } catch (configError) {
-        console.warn(
-          "MG consultant action: MaterialGroupConfig update skipped:",
-          configError,
-        );
-      }
-    }
-  }
 
   const requestTitle =
     (params.requestId && isMgRequestIdTitle(params.requestId)
@@ -1491,8 +1538,7 @@ export async function updateConsultantMaterialGroupAction(
     );
     const lastRole = getLastApproverRoleFromSequence(roleSequence);
     if (lastRole) {
-      actorIsLastApprover =
-        lastRole.toLowerCase() === auditRole.toLowerCase();
+      actorIsLastApprover = lastRole.toLowerCase() === auditRole.toLowerCase();
     }
   } catch (err) {
     console.warn(

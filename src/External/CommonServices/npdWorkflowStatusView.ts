@@ -3,6 +3,7 @@ import type { INpdWorkflowStepJson } from "./Interface";
 import {
   getFirstPendingApproverRole,
   isInitiatorWorkflowRole,
+  isVerticalHeadWorkflowRole,
 } from "./npdWorkflowJsonService";
 import { normalizeEmail } from "./personFieldUtils";
 import SPServices from "./SPServices";
@@ -59,7 +60,7 @@ export function buildNpdWorkflowStatusViewRows(params: {
 
     return {
       key: `${index}-${step.Role}-${email}`,
-      role: step.Role.trim() || "—",
+      role: formatWorkflowStatusRoleLabel(step.Role),
       name: resolveNpdWorkflowDisplayName(
         email,
         authorEmail,
@@ -123,6 +124,18 @@ export function resolveNpdWorkflowDisplayName(
   }
 
   return formatEmailLocalName(email);
+}
+
+/** Display-only: map legacy Vertical Head to VH-Marketing Manager. */
+function formatWorkflowStatusRoleLabel(role: string): string {
+  const trimmed = role.trim();
+  if (!trimmed) {
+    return "—";
+  }
+  if (isVerticalHeadWorkflowRole(trimmed)) {
+    return Config.Roles.VerticalHead;
+  }
+  return trimmed;
 }
 
 function resolveWorkflowStatusLabel(

@@ -44,10 +44,12 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
   selectAll = false,
   selectionLimit,
   emptyMessage = "No available options",
+  closeOnScroll = false,
   "data-testid": testId,
 }) => {
   const hostRef = React.useRef<HTMLDivElement>(null);
   const multiSelectRef = React.useRef<PrimeMultiSelectType>(null);
+  const overlayOpenRef = React.useRef(false);
   const isSingleSelect = selectionLimit === 1;
   const panelToken = React.useMemo(
     () => `roca-ms-panel-${sanitizePanelToken(id || "default")}`,
@@ -97,6 +99,47 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
     panel.style.setProperty("box-sizing", "border-box", "important");
     panel.style.left = `${Math.round(rect.left)}px`;
   }, [panelToken]);
+
+  const handleOverlayShow = React.useCallback(() => {
+    overlayOpenRef.current = true;
+    syncOverlayToTrigger();
+  }, [syncOverlayToTrigger]);
+
+  const handleOverlayHide = React.useCallback(() => {
+    overlayOpenRef.current = false;
+  }, []);
+
+  React.useEffect(() => {
+    if (!closeOnScroll) {
+      return undefined;
+    }
+
+    const hideOnPageScroll = (event: Event): void => {
+      if (!overlayOpenRef.current) {
+        return;
+      }
+
+      const panel =
+        (multiSelectRef.current?.getOverlay?.() as HTMLElement | null) ??
+        (document.querySelector(`.${panelToken}`) as HTMLElement | null);
+      const target = event.target;
+      // Keep open when scrolling the options list itself.
+      if (
+        panel &&
+        target instanceof Node &&
+        (target === panel || panel.contains(target))
+      ) {
+        return;
+      }
+
+      multiSelectRef.current?.hide();
+    };
+
+    window.addEventListener("scroll", hideOnPageScroll, true);
+    return () => {
+      window.removeEventListener("scroll", hideOnPageScroll, true);
+    };
+  }, [closeOnScroll, panelToken]);
 
   const itemTemplate = React.useCallback((option: IDropdownOption) => {
     const text = String(option?.label ?? "");
@@ -165,7 +208,8 @@ const MultiSelect: React.FC<IMultiSelectProps> = ({
           className={`w-full ${error ? "p-invalid" : ""}`}
           emptyMessage={emptyMessage}
           itemTemplate={itemTemplate}
-          onShow={syncOverlayToTrigger}
+          onShow={handleOverlayShow}
+          onHide={handleOverlayHide}
           title={selectedLabelTitle || undefined}
           pt={{
             root: {

@@ -44,7 +44,6 @@ function item(
     hsnCode: partial.hsnCode || "69101000",
     weightKg: partial.weightKg === undefined ? 10.5 : partial.weightKg,
     uom: partial.uom || ["PC"],
-    minQtyBoxQty: "",
     sapPosted: partial.sapPosted,
   };
 }
@@ -65,7 +64,7 @@ const passthroughLookupResolver = createPassthroughSapLookupCodeResolver();
 function build(
   row: INpdItemDetailRecord,
   plant = "CALW",
-  materialType = Config.NpdMaterialTypes.FinishedProducts,
+  materialType = Config.NpdMaterialTypes.OwnManufactureProducts,
 ): ISapMaterialMasterRequestRow {
   return buildSapMaterialMasterRequestRow(
     {
@@ -120,7 +119,7 @@ const segmentPayload = buildSapMaterialMasterRequestRow(
       materialCode: "MAT4",
       productSegment: ["ABC"],
     }),
-    materialType: Config.NpdMaterialTypes.FinishedProducts,
+    materialType: Config.NpdMaterialTypes.OwnManufactureProducts,
     plant: "CALW",
     brand: "PW",
     otherDetails,
@@ -266,11 +265,13 @@ async function runFlow(): Promise<void> {
     markPosted: async (id: number) => {
       marked.push(id);
     },
-    insertMaster: async (row: INpdItemDetailRecord) => {
-      if (row.materialCode === "MMFAIL") {
-        throw new Error("Material Master insert failed");
+    insertMaster: async (rows: INpdItemDetailRecord[]) => {
+      for (const row of rows) {
+        if (row.materialCode === "MMFAIL") {
+          throw new Error("Material Master insert failed");
+        }
+        inserted.push(row.materialCode);
       }
-      inserted.push(row.materialCode);
     },
   };
 
@@ -280,25 +281,36 @@ async function runFlow(): Promise<void> {
     item({ sharePointId: 13, materialCode: "B" }),
   ];
   await assert.rejects(() => postItemDetailsToSap(first, build, deps), /Material Code already exist/);
-  assert.deepEqual(posted, ["A", "FAIL", "B"]);
-  assert.deepEqual(marked, [11, 13]);
-  assert.deepEqual(inserted, ["A", "B"]);
+  // Stop on FAIL — B is not posted; Material Master is not written mid-batch.
+  assert.deepEqual(posted, ["A", "FAIL"]);
+  assert.deepEqual(marked, [11]);
+  assert.deepEqual(inserted, []);
   assert.equal(first[0].sapPosted, true);
   assert.equal(first[1].sapPosted, undefined);
-  assert.equal(first[2].sapPosted, true);
+  assert.equal(first[2].sapPosted, undefined);
 
   posted.length = 0;
   marked.length = 0;
   inserted.length = 0;
+  const progress: Array<[number, number]> = [];
   const retry = [
     item({ sharePointId: 11, materialCode: "A", sapPosted: true }),
     item({ sharePointId: 12, materialCode: "FAIL" }),
-    item({ sharePointId: 13, materialCode: "B", sapPosted: true }),
+    item({ sharePointId: 13, materialCode: "B" }),
   ];
-  await assert.rejects(() => postItemDetailsToSap(retry, build, deps), /Material Code already exist/);
+  await assert.rejects(
+    () =>
+      postItemDetailsToSap(retry, build, {
+        ...deps,
+        onProgress: (current, total) => progress.push([current, total]),
+      }),
+    /Material Code already exist/,
+  );
+  // Retry: only SAP=false lines (FAIL, B) — progress total is 2, not 3.
   assert.deepEqual(posted, ["FAIL"]);
   assert.deepEqual(marked, []);
-  assert.deepEqual(inserted, ["A", "B"]);
+  assert.deepEqual(inserted, []);
+  assert.deepEqual(progress[0], [0, 2]);
 
   posted.length = 0;
   const calls: string[] = [];
@@ -329,14 +341,14 @@ async function runFlow(): Promise<void> {
   const mmFail = [item({ sharePointId: 21, materialCode: "MMFAIL" })];
   await assert.rejects(() => postItemDetailsToSap(mmFail, build, deps), /Material Master insert failed/);
   assert.equal(mmFail[0].sapPosted, true);
+  assert.deepEqual(marked.slice(-1), [21]);
   posted.length = 0;
   inserted.length = 0;
-  mmFail[0].materialCode = "MMFAIL";
   const retryMaster = [item({ sharePointId: 21, materialCode: "OK", sapPosted: true })];
   await postItemDetailsToSap(retryMaster, build, {
     ...deps,
-    insertMaster: async (row) => {
-      inserted.push(row.materialCode);
+    insertMaster: async (rows) => {
+      rows.forEach((row) => inserted.push(row.materialCode));
     },
   });
   assert.deepEqual(posted, []);

@@ -218,8 +218,8 @@ This is a Google AI Studio single-page application prototype. Screens are naviga
 **General Information**
 
 - Brand (MG1) — required dropdown; ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users email = logged-in user; Brand lookup Title values
-- Material Type — required dropdown; `Config.NpdMaterialTypes` (Finished Products, Traded Products)
-- Plant / Source — required when Material Type selected; **Finished Products** → ROCA `PlantMaster` (Factory, active, `PlantCode`); **Traded Products** → `Config.NpdTradedPlantSources` (Imported, Domestic); Brand Material Extension filter — pending
+- Material Type — required dropdown; `Config.NpdMaterialTypes` (Own Manufacture Products, Traded Products)
+- Plant / Source — required when Material Type selected; **Own Manufacture Products** → ROCA `PlantMaster` (Factory, active, `PlantCode`); **Traded Products** → `Config.NpdTradedPlantSources` (Imported, Domestic); Brand Material Extension filter — pending
 - Cross-site ROCA URL: `requireRocaMasterSiteUrl()` uses context site URL + browser URL haystack (localhost workbench supported)
 - Roca Global Code — **conditional**: visible and mandatory when Brand = Roca, Laufen, or Armani
 
@@ -453,7 +453,7 @@ Use `SPServices.GenerateFormatId(prefix, lastId, padLength)` for consistent form
 
 | Material Type | Product Source | Plant Code | Valuation Class |
 |---|---|---|---|
-| Finished Products | Any | Same as Plant/Source | 6000 |
+| Own Manufacture Products | Any | Same as Plant/Source | 6000 |
 | Traded Products | Domestic | CCWH | 5000 |
 | Traded Products | Imported | CCWH | 5100 |
 
@@ -897,7 +897,7 @@ Title=NPD Request, CurrentRole=Vertical Head,  NextRole=MIS Coordinator
 |---|---|---|
 | Title | Single line of text | Stores Brand on Save Draft; Request ID `NPD-YYYY-###` on Submit |
 | Brand | Single line of text | Brand (MG1) |
-| MaterialType | Single line of text | Finished Products / Traded Products |
+| MaterialType | Single line of text | Own Manufacture Products / Traded Products |
 | Plant | Single line of text | Plant / Source |
 | Status | Choice | `Draft` on Save; `Pending` on Submit; keep existing Rework / In ReWork on draft update |
 | IsDeleted | Yes/No | Soft delete |

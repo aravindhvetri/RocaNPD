@@ -4,7 +4,7 @@ import { getNpdMaterialTypeOptions } from "../../../../../External/CommonService
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
 import {
   selectHasPlantSourceMaterialType,
-  selectIsFinishedProductsMaterialType,
+  selectIsOwnManufactureProductsMaterialType,
 } from "../../../../../store/slices/npdFormSlice";
 import { Dropdown } from "../../common/controls";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
@@ -38,7 +38,8 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
   onPlantSourceChange,
 }) => {
   const materialTypeOptions = React.useMemo(() => getNpdMaterialTypeOptions(), []);
-  const isFinishedProducts = selectIsFinishedProductsMaterialType(materialType);
+  const isOwnManufactureProducts =
+    selectIsOwnManufactureProductsMaterialType(materialType);
   const hasPlantSourceMaterialType = selectHasPlantSourceMaterialType(materialType);
   const plantDisabled =
     readOnly ||
@@ -140,7 +141,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           }
           disabled={plantDisabled}
           helperText={plantHelperText}
-          filter={isFinishedProducts}
+          filter={isOwnManufactureProducts}
           className={styles.inlineField}
           onChange={(value) =>
             onPlantSourceChange(typeof value === "string" ? value : null)

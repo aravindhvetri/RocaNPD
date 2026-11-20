@@ -1,5 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import type { IImportParseResult } from "../../External/CommonServices/Interface";
+import type {
+  ILookupTypeImportParseResult,
+  ILookupTypeImportRecord,
+} from "../../External/CommonServices/Interface";
 import * as lookupTypeService from "../../External/CommonServices/lookupTypeService";
 import type { ILookupTypeState } from "../slices/adminState.types";
 
@@ -23,9 +26,15 @@ export const fetchLookupTypes = createAsyncThunk(
 
 export const createLookupType = createAsyncThunk(
   "admin/createLookupType",
-  async (title: string, { dispatch, rejectWithValue }) => {
+  async (
+    payload: { title: string; required: boolean },
+    { dispatch, rejectWithValue },
+  ) => {
     try {
-      await lookupTypeService.createLookupType(title);
+      await lookupTypeService.createLookupType(
+        payload.title,
+        payload.required,
+      );
       return await dispatch(fetchLookupTypes()).unwrap();
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -36,11 +45,15 @@ export const createLookupType = createAsyncThunk(
 export const updateLookupType = createAsyncThunk(
   "admin/updateLookupType",
   async (
-    payload: { id: number; title: string },
+    payload: { id: number; title: string; required: boolean },
     { dispatch, rejectWithValue },
   ) => {
     try {
-      await lookupTypeService.updateLookupType(payload.id, payload.title);
+      await lookupTypeService.updateLookupType(
+        payload.id,
+        payload.title,
+        payload.required,
+      );
       return await dispatch(fetchLookupTypes()).unwrap();
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -64,7 +77,7 @@ export const softDeleteLookupType = createAsyncThunk(
 );
 
 export const previewImportLookupTypes = createAsyncThunk<
-  IImportParseResult,
+  ILookupTypeImportParseResult,
   File,
   {
     rejectValue: string;
@@ -84,7 +97,7 @@ export const previewImportLookupTypes = createAsyncThunk<
 
 export const commitImportLookupTypes = createAsyncThunk<
   number,
-  string[],
+  ILookupTypeImportRecord[],
   { rejectValue: string }
 >(
   "admin/commitImportLookupTypes",
@@ -104,7 +117,7 @@ export const commitImportLookupTypes = createAsyncThunk<
 );
 
 export const importLookupTypes = createAsyncThunk<
-  IImportParseResult,
+  ILookupTypeImportParseResult,
   File,
   {
     rejectValue: string;

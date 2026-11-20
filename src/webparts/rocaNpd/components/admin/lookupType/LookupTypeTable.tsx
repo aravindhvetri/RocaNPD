@@ -4,6 +4,7 @@ import type { ILookupTypeRow } from "../../../../../External/CommonServices/Inte
 import { Button, DataTable } from "../../common/controls";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
 import styles from "../../common/controls/DataTable/DataTable.module.scss";
+import tableStyles from "./LookupTypeTable.module.scss";
 
 export interface ILookupTypeTableProps {
   rows: ILookupTypeRow[];
@@ -27,6 +28,10 @@ const LookupTypeTable: React.FC<ILookupTypeTableProps> = ({
         header: FieldLabels.LookupTypeName,
         sortable: true,
         style: { width: "100%" },
+        // Preserve exact internal spaces from Add/Edit (HTML collapses them by default).
+        body: (row) => (
+          <span className={tableStyles.titleCell}>{row.Title}</span>
+        ),
       },
       {
         field: "Id",

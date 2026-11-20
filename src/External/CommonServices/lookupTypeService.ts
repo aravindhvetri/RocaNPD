@@ -1,8 +1,9 @@
-import { Config, FieldLabels } from "./Config";
+import { Config, FieldLabels, FieldNames } from "./Config";
 import { buildExportFileName, exportToExcel } from "./exportService";
 import type {
-  IImportParseResult,
   ILookupType,
+  ILookupTypeImportParseResult,
+  ILookupTypeImportRecord,
   ILookupTypeRow,
 } from "./Interface";
 import {
@@ -23,18 +24,58 @@ import {
 import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.LookupType;
+const REQUIRED_FIELD = FieldNames.LookupType.Required;
 
 /** Excel headers required for Lookup Type Import (must match FieldLabels). */
 export const LOOKUP_TYPE_IMPORT_HEADERS = [
   FieldLabels.LookupTypeName,
+  FieldLabels.Required,
 ] as const;
 
-const SELECT_FIELDS = "Id,Title,IsDeleted,Modified";
+/**
+ * Accepts Yes/No and true/false (any case). Empty → false.
+ * Returns null when the cell value is not a recognized boolean.
+ */
+function parseLookupTypeRequiredCell(value: unknown): boolean | null {
+  if (value === true || value === 1) {
+    return true;
+  }
+  if (value === false || value === 0) {
+    return false;
+  }
+
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    return false;
+  }
+  if (
+    normalized === "yes" ||
+    normalized === "true" ||
+    normalized === "1"
+  ) {
+    return true;
+  }
+  if (
+    normalized === "no" ||
+    normalized === "false" ||
+    normalized === "0"
+  ) {
+    return false;
+  }
+
+  return null;
+}
+
+const SELECT_FIELDS = `Id,Title,${REQUIRED_FIELD},IsDeleted,Modified`;
 
 function mapLookupType(item: Record<string, unknown>): ILookupType {
   return {
     Id: Number(item.Id),
     Title: String(item.Title ?? "").trim(),
+    Required: isDeletedYesFlag(item[REQUIRED_FIELD]),
     IsDeleted: isDeletedYesFlag(item[SOFT_DELETE_FIELD]),
   };
 }
@@ -51,39 +92,57 @@ export async function fetchActiveLookupTypes(): Promise<ILookupType[]> {
   return rows.map(mapLookupType).filter(isActiveRecord);
 }
 
+/** Lowercase and remove all whitespace for duplicate matching. */
+function normalizeLookupTypeTitleKey(value: string): string {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+
 async function assertLookupTypeNotDuplicate(
   title: string,
   editingId?: number,
 ): Promise<void> {
   const existing = await fetchActiveLookupTypes();
-  const titleKey = title.trim().toLowerCase();
+  const titleKey = normalizeLookupTypeTitleKey(title);
   const isDuplicate = existing.some(
     (item) =>
       item.Id !== editingId &&
-      item.Title.trim().toLowerCase() === titleKey,
+      normalizeLookupTypeTitleKey(item.Title) === titleKey,
   );
   if (isDuplicate) {
     throw new Error(`Lookup Type Name already exists.`);
   }
 }
 
-export async function createLookupType(title: string): Promise<void> {
+export async function createLookupType(
+  title: string,
+  required = false,
+): Promise<void> {
   await assertLookupTypeNotDuplicate(title);
   await SPServices.SPAddItem({
     Listname: LIST_NAME(),
     RequestJSON: {
       Title: title.trim(),
+      // SharePoint Yes/No column expects Edm.Boolean (true/false).
+      [REQUIRED_FIELD]: required,
       ...getActiveRecordCreatePayload(),
     },
   });
 }
 
-export async function updateLookupType(id: number, title: string): Promise<void> {
+export async function updateLookupType(
+  id: number,
+  title: string,
+  required = false,
+): Promise<void> {
   await assertLookupTypeNotDuplicate(title, id);
   await SPServices.SPUpdateItem({
     Listname: LIST_NAME(),
     ID: id,
-    RequestJSON: { Title: title.trim() },
+    RequestJSON: {
+      Title: title.trim(),
+      // SharePoint Yes/No column expects Edm.Boolean (true/false).
+      [REQUIRED_FIELD]: required,
+    },
   });
 }
 
@@ -104,20 +163,22 @@ export async function softDeleteLookupType(
   });
 }
 
-export async function bulkCreateLookupTypes(titles: string[]): Promise<void> {
-  if (!titles.length) {
+export async function bulkCreateLookupTypes(
+  records: ILookupTypeImportRecord[],
+): Promise<void> {
+  if (!records.length) {
     return;
   }
 
   // Final SharePoint guard — do not trust Redux/list state from page load (multi-tab).
   const existing = await fetchActiveLookupTypes();
   const existingKeys = new Set(
-    existing.map((item) => item.Title.trim().toLowerCase()),
+    existing.map((item) => normalizeLookupTypeTitleKey(item.Title)),
   );
   const batchKeys = new Set<string>();
 
-  for (const title of titles) {
-    const titleKey = title.trim().toLowerCase();
+  for (const record of records) {
+    const titleKey = normalizeLookupTypeTitleKey(record.title);
     if (!titleKey) {
       continue;
     }
@@ -129,8 +190,10 @@ export async function bulkCreateLookupTypes(titles: string[]): Promise<void> {
 
   await SPServices.batchInsert({
     ListName: LIST_NAME(),
-    responseData: titles.map((title) => ({
-      Title: title.trim(),
+    responseData: records.map((record) => ({
+      Title: record.title.trim(),
+      // SharePoint Yes/No column expects Edm.Boolean (true/false).
+      [REQUIRED_FIELD]: record.required === true,
       ...getActiveRecordCreatePayload(),
     })),
   });
@@ -139,7 +202,7 @@ export async function bulkCreateLookupTypes(titles: string[]): Promise<void> {
 export async function parseLookupTypeImportFile(
   file: File,
   existingItems: ILookupType[],
-): Promise<IImportParseResult> {
+): Promise<ILookupTypeImportParseResult> {
   const rows = await readSpreadsheetRows(file);
 
   if (!rows.length) {
@@ -157,12 +220,13 @@ export async function parseLookupTypeImportFile(
   const headerRow = rows[headerRowIndex];
   assertRequiredImportHeaders(headerRow, [...LOOKUP_TYPE_IMPORT_HEADERS]);
   const columnIndex = findColumnIndex(headerRow, FieldLabels.LookupTypeName);
+  const requiredColumnIndex = findColumnIndex(headerRow, FieldLabels.Required);
 
   const existingLower = new Set(
-    existingItems.map((item) => item.Title.trim().toLowerCase()),
+    existingItems.map((item) => normalizeLookupTypeTitleKey(item.Title)),
   );
-  const seenInFile = new Set<string>();
-  const toCreate: string[] = [];
+  const seenInFile = new Map<string, { title: string; rowNumber: number }>();
+  const toCreate: ILookupTypeImportRecord[] = [];
   const duplicates: string[] = [];
   const errors: string[] = [];
 
@@ -190,14 +254,39 @@ export async function parseLookupTypeImportFile(
       continue;
     }
 
-    const lower = title.toLowerCase();
-    if (existingLower.has(lower) || seenInFile.has(lower)) {
-      duplicates.push(title);
+    const requiredRaw =
+      requiredColumnIndex >= 0 ? row[requiredColumnIndex] : "";
+    const required = parseLookupTypeRequiredCell(requiredRaw);
+    if (required === null) {
+      errors.push(
+        `Row ${excelRowNumber}: ${FieldLabels.Required} must be Yes, No, true, or false.`,
+      );
       continue;
     }
 
-    seenInFile.add(lower);
-    toCreate.push(title);
+    // Same key as Add/Edit: ignore spaces and case ("Number 01" === "Number01").
+    const titleKey = normalizeLookupTypeTitleKey(title);
+    if (!titleKey) {
+      continue;
+    }
+
+    if (existingLower.has(titleKey)) {
+      duplicates.push(
+        `Row ${excelRowNumber}: "${title}" is a duplicate Lookup Type Name`,
+      );
+      continue;
+    }
+
+    const priorInFile = seenInFile.get(titleKey);
+    if (priorInFile) {
+      duplicates.push(
+        `Row ${excelRowNumber}: "${title}" is a duplicate of "${priorInFile.title}" (Row ${priorInFile.rowNumber})`,
+      );
+      continue;
+    }
+
+    seenInFile.set(titleKey, { title, rowNumber: excelRowNumber });
+    toCreate.push({ title, required });
   }
 
   if (!toCreate.length && !duplicates.length && !errors.length) {
@@ -210,12 +299,12 @@ export async function parseLookupTypeImportFile(
 export async function previewLookupTypeImportFile(
   file: File,
   existingItems: ILookupType[],
-): Promise<IImportParseResult> {
+): Promise<ILookupTypeImportParseResult> {
   return parseLookupTypeImportFile(file, existingItems);
 }
 
 export async function commitLookupTypeImport(
-  toCreate: string[],
+  toCreate: ILookupTypeImportRecord[],
 ): Promise<void> {
   if (toCreate.length) {
     await bulkCreateLookupTypes(toCreate);
@@ -225,7 +314,7 @@ export async function commitLookupTypeImport(
 export async function importLookupTypesFromFile(
   file: File,
   existingItems: ILookupType[],
-): Promise<IImportParseResult> {
+): Promise<ILookupTypeImportParseResult> {
   const result = await previewLookupTypeImportFile(file, existingItems);
   await commitLookupTypeImport(result.toCreate);
   return result;

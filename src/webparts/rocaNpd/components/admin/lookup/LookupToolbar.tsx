@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button } from "../../common/controls";
 import { MasterToolbarSearch } from "../../common/master/MasterToolbar";
 import styles from "../../common/master/MasterToolbar/MasterToolbar.module.scss";
@@ -37,14 +38,14 @@ const LookupToolbar: React.FC<ILookupToolbarProps> = ({
       />
 
       <Button
-        label="Import"
+        label={Config.Import}
         icon="pi pi-upload"
         size="sm"
         className={styles.actionButton}
         onClick={onImport}
       />
       <Button
-        label="Export"
+        label={Config.Export}
         icon="pi pi-download"
         size="sm"
         className={styles.actionButton}
@@ -52,7 +53,7 @@ const LookupToolbar: React.FC<ILookupToolbarProps> = ({
         onClick={onExport}
       />
       <Button
-        label="Add New"
+        label={Config.AddNew}
         icon="pi pi-plus"
         size="sm"
         className={styles.addNewButton}

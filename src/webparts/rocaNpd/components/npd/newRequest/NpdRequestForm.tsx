@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
+import { exportNpdItemDetailsToExcel } from "../../../../../External/CommonServices/npdItemDetailsImportService";
 import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
 import {
@@ -9,12 +10,21 @@ import {
   setNpdOtherDetailsProfitCenter,
   setNpdPlantSource,
 } from "../../../../../store/slices/npdFormSlice";
-import { LoaderOverlay, Toast } from "../../common/controls";
+import {
+  LoaderOverlay,
+  showErrorToast,
+  showSuccessToast,
+  Toast,
+} from "../../common/controls";
 import NpdApproverRemarks from "./NpdApproverRemarks";
 import NpdAuditLogTable from "./NpdAuditLogTable";
 import NpdGeneralInfoSection from "./NpdGeneralInfoSection";
 import NpdItemDetailsImport from "./NpdItemDetailsImport";
 import NpdItemDetailsSection from "./NpdItemDetailsSection";
+import {
+  isEmptyItemDetailRow,
+  toNpdItemDetailRecord,
+} from "./npdItemDetailsConfig";
 import NpdOtherDetailsSection from "./NpdOtherDetailsSection";
 import NpdRequestFormFooter from "./NpdRequestFormFooter";
 import NpdEditingRestrictedDialog from "../tabLock/NpdEditingRestrictedDialog";
@@ -41,9 +51,11 @@ const NpdRequestForm: React.FC = () => {
     footerMode,
     generalInfoReadOnly,
     itemDetailsReadOnly,
+    showItemDetailsExport,
     isMisCoordinatorActing,
     showOtherDetails,
     otherDetailsReadOnly,
+    hasAnyItemPostedToSap,
     handleCancel,
     handleSaveDraft,
     handleSubmit,
@@ -95,10 +107,28 @@ const NpdRequestForm: React.FC = () => {
           brand={generalInfo.brand}
           rows={itemRows}
           lookupOptionsByType={npdForm.lookupOptionsByType}
+          lookupTypes={npdForm.lookupTypes}
           readOnly={itemDetailsReadOnly}
           isMisCoordinatorActing={isMisCoordinatorActing}
+          showExport={showItemDetailsExport}
+          showSapStatus={showOtherDetails}
+          hideImportAndBulkDelete={hasAnyItemPostedToSap}
           onRowsChange={setItemRows}
           onImportClick={() => setImportVisible(true)}
+          onExportClick={() => {
+            const exportRows = itemRows
+              .filter((row) => !isEmptyItemDetailRow(row))
+              .map(toNpdItemDetailRecord);
+            if (!exportRows.length) {
+              return;
+            }
+            try {
+              exportNpdItemDetailsToExcel(exportRows, generalInfo.brand);
+              showSuccessToast(toastRef, "Export completed successfully.");
+            } catch {
+              showErrorToast(toastRef, "Failed to export Item Details.");
+            }
+          }}
         />
         {showOtherDetails ? (
           <NpdOtherDetailsSection
@@ -140,6 +170,9 @@ const NpdRequestForm: React.FC = () => {
           (npdForm.requestStatus || "").trim().toLowerCase() !== "rework" &&
           (npdForm.requestStatus || "").trim().toLowerCase() !== "in rework"
         }
+        hideMisRejectRework={
+          footerMode === "mis-pending" && hasAnyItemPostedToSap
+        }
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}
@@ -150,8 +183,8 @@ const NpdRequestForm: React.FC = () => {
       <NpdItemDetailsImport
         visible={importVisible}
         brand={generalInfo.brand}
-        rows={itemRows}
         lookupOptionsByType={npdForm.lookupOptionsByType}
+        lookupTypes={npdForm.lookupTypes}
         isMisCoordinatorActing={isMisCoordinatorActing}
         toastRef={toastRef}
         onHide={() => setImportVisible(false)}

@@ -17,6 +17,8 @@ export const NpdItemDetailsActionsContext =
 
 export interface INpdItemDetailsActionCellProps {
   rowId: string;
+  /** Posted lines cannot be removed. */
+  posted?: boolean;
 }
 
 /**
@@ -25,10 +27,19 @@ export interface INpdItemDetailsActionCellProps {
  */
 const NpdItemDetailsActionCell: React.FC<INpdItemDetailsActionCellProps> = ({
   rowId,
+  posted = false,
 }) => {
   const { allowDeleteRows, onAddRow, onDeleteRow } = React.useContext(
     NpdItemDetailsActionsContext,
   );
+
+  if (posted) {
+    return (
+      <span className={styles.postedActionPlaceholder} aria-hidden="true">
+        -
+      </span>
+    );
+  }
 
   return (
     <div

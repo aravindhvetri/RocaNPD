@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
 import { getLookupOptionsByFieldName } from "../../../../../External/CommonServices/lookupOptionUtils";
 import type { IDataTableColumn } from "../../common/controls/DataTable";
+import { Tag } from "../../common/controls";
 import NpdItemDetailsActionCell from "./NpdItemDetailsActionCell";
 import NpdItemDetailsTableCell from "./NpdItemDetailsTableCell";
 import type { INpdItemDetailsFieldDef } from "./npdItemDetailsConfig";
@@ -30,6 +31,8 @@ export interface IUseNpdItemDetailsColumnsParams {
   allowDeleteRows: boolean;
   lookupOptionsByType: Record<string, ISelectOption[]>;
   readOnly?: boolean;
+  /** Same visibility as Other Details. Display-only; not an editable field. */
+  showSapStatus?: boolean;
   onFieldChange: (
     rowId: string,
     field: NpdItemDetailFieldKey,
@@ -40,12 +43,21 @@ export interface IUseNpdItemDetailsColumnsParams {
 const CENTER_ALIGN: React.CSSProperties["textAlign"] = "center";
 const EMPTY_LOOKUP_OPTIONS: ISelectOption[] = [];
 
+/** Horizontal freeze for Material Code → Material Description. */
+const FROZEN_ITEM_DETAIL_FIELDS: Partial<
+  Record<NpdItemDetailFieldKey, string>
+> = {
+  materialCode: styles.frozenMaterialCode,
+  materialDescription: styles.frozenMaterialDescription,
+};
+
 export function useNpdItemDetailsColumns({
   visibleFields,
   allowDeleteRows,
   lookupOptionsByType,
   onFieldChange,
   readOnly = false,
+  showSapStatus = false,
 }: IUseNpdItemDetailsColumnsParams): IDataTableColumn<INpdItemDetailRow>[] {
   return React.useMemo(() => {
     const optionsByField: Partial<Record<NpdItemDetailFieldKey, ISelectOption[]>> =
@@ -56,37 +68,65 @@ export function useNpdItemDetailsColumns({
           lookupOptionsByType,
           fieldDef.header,
           fieldDef.field,
+          ...(fieldDef.field === "materialGroup"
+            ? [
+                "Material Group",
+                "Material / Business Group",
+                "Material / Business group",
+              ]
+            : []),
         );
       }
     });
 
     const fieldColumns: IDataTableColumn<INpdItemDetailRow>[] =
-      visibleFields.map((fieldDef) => ({
-        field: fieldDef.field,
-        header: renderColumnHeader(fieldDef),
-        style: { minWidth: fieldDef.minWidth, width: fieldDef.minWidth },
-        headerStyle: { minWidth: fieldDef.minWidth, width: fieldDef.minWidth },
-        body: (row) => (
-          <NpdItemDetailsTableCell
-            id={`${row.id}-${fieldDef.field}`}
-            fieldDef={fieldDef}
-            row={row}
-            lookupOptions={optionsByField[fieldDef.field] ?? EMPTY_LOOKUP_OPTIONS}
-            onFieldChange={onFieldChange}
-            readOnly={readOnly}
-          />
-        ),
-      }));
+      visibleFields.map((fieldDef) => {
+        // Lock column width so long MultiSelect / text values ellipsis
+        // instead of expanding the cell.
+        const columnWidth = {
+          minWidth: fieldDef.minWidth,
+          width: fieldDef.minWidth,
+          maxWidth: fieldDef.minWidth,
+        };
+        const frozenClass = FROZEN_ITEM_DETAIL_FIELDS[fieldDef.field];
+        return {
+          field: fieldDef.field,
+          header: renderColumnHeader(fieldDef),
+          style: columnWidth,
+          headerStyle: columnWidth,
+          className: frozenClass,
+          headerClassName: frozenClass,
+          body: (row) => (
+            <NpdItemDetailsTableCell
+              id={`${row.id}-${fieldDef.field}`}
+              fieldDef={fieldDef}
+              row={row}
+              lookupOptions={optionsByField[fieldDef.field] ?? EMPTY_LOOKUP_OPTIONS}
+              onFieldChange={onFieldChange}
+              readOnly={readOnly || row.sapPosted === true}
+            />
+          ),
+        };
+      });
 
     const serialColumn: IDataTableColumn<INpdItemDetailRow> = {
       field: "id",
       header: "S.No",
-      style: { width: "3.25rem", minWidth: "3.25rem", textAlign: CENTER_ALIGN },
+      style: {
+        width: "3.25rem",
+        minWidth: "3.25rem",
+        maxWidth: "3.25rem",
+        textAlign: CENTER_ALIGN,
+      },
       headerStyle: {
         width: "3.25rem",
         minWidth: "3.25rem",
+        maxWidth: "3.25rem",
         textAlign: CENTER_ALIGN,
       },
+      // Keep S.No pinned with the three frozen fields so left freeze stays contiguous.
+      className: styles.frozenSerial,
+      headerClassName: styles.frozenSerial,
       body: (_row, rowIndex) => (
         // PrimeReact rowIndex is absolute across the full value array (not page-local).
         <span className={styles.rowIndex}>{rowIndex + 1}</span>
@@ -99,19 +139,59 @@ export function useNpdItemDetailsColumns({
       field: "actions",
       columnKey: `npd-item-actions-${allowDeleteRows ? "multi" : "single"}`,
       header: "Actions",
-      style: { width: "5rem", minWidth: "5rem", textAlign: CENTER_ALIGN },
+      style: {
+        width: "5rem",
+        minWidth: "5rem",
+        maxWidth: "5rem",
+        textAlign: CENTER_ALIGN,
+      },
       headerStyle: {
         width: "5rem",
         minWidth: "5rem",
+        maxWidth: "5rem",
         textAlign: CENTER_ALIGN,
       },
-      body: (row) => <NpdItemDetailsActionCell rowId={row.id} />,
+      body: (row) => (
+        <NpdItemDetailsActionCell
+          rowId={row.id}
+          posted={row.sapPosted === true}
+        />
+      ),
+    };
+
+    const sapStatusWidth = {
+      width: "8.75rem",
+      minWidth: "8.75rem",
+      maxWidth: "8.75rem",
+    };
+    const sapStatusColumn: IDataTableColumn<INpdItemDetailRow> = {
+      field: "sapPosted",
+      header: <span className={styles.columnTitle}>SAP Status</span>,
+      style: sapStatusWidth,
+      headerStyle: sapStatusWidth,
+      body: (row) =>
+        row.sapPosted === true ? (
+          <Tag
+            value="Posted"
+            icon="pi pi-check-circle"
+            className={styles.statusApproved}
+          />
+        ) : (
+          <Tag
+            value="Pending"
+            icon="pi pi-clock"
+            className={styles.statusPending}
+          />
+        ),
     };
 
     const columns: IDataTableColumn<INpdItemDetailRow>[] = [
       serialColumn,
       ...fieldColumns,
     ];
+    if (showSapStatus) {
+      columns.push(sapStatusColumn);
+    }
     if (!readOnly) {
       columns.push(actionColumn);
     }
@@ -122,6 +202,7 @@ export function useNpdItemDetailsColumns({
     lookupOptionsByType,
     onFieldChange,
     readOnly,
+    showSapStatus,
     visibleFields,
   ]);
 }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { fetchNpdRequestStatusChoices } from "../../../../../External/CommonServices/npdRequestStatusChoices";
+import { getNpdRequestStatusChoiceCatalog } from "../../../../../External/CommonServices/npdRequestStatusChoices";
 import type { INpdRequestListItemRow } from "../../../../../External/CommonServices/Interface";
 import {
   ALL_BRAND_VALUE,
@@ -13,6 +13,8 @@ import {
 } from "./npdRequestListUtils";
 import type { NpdRequestDashboardVariant } from "./npdRequestListUtils";
 
+const STATUS_CHOICE_CATALOG = getNpdRequestStatusChoiceCatalog();
+
 export function useNpdRequestListFilters(
   items: INpdRequestListItemRow[],
   variant: NpdRequestDashboardVariant,
@@ -20,11 +22,6 @@ export function useNpdRequestListFilters(
   const [searchValue, setSearchValue] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState(ALL_STATUS_VALUE);
   const [brandFilter, setBrandFilter] = React.useState(ALL_BRAND_VALUE);
-  const [statusChoices, setStatusChoices] = React.useState<string[]>([]);
-
-  React.useEffect(() => {
-    void fetchNpdRequestStatusChoices().then(setStatusChoices);
-  }, []);
 
   React.useEffect(() => {
     setSearchValue("");
@@ -37,9 +34,9 @@ export function useNpdRequestListFilters(
     () =>
       buildStatusFilterOptionsFromData(
         items.map((item) => item.Status),
-        statusChoices,
+        STATUS_CHOICE_CATALOG,
       ),
-    [items, statusChoices],
+    [items],
   );
 
   React.useEffect(() => {

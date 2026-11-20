@@ -79,7 +79,7 @@ Individual lookup values, each scoped to one Lookup Type.
 |---|---|---|
 | BR-01 | Parryware | Brand |
 | BR-02 | Johnson Pedder | Brand |
-| MT-01 | Finished Products | Material Type |
+| MT-01 | Own Manufacture Products | Material Type |
 | MT-02 | Traded Products | Material Type |
 | PS-01 | Imported | Plant / Source |
 | PS-02 | Domestic | Plant / Source |
@@ -120,7 +120,7 @@ Edited via a single "Configure Workflow" modal (not a per-row create form) — l
 *(Nav item present; screen not yet captured — fields TBD.)*
 
 ### 3.6 Plant Master
-**No NPD admin screen.** Plant codes are read from ROCA `PlantMaster` (Brand Material Extension MultiSelect; Finished Products Plant/Source).
+**No NPD admin screen.** Plant codes are read from ROCA `PlantMaster` (Brand Material Extension MultiSelect; Own Manufacture Products Plant/Source).
 
 ### 3.7 Role
 **No NPD admin screen.** Role names are read from ROCA `RoleMaster` (Workflow Configuration Next Role).
@@ -230,7 +230,7 @@ Form: `Select All` / `Clear All` masters, per-master `+ Add Row` (multiple entri
 ```
 Lookup Type Master ──1:N──► Lookup Master
 Lookup Master (Brand) ──1:N──► Brand Material Extension
-ROCA PlantMaster ──drives──► Brand Material Extension plants + Finished Products Plant/Source
+ROCA PlantMaster ──drives──► Brand Material Extension plants + Own Manufacture Products Plant/Source
 ROCA RoleMaster ──used by──► Workflow Configuration
 ROCA ApproversMaster ──used by──► Brand (MG1), role resolution, routing
 NPD Request ──1:N──► NPD Item

@@ -39,11 +39,47 @@ export const SharePointGroups = {
 
 /** NPD Request Material Type choices (General Information). */
 export const NpdMaterialTypes = {
-  FinishedProducts: "Finished Products",
+  OwnManufactureProducts: "Own Manufacture Products",
   TradedProducts: "Traded Products",
 } as const;
 
-/** PlantMaster filters for Finished Products Plant / Source dropdown. */
+/**
+ * True for Own Manufacture Products, including older NPD_Request rows that
+ * still store the previous label "Finished Products".
+ */
+export function isOwnManufactureProductsMaterialType(
+  materialType: string | null | undefined,
+): boolean {
+  const normalized = (materialType || "").trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  return (
+    normalized === NpdMaterialTypes.OwnManufactureProducts.toLowerCase() ||
+    normalized === "own manufacture product" ||
+    normalized === "finished products" ||
+    normalized === "finished product"
+  );
+}
+
+/**
+ * Maps older "Finished Products" values to Own Manufacture Products for UI
+ * and subsequent saves.
+ */
+export function normalizeNpdMaterialTypeLabel(
+  materialType: string | null | undefined,
+): string {
+  const raw = (materialType || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (isOwnManufactureProductsMaterialType(raw)) {
+    return NpdMaterialTypes.OwnManufactureProducts;
+  }
+  return raw;
+}
+
+/** PlantMaster filters for Own Manufacture Products Plant / Source dropdown. */
 export const NpdPlantSourceFilters = {
   FactoryPlantType: "Factory",
   ActiveYes: "Yes",
@@ -85,7 +121,10 @@ export const NpdMisLookupTypes = {
   ProfitCenter: "Profit Center",
 } as const;
 
-/** Brands that require Roca Global Code on Item Details rows. */
+/**
+ * Legacy brand list (Roca Global Code used to be brand-gated).
+ * Item Details now shows CMA / Global code for every brand.
+ */
 export const NpdRocaGlobalCodeBrands = ["Roca", "Laufen", "Armani"] as const;
 
 export const WorkflowRequestTypes = {
@@ -239,6 +278,11 @@ export const NpdFormFrom = {
 export const NpdItemDetailsPageSize = 15;
 
 export const FieldNames = {
+  LookupType: {
+    Title: "Title",
+    /** Yes/No — drives Item Details mandatory validation. */
+    Required: "Required",
+  },
   Lookup: {
     /** Lookup Name in the UI — there is no LookupName column. */
     Title: "Title",
@@ -263,6 +307,8 @@ export const FieldNames = {
     Plant: "Plant",
     Status: "Status",
     WorkFlowJSON: "WorkFlowJSON",
+    /** Active Item Details line count — drives Products column on list pages. */
+    ItemDetailsCount: "ItemDetailsCount",
     PlantCode: "PlantCode",
     StorageLocation: "StorageLocation",
     ProfitCenter: "ProfitCenter",
@@ -295,7 +341,6 @@ export const FieldNames = {
     HSNCode: "HSNCode",
     Weight: "Weight",
     UOM: "UOM",
-    MinQty: "MinQty",
     /** Yes/No. True after this line has been accepted by the SAP Material Master API. */
     SAP: "SAP",
     /** Yes/No soft-delete. Active Item Details queries use IsDeleted = false. */
@@ -351,7 +396,7 @@ export const FieldNames = {
     ProductSubCategoryMGP3ACode: "ProductSubCategoryMGP3ACode",
     ProductSubCategoryMGP3A: "ProductSubCategoryMGP3A",
     MaterialGroupCode: "MaterialGroupCode",
-    MaterialGroup: "MaterialGroup",
+    MaterialGroup: "Material / Business group",
     ExtMaterialGroupCode: "ExtMaterialGroupCode",
     ExtMaterialGroup: "ExtMaterialGroup",
     ProductSegmentCode: "ProductSegmentCode",
@@ -364,7 +409,6 @@ export const FieldNames = {
     Weight: "Weight",
     UOMCode: "UOMCode",
     UOM: "UOM",
-    MinQty: "MinQty",
     ItemType: "ItemType",
     NPDRequest: "NPDRequest",
     NPDRequestId: "NPDRequestId",
@@ -382,8 +426,38 @@ export const FieldNames = {
   },
 } as const;
 
+/**
+ * Shared action / button labels. Prefer `Config.Add`, `Config.Edit`, etc.
+ * (or `Config.ActionLabels.*`) over hardcoded UI strings.
+ */
+export const ActionLabels = {
+  Add: "Add",
+  AddNew: "Add New",
+  Edit: "Edit",
+  Update: "Update",
+  Cancel: "Cancel",
+  Delete: "Delete",
+  ConfirmDelete: "Confirm Delete",
+  View: "View",
+  Close: "Close",
+  Yes: "Yes",
+  No: "No",
+  Submit: "Submit",
+  Save: "Save",
+  SaveAsDraft: "Save as Draft",
+  Import: "Import",
+  Export: "Export",
+  Rework: "Rework",
+  Reject: "Reject",
+  Approve: "Approve",
+  Complete: "Complete",
+} as const;
+
 export const FieldLabels = {
   LookupTypeName: "Lookup Type Name",
+  LookupTypeRequired: "Is This Field Mandatory ?",
+  /** Excel / list column header for NPD_LookupType.Required. */
+  Required: "Required",
   LookupType: "Lookup Type",
   LookupName: "Lookup Name",
   LookupCode: "Lookup Code",
@@ -422,7 +496,7 @@ export const FieldLabels = {
   Initiated: "Initiated",
   Approver: "Approver",
   CurrentApprover: "Current Approver",
-  PendingWithVh: "Pending with VH",
+  PendingWithVh: "Pending with VH-Marketing Manager",
   PendingWithMisCoordinator: "Pending with MIS Coordinator",
   PendingWithPrefix: "Pending with",
   NoRecordsFound: "No Records Found",
@@ -438,7 +512,7 @@ export const FieldLabels = {
   AllBrands: "All Brands",
   InRework: "Rework",
   Export: "Export",
-  RocaGlobalCode: "Roca Global Code",
+  RocaGlobalCode: "CMA / Global code",
   MaterialCode: "Material Code",
   ConfiguredMasters: "Configured Masters",
   EntriesCount: "Entries Count",
@@ -452,7 +526,7 @@ export const FieldLabels = {
   ColorMgp1a: "Color (MGP1A)",
   ProductRangeMgp2a: "Product Range (MGP2A)",
   ProductSubCategoryMgp3a: "Product Sub Category (MGP3A)",
-  MaterialGroup: "Material Group",
+  MaterialGroup: "Business / Material Group",
   ExtMaterialGroup: "Ext. Material Group",
   ProductSegment: "Product Segment",
   TaxClassification: "Tax Classification",
@@ -460,7 +534,6 @@ export const FieldLabels = {
   HsnCode: "HSN Code",
   WeightKg: "Weight (Kg)",
   Uom: "UOM",
-  MinQtyBoxQty: "Min. Qty/Box Qty",
   Comments: "Comments",
   CreateNewMaterialGroupRequest: "Create New Material Group Request",
   SelectMastersToConfigure: "SELECT MASTERS TO CONFIGURE (MULTI-SELECT)",
@@ -497,7 +570,7 @@ export const TextInputRules = {
   DisallowedCharacters: /[^a-zA-Z0-9\s]/,
   /** Strip helper — /g required for String.replace. */
   DisallowedCharactersGlobal: /[^a-zA-Z0-9\s]/g,
-  /** Digits only (e.g. Min. Qty/Box Qty stored as Single Line of Text). */
+  /** Digits only (shared text sanitize helper). */
   NonDigitsGlobal: /[^0-9]/g,
   SpecialCharactersNotAllowedSuffix: "cannot contain special characters.",
 } as const;
@@ -524,6 +597,28 @@ export const Config = {
   NpdItemDetailsPageSize,
   FieldNames,
   FieldLabels,
+  ActionLabels,
+  /** Common action labels — use instead of hardcoded "Add" / "Edit" / etc. */
+  Add: ActionLabels.Add,
+  AddNew: ActionLabels.AddNew,
+  Edit: ActionLabels.Edit,
+  Update: ActionLabels.Update,
+  Cancel: ActionLabels.Cancel,
+  Delete: ActionLabels.Delete,
+  ConfirmDelete: ActionLabels.ConfirmDelete,
+  View: ActionLabels.View,
+  Close: ActionLabels.Close,
+  Yes: ActionLabels.Yes,
+  No: ActionLabels.No,
+  Submit: ActionLabels.Submit,
+  Save: ActionLabels.Save,
+  SaveAsDraft: ActionLabels.SaveAsDraft,
+  Import: ActionLabels.Import,
+  Export: ActionLabels.Export,
+  Rework: ActionLabels.Rework,
+  Reject: ActionLabels.Reject,
+  Approve: ActionLabels.Approve,
+  Complete: ActionLabels.Complete,
   DeleteDependencies,
   ImportExport,
   TextInputRules,
@@ -538,6 +633,8 @@ export const Config = {
   NpdApproverSystems,
   SharePointGroups,
   NpdMaterialTypes,
+  isOwnManufactureProductsMaterialType,
+  normalizeNpdMaterialTypeLabel,
   NpdPlantSourceFilters,
   NpdTradedPlantSources,
   NpdMisPlantCodes,
@@ -549,7 +646,7 @@ export const Config = {
 
   Roles: {
     Initiator: "Initiator",
-    VerticalHead: "Vertical Head",
+    VerticalHead: "VH-Marketing Manager",
     MisCoordinator: "MIS Coordinator",
     Consultant: "Consultant",
     Admin: "Admin",
@@ -579,7 +676,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V1.7",
+  AppVersion: "V2.10",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

@@ -4,6 +4,7 @@ import {
   formatMaterialMasterCreatedDate,
   type IMaterialMasterColumnDef,
 } from "../../../../../External/CommonServices/materialMasterService";
+import { mapSapMaterialTypeCode } from "../../../../../External/CommonServices/sapMaterialMasterLookupFieldHints";
 import { renderSharePointUserPersona } from "../../../../../External/CommonServices/personFieldUtils";
 import {
   DataTable,
@@ -65,6 +66,18 @@ const MaterialMasterTable: React.FC<IMaterialMasterTableProps> = ({
           }
           if (column.field === "Initiator") {
             return renderUserCell(row.Initiator, row.InitiatorEmail);
+          }
+          if (column.field === "MaterialType") {
+            const stored = String(row.MaterialType ?? "").trim();
+            if (!stored) {
+              return <EmptyDash />;
+            }
+            const display = mapSapMaterialTypeCode(stored);
+            return (
+              <span className={styles.cellText} title={stored}>
+                {display}
+              </span>
+            );
           }
           const text = String(row[column.field] ?? "").trim();
           return text ? (

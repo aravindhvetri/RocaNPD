@@ -105,9 +105,9 @@ export async function buildNpdDraftWorkflowJson(
       if (!enforceApprovers) {
         continue;
       }
-      if (role.toLowerCase() === Config.Roles.VerticalHead.toLowerCase()) {
+      if (isVerticalHeadWorkflowRole(role)) {
         throw new Error(
-          "Vertical Head is not configured for this brand.",
+          `${Config.Roles.VerticalHead} is not configured for this brand.`,
         );
       }
 
@@ -206,7 +206,7 @@ export function workflowRoleIncludesEmail(
 
   return steps.some(
     (step) =>
-      step.Role.trim().toLowerCase() === normalizedRole &&
+      workflowRolesMatch(step.Role, role) &&
       normalizeEmail(step.UserEmail) === normalizedEmail,
   );
 }
@@ -247,11 +247,10 @@ function findActorStepIndex(
   actorRole: string,
 ): number {
   const normalizedEmail = actorEmail.trim().toLowerCase();
-  const normalizedRole = actorRole.trim().toLowerCase();
   const exactIndex = steps.findIndex(
     (step) =>
       step.UserEmail.trim().toLowerCase() === normalizedEmail &&
-      step.Role.trim().toLowerCase() === normalizedRole,
+      workflowRolesMatch(step.Role, actorRole),
   );
   if (exactIndex >= 0) {
     return exactIndex;
@@ -260,7 +259,7 @@ function findActorStepIndex(
   return steps.findIndex(
     (step) =>
       !isInitiatorWorkflowRole(step.Role) &&
-      step.Role.trim().toLowerCase() === normalizedRole &&
+      workflowRolesMatch(step.Role, actorRole) &&
       isPendingWorkflowStatus(step.Status),
   );
 }
@@ -271,7 +270,6 @@ export function applyApproverActionToWorkflow(
   actorRole: string,
   actionStatus: string,
 ): INpdWorkflowStepJson[] {
-  const normalizedRole = actorRole.trim().toLowerCase();
   const approved = actionStatus === Config.WorkflowStepStatus.Approved;
   const actorIndex = findActorStepIndex(steps, actorEmail, actorRole);
   const roleOrder: string[] = [];
@@ -283,7 +281,9 @@ export function applyApproverActionToWorkflow(
     }
   });
 
-  const actorRoleIndex = roleOrder.indexOf(normalizedRole);
+  const actorRoleIndex = roleOrder.findIndex((roleKey) =>
+    workflowRolesMatch(roleKey, actorRole),
+  );
   const nextRole =
     approved && actorRoleIndex >= 0 ? roleOrder[actorRoleIndex + 1] : undefined;
 
@@ -298,6 +298,10 @@ export function applyApproverActionToWorkflow(
       stampedActor = true;
       return {
         ...step,
+        // Persist the current role title when acting on a legacy VH step.
+        Role: isVerticalHeadWorkflowRole(step.Role)
+          ? Config.Roles.VerticalHead
+          : step.Role,
         UserEmail: actorEmail.trim() || step.UserEmail,
         Status: actionStatus,
       };
@@ -312,7 +316,7 @@ export function applyApproverActionToWorkflow(
       return { ...step, Status: Config.WorkflowStepStatus.Pending };
     }
 
-    const sameRole = step.Role.trim().toLowerCase() === normalizedRole;
+    const sameRole = workflowRolesMatch(step.Role, actorRole);
     const isPending = isPendingWorkflowStatus(step.Status);
 
     if (sameRole && isPending) {
@@ -332,11 +336,14 @@ export function applyApproverActionToWorkflow(
     const fallbackIndex = mapped.findIndex(
       (step) =>
         !isInitiatorWorkflowRole(step.Role) &&
-        step.Role.trim().toLowerCase() === normalizedRole,
+        workflowRolesMatch(step.Role, actorRole),
     );
     if (fallbackIndex >= 0) {
       mapped[fallbackIndex] = {
         ...mapped[fallbackIndex],
+        Role: isVerticalHeadWorkflowRole(mapped[fallbackIndex].Role)
+          ? Config.Roles.VerticalHead
+          : mapped[fallbackIndex].Role,
         UserEmail: actorEmail.trim() || mapped[fallbackIndex].UserEmail,
         Status: actionStatus,
       };
@@ -370,8 +377,30 @@ export function resolveRequestStatusAfterAction(
     : Config.RequestStatus.Approved;
 }
 
+/**
+ * True for VH-Marketing Manager, including older WorkFlowJSON / comments
+ * that still store the previous label "Vertical Head".
+ */
 export function isVerticalHeadWorkflowRole(role: string): boolean {
-  return role.trim().toLowerCase() === Config.Roles.VerticalHead.toLowerCase();
+  const normalized = role.trim().toLowerCase();
+  return (
+    normalized === Config.Roles.VerticalHead.toLowerCase() ||
+    normalized === "vertical head" ||
+    normalized === "vh-marketing manager"
+  );
+}
+
+/** Role equality that treats legacy Vertical Head as VH-Marketing Manager. */
+export function workflowRolesMatch(left: string, right: string): boolean {
+  const a = left.trim().toLowerCase();
+  const b = right.trim().toLowerCase();
+  if (!a || !b) {
+    return false;
+  }
+  if (a === b) {
+    return true;
+  }
+  return isVerticalHeadWorkflowRole(left) && isVerticalHeadWorkflowRole(right);
 }
 
 export function isMisCoordinatorWorkflowRole(role: string): boolean {
@@ -459,10 +488,8 @@ export function wasNpdWorkflowActionApplied(
     return false;
   }
 
-  const pendingRole = getFirstPendingApproverRole(latest.WorkflowSteps)
-    .trim()
-    .toLowerCase();
-  if (pendingRole !== actor) {
+  const pendingRole = getFirstPendingApproverRole(latest.WorkflowSteps).trim();
+  if (!workflowRolesMatch(pendingRole, actorRole)) {
     return true;
   }
 
@@ -543,10 +570,7 @@ function assignedRolesInclude(
   assignedRoles: readonly string[],
   role: string,
 ): boolean {
-  const normalizedRole = role.trim().toLowerCase();
-  return assignedRoles.some(
-    (assigned) => assigned.trim().toLowerCase() === normalizedRole,
-  );
+  return assignedRoles.some((assigned) => workflowRolesMatch(assigned, role));
 }
 
 export function userCanActOnPendingWorkflow(
@@ -569,8 +593,13 @@ export function resolveActorWorkflowRole(
 ): string {
   const pendingRole = getFirstPendingApproverRole(steps);
   if (pendingRole && assignedRolesInclude(assignedRoles, pendingRole)) {
-    return pendingRole;
+    return isVerticalHeadWorkflowRole(pendingRole)
+      ? Config.Roles.VerticalHead
+      : pendingRole;
   }
 
-  return getPendingWorkflowRole(steps, userEmail);
+  const fromEmail = getPendingWorkflowRole(steps, userEmail);
+  return isVerticalHeadWorkflowRole(fromEmail)
+    ? Config.Roles.VerticalHead
+    : fromEmail;
 }

@@ -92,8 +92,10 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
   }, [item, mode, visible]);
 
   const dialogTitle =
-    mode === "create" ? "Add Workflow" : "Edit Workflow";
-  const saveLabel = mode === "create" ? "Add" : "Update";
+    mode === "create"
+      ? `${Config.Add} Workflow`
+      : `${Config.Edit} Workflow`;
+  const saveLabel = mode === "create" ? Config.Add : Config.Update;
   const controlsDisabled = saving;
   const requestTypeSelected = Boolean(requestType?.trim());
   const isMgRequest = requestType ? isMgRequestType(requestType) : false;
@@ -242,7 +244,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
       footer={
         <div className={styles.footer}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             disabled={controlsDisabled}
@@ -359,7 +361,7 @@ const WorkflowConfigFormDialog: React.FC<IWorkflowConfigFormDialogProps> = ({
             {showAddStepButton ? (
               <div className={styles.addStepRow}>
                 <Button
-                  label="Add Step"
+                  label={`${Config.Add} Step`}
                   icon="pi pi-plus"
                   size="sm"
                   className={styles.addStepButton}

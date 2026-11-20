@@ -1,5 +1,8 @@
 import * as React from "react";
-import type { ISelectOption } from "../../../../../External/CommonServices/Interface";
+import type {
+  ILookupType,
+  ISelectOption,
+} from "../../../../../External/CommonServices/Interface";
 import { Config } from "../../../../../External/CommonServices/Config";
 import { Button, DataTable } from "../../common/controls";
 import NpdFormSectionPanel from "./NpdFormSectionPanel";
@@ -7,8 +10,10 @@ import {
   NpdItemDetailsActionsContext,
 } from "./NpdItemDetailsActionCell";
 import {
+  clearLookupImportAttention,
   createEmptyNpdItemDetailRow,
   getVisibleNpdItemDetailFields,
+  isEmptyItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type {
   INpdItemDetailRow,
@@ -22,24 +27,37 @@ export interface INpdItemDetailsSectionProps {
   brand: string | null;
   rows: INpdItemDetailRow[];
   lookupOptionsByType: Record<string, ISelectOption[]>;
+  lookupTypes?: readonly ILookupType[];
   readOnly?: boolean;
   isMisCoordinatorActing?: boolean;
   onRowsChange: React.Dispatch<React.SetStateAction<INpdItemDetailRow[]>>;
   onImportClick?: () => void;
+  onExportClick?: () => void;
+  /** When false, Export is hidden (e.g. Initiator New Request). Default true. */
+  showExport?: boolean;
+  /** Same visibility as Other Details. */
+  showSapStatus?: boolean;
+  /** After any Item Details row is posted to SAP, hide Import + Bulk Delete. */
+  hideImportAndBulkDelete?: boolean;
 }
 
 const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   brand,
   rows,
   lookupOptionsByType,
+  lookupTypes = [],
   readOnly = false,
   isMisCoordinatorActing = false,
   onRowsChange,
   onImportClick,
+  onExportClick,
+  showExport = true,
+  showSapStatus = false,
+  hideImportAndBulkDelete = false,
 }) => {
   const visibleFields = React.useMemo(
-    () => getVisibleNpdItemDetailFields(brand),
-    [brand],
+    () => getVisibleNpdItemDetailFields(brand, lookupTypes),
+    [brand, lookupTypes],
   );
   const pageSize = Config.NpdItemDetailsPageSize;
   const [first, setFirst] = React.useState(0);
@@ -161,9 +179,16 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         return;
       }
       onRowsChange((currentRows) =>
-        currentRows.map((row) =>
-          row.id === rowId ? { ...row, [field]: value } : row,
-        ),
+        currentRows.map((row) => {
+          if (row.id !== rowId || row.sapPosted === true) {
+            return row;
+          }
+          return clearLookupImportAttention(
+            { ...row, [field]: value },
+            field,
+            value,
+          );
+        }),
       );
     },
     [onRowsChange, readOnly],
@@ -175,6 +200,10 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         return;
       }
       onRowsChange((currentRows) => {
+        const target = currentRows.find((row) => row.id === rowId);
+        if (target?.sapPosted === true) {
+          return currentRows;
+        }
         const filtered = currentRows.filter((row) => row.id !== rowId);
         return filtered.length > 0
           ? filtered
@@ -188,7 +217,12 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     if (readOnly) {
       return;
     }
-    onRowsChange([createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))]);
+    onRowsChange((currentRows) => {
+      const posted = currentRows.filter((row) => row.sapPosted === true);
+      return posted.length > 0
+        ? posted
+        : [createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))];
+    });
     setFirst(0);
   }, [isMisCoordinatorActing, onRowsChange, readOnly]);
 
@@ -213,34 +247,57 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
     allowDeleteRows,
     lookupOptionsByType,
     readOnly,
+    showSapStatus,
     onFieldChange: handleFieldChange,
   });
 
-  const headerActions = readOnly ? null : (
+  const hasExportableRows = rows.some((row) => !isEmptyItemDetailRow(row));
+
+  const exportButton = showExport ? (
+    <Button
+      label={Config.Export}
+      icon="pi pi-download"
+      size="xs"
+      className={styles.headerExportButton}
+      disabled={!hasExportableRows}
+      onClick={onExportClick}
+    />
+  ) : null;
+
+  // View mode: Export only (no Add / Import / Delete). Edit: full actions.
+  // After any SAP post, Import + Bulk Delete stay hidden for MIS.
+  const headerActions = readOnly ? (
+    exportButton
+  ) : (
     <>
       <Button
-        label="Add"
+        label={Config.Add}
         icon="pi pi-plus"
         size="xs"
         className={styles.headerAddButton}
         onClick={() => handleAddItem()}
       />
-      <Button
-        label="Import"
-        icon="pi pi-download"
-        size="xs"
-        className={styles.headerImportButton}
-        onClick={onImportClick}
-      />
-      <Button
-        label="Delete"
-        icon="pi pi-trash"
-        size="xs"
-        title="Delete all item lines"
-        aria-label="Delete all item lines"
-        className={styles.headerDeleteButton}
-        onClick={handleBulkDeleteRows}
-      />
+      {!hideImportAndBulkDelete ? (
+        <Button
+          label={Config.Import}
+          icon="pi pi-download"
+          size="xs"
+          className={styles.headerImportButton}
+          onClick={onImportClick}
+        />
+      ) : null}
+      {exportButton}
+      {!hideImportAndBulkDelete ? (
+        <Button
+          label={Config.Delete}
+          icon="pi pi-trash"
+          size="xs"
+          title="Delete all item lines"
+          aria-label="Delete all item lines"
+          className={styles.headerDeleteButton}
+          onClick={handleBulkDeleteRows}
+        />
+      ) : null}
     </>
   );
 

@@ -237,6 +237,26 @@ export function injectRocaPrimeOverrides(): void {
       color: #ffffff !important;
     }
 
+    [data-roca-npd-root] .p-inputswitch .p-inputswitch-slider {
+      background: #d1d5db !important;
+    }
+
+    [data-roca-npd-root] .p-inputswitch.p-highlight .p-inputswitch-slider {
+      background: #40919d !important;
+    }
+
+    [data-roca-npd-root] .p-inputswitch:not(.p-disabled):hover .p-inputswitch-slider {
+      background: #cbd5e0 !important;
+    }
+
+    [data-roca-npd-root] .p-inputswitch.p-highlight:not(.p-disabled):hover .p-inputswitch-slider {
+      background: #2a6b75 !important;
+    }
+
+    [data-roca-npd-root] .p-inputswitch.p-focus .p-inputswitch-slider {
+      box-shadow: 0 0 0 0.125rem rgba(64, 145, 157, 0.28) !important;
+    }
+
     [data-roca-npd-root] .p-multiselect-header {
       display: flex !important;
       align-items: center !important;

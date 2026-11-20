@@ -11,8 +11,24 @@ import { getRocaLogoInlineAttachment } from "./npdEmailLogo";
 import { greetingNameFromEmail } from "./npdApprovalEmailTemplate";
 import { extractPersonEmails, normalizeEmail } from "./personFieldUtils";
 import { APPROVERS_EXPAND, APPROVERS_SELECT } from "./roleService";
+import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
+
+async function loadApproversMasterRows(
+  contextSiteUrl?: string,
+): Promise<readonly Record<string, unknown>[]> {
+  const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
+  return ensureApproversMasterRows(rocaSiteUrl, () =>
+    SPServices.getAnotherSPReadItems({
+      SiteUrl: rocaSiteUrl,
+      Listname: Config.RocaMasterListNames.ApproversMaster,
+      Select: APPROVERS_SELECT,
+      Expand: APPROVERS_EXPAND,
+      Topcount: 5000,
+    }) as Promise<Record<string, unknown>[]>,
+  );
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -72,14 +88,7 @@ export async function fetchConsultantEmails(
   contextSiteUrl?: string,
 ): Promise<string[]> {
   try {
-    const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
-    const rows = (await SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    })) as Record<string, unknown>[];
+    const rows = await loadApproversMasterRows(contextSiteUrl);
 
     const consultantEmails: string[] = [];
 
@@ -118,14 +127,7 @@ export async function fetchConsultantApproverInfo(
   contextSiteUrl?: string,
 ): Promise<IConsultantApproverInfo | null> {
   try {
-    const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
-    const rows = (await SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    })) as Record<string, unknown>[];
+    const rows = await loadApproversMasterRows(contextSiteUrl);
 
     for (const row of rows) {
       if (

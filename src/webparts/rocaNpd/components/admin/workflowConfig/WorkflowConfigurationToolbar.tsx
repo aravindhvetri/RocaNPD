@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button } from "../../common/controls";
 import { MasterToolbarSearch } from "../../common/master/MasterToolbar";
 import styles from "../../common/master/MasterToolbar/MasterToolbar.module.scss";
@@ -31,7 +32,7 @@ const WorkflowConfigurationToolbar: React.FC<IWorkflowConfigurationToolbarProps>
       />
 
       <Button
-        label="Add New"
+        label={Config.AddNew}
         icon="pi pi-plus"
         size="sm"
         className={styles.addNewButton}

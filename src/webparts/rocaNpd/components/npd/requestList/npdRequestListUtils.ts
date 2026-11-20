@@ -261,8 +261,7 @@ export function isNpdApprovedListItem(
     return true;
   }
 
-  const role = (viewRole || "").trim().toLowerCase();
-  if (role !== Config.Roles.VerticalHead.toLowerCase()) {
+  if (!isVerticalHeadWorkflowRole(viewRole || "")) {
     return false;
   }
 

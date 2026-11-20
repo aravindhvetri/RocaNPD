@@ -232,8 +232,8 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
                 icon="pi pi-pencil"
                 iconOnly
                 className={tableStyles.editAction}
-                title="Edit"
-                aria-label="Edit"
+                title={Config.Edit}
+                aria-label={Config.Edit}
                 onClick={() => handleEdit(row)}
               />
             ) : null}
@@ -242,8 +242,8 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
               icon="pi pi-eye"
               iconOnly
               className={tableStyles.viewAction}
-              title="View"
-              aria-label="View"
+              title={Config.View}
+              aria-label={Config.View}
               onClick={() => handleView(row)}
             />
           </div>
@@ -251,6 +251,17 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
       },
     ],
     [canEditRow, handleEdit, handleView, workflow.openWorkflow],
+  );
+
+  const openRow = React.useCallback(
+    (row: INpdRequestListItemRow): void => {
+      if (canEditRow(row)) {
+        handleEdit(row);
+        return;
+      }
+      handleView(row);
+    },
+    [canEditRow, handleEdit, handleView],
   );
 
   return (
@@ -264,6 +275,17 @@ const NpdRequestListTable: React.FC<INpdRequestListTableProps> = ({
         paginator
         paginatorPosition="bottom"
         paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+        rowClassName={() => styles.clickableRow}
+        onRowClick={(event) => {
+          const target = event.originalEvent.target;
+          if (
+            target instanceof Element &&
+            target.closest("button, a, input, textarea, select")
+          ) {
+            return;
+          }
+          openRow(event.data);
+        }}
       />
       <NpdWorkflowStatusDialog
         visible={workflow.visible}

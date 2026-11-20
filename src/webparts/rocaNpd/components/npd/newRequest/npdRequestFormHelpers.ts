@@ -152,7 +152,6 @@ export function fingerprintNpdItemDetailRow(row: INpdItemDetailRow): string {
     row.hsnCode.trim(),
     row.weightKg === null || row.weightKg === undefined ? "" : String(row.weightKg),
     normalizeMultiForCompare(row.uom),
-    row.minQtyBoxQty.trim(),
   ].join("\u0002");
 }
 
@@ -256,10 +255,7 @@ export function canEditNpdListRow(
   }
 
   if (viewRole === Config.Roles.VerticalHead) {
-    return (
-      pendingRole.trim().toLowerCase() ===
-      Config.Roles.VerticalHead.toLowerCase()
-    );
+    return isVerticalHeadWorkflowRole(pendingRole);
   }
 
   if (viewRole === Config.Roles.MisCoordinator) {
@@ -327,11 +323,17 @@ export function canEditNpdItemDetails(params: {
     return true;
   }
 
-  if (params.footerMode !== "mis-pending") {
+  // VH-Marketing Manager and MIS Coordinator may edit Item Details while their
+  // step is pending (same grid add/edit UX; persist rules differ by action).
+  if (
+    params.footerMode !== "mis-pending" &&
+    params.footerMode !== "vertical-head-pending"
+  ) {
     return false;
   }
 
   return (
+    isVerticalHeadWorkflowRole(params.pendingRole) ||
     isMisCoordinatorWorkflowRole(params.pendingRole) ||
     hasPermission(params.assignedRoles, "npd.editItemDetailsPending")
   );

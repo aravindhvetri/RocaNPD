@@ -34,18 +34,6 @@ function ensureSheetRange(sheet: XLSX.WorkSheet): void {
   });
 }
 
-function sheetToStringRows(sheet: XLSX.WorkSheet): string[][] {
-  ensureSheetRange(sheet);
-  const rawRows = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(
-    sheet,
-    { header: 1, defval: "" },
-  );
-
-  return rawRows.map((row) =>
-    row.map((cell) => normalizeImportedCell(cell)),
-  );
-}
-
 function normalizeImportedCell(value: unknown): string {
   return String(value ?? "")
     .replace(/_x0020_/gi, " ")
@@ -55,13 +43,123 @@ function normalizeImportedCell(value: unknown): string {
     .trim();
 }
 
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** Format Excel date parts as DD-MM-YYYY (Lookup Code style, e.g. 29-10-2026). */
+function formatImportDateParts(year: number, month: number, day: number): string {
+  return `${pad2(day)}-${pad2(month)}-${year}`;
+}
+
+function excelSerialToImportDate(serial: number): string | null {
+  const parsed = XLSX.SSF.parse_date_code(serial);
+  if (!parsed || !parsed.y || !parsed.m || !parsed.d) {
+    return null;
+  }
+  return formatImportDateParts(parsed.y, parsed.m, parsed.d);
+}
+
+function isExcelDateNumberFormat(format: string): boolean {
+  const fmt = String(format ?? "").trim();
+  if (!fmt) {
+    return false;
+  }
+  try {
+    return Boolean(XLSX.SSF.is_date(fmt));
+  } catch {
+    return /[dy]|m{2,}|h|s/i.test(fmt) && !/0\.0/i.test(fmt);
+  }
+}
+
+/**
+ * Convert one worksheet cell to import text without Excel date serials
+ * (46323) or locale reformats (10/29/26). Date cells become DD-MM-YYYY.
+ */
+function cellToImportString(cell: XLSX.CellObject | undefined): string {
+  if (!cell) {
+    return "";
+  }
+
+  if (cell.t === "s") {
+    return normalizeImportedCell(cell.v);
+  }
+
+  if (cell.t === "b") {
+    return cell.v ? "TRUE" : "FALSE";
+  }
+
+  if (cell.t === "d") {
+    const value = cell.v;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return formatImportDateParts(
+        value.getFullYear(),
+        value.getMonth() + 1,
+        value.getDate(),
+      );
+    }
+  }
+
+  if (cell.t === "n" && typeof cell.v === "number" && Number.isFinite(cell.v)) {
+    const format = String(cell.z ?? "");
+    const formatted = String(cell.w ?? "").trim();
+    const treatAsDate =
+      isExcelDateNumberFormat(format) ||
+      (/^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$/.test(formatted) &&
+        cell.v > 20000 &&
+        cell.v < 60000);
+
+    if (treatAsDate) {
+      const asDate = excelSerialToImportDate(cell.v);
+      if (asDate) {
+        return asDate;
+      }
+    }
+
+    return normalizeImportedCell(cell.v);
+  }
+
+  if (typeof cell.w === "string" && cell.w.trim()) {
+    return normalizeImportedCell(cell.w);
+  }
+
+  return normalizeImportedCell(cell.v);
+}
+
+function sheetToStringRows(sheet: XLSX.WorkSheet): string[][] {
+  ensureSheetRange(sheet);
+  const reference = sheet["!ref"];
+  if (!reference) {
+    return [];
+  }
+
+  const range = XLSX.utils.decode_range(reference);
+  const rows: string[][] = [];
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const row: string[] = [];
+    for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+      const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+      row.push(cellToImportString(sheet[address] as XLSX.CellObject | undefined));
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
 export async function readSpreadsheetWorkbook(
   file: File,
 ): Promise<{ sheetName: string; rows: string[][] }[]> {
   validateSpreadsheetFile(file);
 
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "array" });
+  // Keep cell types/formats so Lookup Code date cells can be read as text,
+  // not locale-formatted dates or Excel serial numbers.
+  const workbook = XLSX.read(buffer, {
+    type: "array",
+    cellDates: false,
+    cellText: true,
+    cellNF: true,
+  });
 
   if (!workbook.SheetNames.length) {
     throw new Error("The uploaded file does not contain any worksheets.");

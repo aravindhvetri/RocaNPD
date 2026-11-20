@@ -10,8 +10,19 @@ import {
   parseSharePointUserIds,
 } from "./personFieldUtils";
 import { APPROVERS_EXPAND, APPROVERS_SELECT } from "./roleService";
+import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
+
+/** Local VH match (avoids circular import with npdWorkflowJsonService). */
+function isVhMarketingManagerRole(role: string): boolean {
+  const normalized = role.trim().toLowerCase();
+  return (
+    normalized === Config.Roles.VerticalHead.toLowerCase() ||
+    normalized === "vertical head" ||
+    normalized === "vh-marketing manager"
+  );
+}
 
 function uniqueEmails(emails: string[]): string[] {
   const seen = new Set<string>();
@@ -47,7 +58,16 @@ function rowMatchesNpdSystem(row: Record<string, unknown>): boolean {
 }
 
 function rowMatchesRole(row: Record<string, unknown>, role: string): boolean {
-  return lookupTitlesInclude(row.Role, role);
+  if (lookupTitlesInclude(row.Role, role)) {
+    return true;
+  }
+  // Workflow / ApproversMaster may mix legacy "Vertical Head" with the new title.
+  if (isVhMarketingManagerRole(role)) {
+    return getLookupTitles(row.Role).some((title) =>
+      isVhMarketingManagerRole(title),
+    );
+  }
+  return false;
 }
 
 function rowMatchesBrand(row: Record<string, unknown>, brand: string): boolean {
@@ -105,13 +125,15 @@ export async function fetchNpdApproverAssignmentRows(
 }> {
   const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
   const [rows, userEmailById] = await Promise.all([
-    SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    }) as Promise<Record<string, unknown>[]>,
+    ensureApproversMasterRows(rocaSiteUrl, () =>
+      SPServices.getAnotherSPReadItems({
+        SiteUrl: rocaSiteUrl,
+        Listname: Config.RocaMasterListNames.ApproversMaster,
+        Select: APPROVERS_SELECT,
+        Expand: APPROVERS_EXPAND,
+        Topcount: 5000,
+      }) as Promise<Record<string, unknown>[]>,
+    ).then((cached) => cached.slice() as Record<string, unknown>[]),
     SPServices.getAnotherSPSiteUserEmailMap(rocaSiteUrl).catch(
       () => new Map<number, string>(),
     ),
@@ -145,8 +167,7 @@ export function getEmailsForNpdWorkflowRole(
 
   const brandRows = activeRows.filter((row) => rowMatchesBrand(row, brand));
   if (
-    role.trim().toLowerCase() === Config.Roles.VerticalHead.toLowerCase() ||
-    brandRows.length
+    isVhMarketingManagerRole(role) || brandRows.length
   ) {
     return uniqueEmails(
       brandRows.flatMap((row) => collectRowEmails(row, userEmailById)),

@@ -2,13 +2,13 @@ import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type {
-  IImportParseResult,
+  ILookupTypeFormValues,
+  ILookupTypeImportParseResult,
   ILookupTypeRow,
   ITemplateDocument,
 } from "../../../../../External/CommonServices/Interface";
 import {
   buildImportValidationRows,
-  ImportValidationMessages,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
 import { validateLookupTypeDeleteAllowed } from "../../../../../External/CommonServices/dependencyValidationService";
@@ -84,7 +84,7 @@ const LookupTypeMaster: React.FC = () => {
   const [importValidationVisible, setImportValidationVisible] =
     React.useState(false);
   const [importPreview, setImportPreview] =
-    React.useState<IImportParseResult | null>(null);
+    React.useState<ILookupTypeImportParseResult | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
 
   const isLoading = status === "loading";
@@ -203,7 +203,7 @@ const LookupTypeMaster: React.FC = () => {
     showWarningToast(toastRef, message);
   };
 
-  const handleSave = async (title: string): Promise<void> => {
+  const handleSave = async (values: ILookupTypeFormValues): Promise<void> => {
     const mode = dialogMode;
     const editingItem = selectedItem;
     setDialogVisible(false);
@@ -211,11 +211,20 @@ const LookupTypeMaster: React.FC = () => {
 
     try {
       if (mode === "create") {
-        await dispatch(createLookupType(title)).unwrap();
+        await dispatch(
+          createLookupType({
+            title: values.title,
+            required: values.required,
+          }),
+        ).unwrap();
         showSuccessToast(toastRef, "Lookup type created successfully.");
       } else if (editingItem) {
         await dispatch(
-          updateLookupType({ id: editingItem.Id, title }),
+          updateLookupType({
+            id: editingItem.Id,
+            title: values.title,
+            required: values.required,
+          }),
         ).unwrap();
         showSuccessToast(toastRef, "Lookup type updated successfully.");
       }
@@ -299,7 +308,8 @@ const LookupTypeMaster: React.FC = () => {
       const result = await dispatch(previewImportLookupTypes(file)).unwrap();
       const validationRows = buildImportValidationRows(
         result.duplicates,
-        ImportValidationMessages.duplicateLookupType,
+        // Parser already includes row + duplicate detail (spaces/case ignored).
+        "",
         result.errors,
       );
 

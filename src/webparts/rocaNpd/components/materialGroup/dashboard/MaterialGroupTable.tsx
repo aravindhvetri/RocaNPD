@@ -264,8 +264,8 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
                   icon="pi pi-pencil"
                   iconOnly
                   className={tableStyles.editAction}
-                  title="Edit"
-                  aria-label="Edit"
+                  title={Config.Edit}
+                  aria-label={Config.Edit}
                   onClick={() => onEdit(row)}
                 />
               ) : null}
@@ -274,8 +274,8 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
                 icon="pi pi-eye"
                 iconOnly
                 className={tableStyles.viewAction}
-                title="View"
-                aria-label="View"
+                title={Config.View}
+                aria-label={Config.View}
                 onClick={() => onView(row)}
               />
             </div>
@@ -284,6 +284,17 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
       },
     ];
   }, [canEditRow, isConsultant, isAdmin, onEdit, onView]);
+
+  const openRow = React.useCallback(
+    (row: IMaterialGroupGroupedRequest): void => {
+      if (canEditRow(row)) {
+        onEdit(row);
+        return;
+      }
+      onView(row);
+    },
+    [canEditRow, onEdit, onView],
+  );
 
   return (
     <DataTable
@@ -295,6 +306,17 @@ const MaterialGroupTable: React.FC<IMaterialGroupTableProps> = ({
       paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
       paginatorPosition="bottom"
       rows={10}
+      rowClassName={() => styles.clickableRow}
+      onRowClick={(event) => {
+        const target = event.originalEvent.target;
+        if (
+          target instanceof Element &&
+          target.closest("button, a, input, textarea, select")
+        ) {
+          return;
+        }
+        openRow(event.data);
+      }}
     />
   );
 };

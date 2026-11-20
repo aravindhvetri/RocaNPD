@@ -3,6 +3,7 @@ import { Toast as PrimeToast } from "primereact/toast";
 import { flushSync } from "react-dom";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type {
+  ILookupType,
   INpdItemDetailsImportParseResult,
   ISelectOption,
   ITemplateDocument,
@@ -11,7 +12,7 @@ import {
   buildImportValidationRows,
   type IImportValidationRow,
 } from "../../../../../External/CommonServices/importService";
-import { parseNpdItemDetailsImportFile, getNpdItemDetailsRequiredHeaders } from "../../../../../External/CommonServices/npdItemDetailsImportService";
+import { parseNpdItemDetailsImportFile } from "../../../../../External/CommonServices/npdItemDetailsImportService";
 import {
   downloadTemplateFile,
   fetchTemplateByType,
@@ -23,8 +24,7 @@ import {
 } from "../../common/importExport";
 import { LoaderOverlay, showErrorToast, showSuccessToast } from "../../common/controls";
 import {
-  isEmptyItemDetailRow,
-  toNpdItemDetailRecord,
+  createEmptyNpdItemDetailRow,
   toNpdItemDetailRow,
 } from "./npdItemDetailsConfig";
 import type { INpdItemDetailRow } from "./npdItemDetails.types";
@@ -32,8 +32,8 @@ import type { INpdItemDetailRow } from "./npdItemDetails.types";
 export interface INpdItemDetailsImportProps {
   visible: boolean;
   brand: string | null;
-  rows: INpdItemDetailRow[];
   lookupOptionsByType: Record<string, ISelectOption[]>;
+  lookupTypes?: readonly ILookupType[];
   isMisCoordinatorActing?: boolean;
   toastRef: React.RefObject<PrimeToast>;
   onHide: () => void;
@@ -43,8 +43,8 @@ export interface INpdItemDetailsImportProps {
 const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
   visible,
   brand,
-  rows,
   lookupOptionsByType,
+  lookupTypes = [],
   isMisCoordinatorActing = false,
   toastRef,
   onHide,
@@ -78,16 +78,12 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         isMisAdded: Boolean(isMisCoordinatorActing || record.isMisAdded),
       }),
     );
-    onRowsChange((current) => {
-      const keepExisting = current.filter((row) => !isEmptyItemDetailRow(row));
-      if (!keepExisting.length) {
-        return importedRows;
-      }
-      // MIS imports stay at the top of the Item Details grid.
-      return isMisCoordinatorActing
-        ? [...importedRows, ...keepExisting]
-        : [...keepExisting, ...importedRows];
-    });
+    // Import replaces the full Item Details grid (export → edit → re-import).
+    onRowsChange(
+      importedRows.length
+        ? importedRows
+        : [createEmptyNpdItemDetailRow(Boolean(isMisCoordinatorActing))],
+    );
     showSuccessToast(
       toastRef,
       importedRows.length === 1
@@ -108,11 +104,14 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
       // Critical for small files that would otherwise finish in the same tick.
       await awaitUiPaint();
 
+      // Empty existing list: import fully replaces the grid, so prior Material
+      // Codes must not block re-import of an exported/edited file.
       const result = await parseNpdItemDetailsImportFile(
         file,
-        rows.filter((row) => !isEmptyItemDetailRow(row)).map(toNpdItemDetailRecord),
+        [],
         lookupOptionsByType,
         brand,
+        lookupTypes,
       );
 
       if (result.duplicates.length || result.errors.length) {
@@ -161,7 +160,6 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         maxFileSizeBytes={Config.ImportExport.MaxFileSizeBytes}
         accept={Config.ImportExport.AcceptedSpreadsheetAccept}
         importing={importing}
-        expectedHeaders={getNpdItemDetailsRequiredHeaders(brand)}
         onHide={onHide}
         onDownloadTemplate={
           templateDocument
@@ -181,7 +179,8 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         validationRows={validationRows}
         canProceed={
           Boolean(preview?.toCreate.length) &&
-          !(preview?.duplicates.length)
+          !(preview?.duplicates.length) &&
+          !(preview?.errors.length)
         }
         proceeding={importing}
         onHide={() => {

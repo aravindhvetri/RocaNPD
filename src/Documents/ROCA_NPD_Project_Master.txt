@@ -601,8 +601,8 @@ Examples:
 
 ### Conditional Plant / Valuation Logic
 
-- [ ] Finished Products → Plant Code same as Plant/Source.
-- [ ] Finished Products → Valuation Class = 6000.
+- [ ] Own Manufacture Products → Plant Code same as Plant/Source.
+- [ ] Own Manufacture Products → Valuation Class = 6000.
 - [ ] Traded Products + Domestic → Plant Code = CCWH.
 - [ ] Traded Products + Domestic → Valuation Class = 5000.
 - [ ] Traded Products + Imported → Plant Code = CCWH.

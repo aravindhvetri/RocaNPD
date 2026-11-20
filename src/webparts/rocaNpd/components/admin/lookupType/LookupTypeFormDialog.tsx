@@ -1,6 +1,13 @@
 import * as React from "react";
-import { FieldLabels } from "../../../../../External/CommonServices/Config";
-import type { ILookupType } from "../../../../../External/CommonServices/Interface";
+import { InputSwitch } from "primereact/inputswitch";
+import {
+  Config,
+  FieldLabels,
+} from "../../../../../External/CommonServices/Config";
+import type {
+  ILookupType,
+  ILookupTypeFormValues,
+} from "../../../../../External/CommonServices/Interface";
 import { Button, Dialog, InputText } from "../../common/controls";
 import { validateLookupTypeTitle } from "./lookupTypeValidation";
 import styles from "./LookupTypeFormDialog.module.scss";
@@ -14,7 +21,7 @@ export interface ILookupTypeFormDialogProps {
   existingItems: ILookupType[];
   saving: boolean;
   onHide: () => void;
-  onSave: (title: string) => Promise<void>;
+  onSave: (values: ILookupTypeFormValues) => Promise<void>;
   onValidationWarning: (message: string) => void;
 }
 
@@ -29,18 +36,22 @@ const LookupTypeFormDialog: React.FC<ILookupTypeFormDialogProps> = ({
   onValidationWarning,
 }) => {
   const [title, setTitle] = React.useState("");
+  const [required, setRequired] = React.useState(false);
 
   React.useEffect(() => {
     if (!visible) {
       return;
     }
     setTitle(item?.Title ?? "");
+    setRequired(item?.Required === true);
   }, [item, visible]);
 
   const dialogTitle =
-    mode === "create" ? "Add Lookup Type" : "Edit Lookup Type";
+    mode === "create"
+      ? `${Config.Add} Lookup Type`
+      : `${Config.Edit} Lookup Type`;
 
-  const saveLabel = mode === "create" ? "Add" : "Update";
+  const saveLabel = mode === "create" ? Config.Add : Config.Update;
 
   const handleSave = async (): Promise<void> => {
     const validationError = validateLookupTypeTitle(
@@ -54,7 +65,7 @@ const LookupTypeFormDialog: React.FC<ILookupTypeFormDialogProps> = ({
       return;
     }
 
-    await onSave(title.trim());
+    await onSave({ title: title.trim(), required });
   };
 
   return (
@@ -67,7 +78,7 @@ const LookupTypeFormDialog: React.FC<ILookupTypeFormDialogProps> = ({
       footer={
         <div className={styles.footer}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             disabled={saving}
@@ -96,6 +107,23 @@ const LookupTypeFormDialog: React.FC<ILookupTypeFormDialogProps> = ({
         className={styles.formField}
         onChange={setTitle}
       />
+      <div className={`${styles.formField} ${styles.mandatoryField}`}>
+        <label className={styles.mandatoryLabel} htmlFor="lookupTypeRequired">
+          {FieldLabels.LookupTypeRequired}
+        </label>
+        <div className={styles.mandatoryToggleRow}>
+          <InputSwitch
+            inputId="lookupTypeRequired"
+            checked={required}
+            disabled={saving}
+            className={styles.mandatorySwitch}
+            onChange={(e) => setRequired(Boolean(e.value))}
+          />
+          {/* <span className={styles.mandatoryState} aria-hidden="true">
+            {required ? Config.Yes : Config.No}
+          </span> */}
+        </div>
+      </div>
     </Dialog>
   );
 };

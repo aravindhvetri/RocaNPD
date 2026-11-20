@@ -2,6 +2,8 @@
 export interface ILookupType {
   Id: number;
   Title: string;
+  /** True when NPD_LookupType.Required is Yes. */
+  Required: boolean;
   IsDeleted: boolean;
 }
 
@@ -10,6 +12,20 @@ export interface ILookupTypeRow extends ILookupType, Record<string, unknown> {}
 
 export interface ILookupTypeFormValues {
   title: string;
+  required: boolean;
+}
+
+/** Row parsed from Lookup Type Import before persistence. */
+export interface ILookupTypeImportRecord {
+  title: string;
+  required: boolean;
+}
+
+/** Result of parsing a Lookup Type import spreadsheet before persistence. */
+export interface ILookupTypeImportParseResult {
+  toCreate: ILookupTypeImportRecord[];
+  duplicates: string[];
+  errors: string[];
 }
 
 /**
@@ -190,6 +206,13 @@ export interface INpdRequestGeneralInfo {
   InitiatorId: number;
   Created: string;
   Modified: string;
+  /** Active Item Details lines — Products column on list pages. */
+  ItemDetailsCount?: number;
+  /**
+   * Server-relative URL of NpdItemDetailsBackup.json when present on the
+   * NPD_Request item (from AttachmentFiles expand — not a separate list call).
+   */
+  ItemDetailsBackupUrl?: string;
   PlantCode?: string;
   StorageLocation?: string;
   ProfitCenter?: string;
@@ -243,7 +266,6 @@ export interface INpdItemDetailRecord {
   hsnCode: string;
   weightKg: number | null;
   uom: string[];
-  minQtyBoxQty: string;
   /** True when the line item was added by the MIS Coordinator, highlighted in Item Details table. */
   isMisAdded?: boolean;
   /** NPD_ItemDetails.SAP — true after SAP accepted this line. */
@@ -300,7 +322,7 @@ export interface IRoleBrandAssignment {
 
 /**
  * Session access context. A user can hold multiple roles at once
- * (e.g. Admin + Initiator + Vertical Head). Permissions are a union.
+ * (e.g. Admin + Initiator + VH-Marketing Manager). Permissions are a union.
  */
 export interface IResolvedUserAccess {
   assignedRoles: string[];
@@ -318,7 +340,7 @@ export interface IRequestViewScope {
   /**
    * When true, the row is visible only if the logged-in user is the request
    * Initiator (Initiator person, else Author). Used for Initiator lists.
-   * Admin, MIS Coordinator, and Vertical Head keep this false.
+   * Admin, MIS Coordinator, and VH-Marketing Manager keep this false.
    */
   ownerOnly: boolean;
   /**
@@ -373,6 +395,7 @@ export interface IMaterialGroupEntryRow {
 export interface IMaterialMasterRow extends Record<string, unknown> {
   Id: number;
   ItemType: string;
+  RocaGlobalCode: string;
   MaterialCode: string;
   MaterialType: string;
   MaterialDescription: string;
@@ -406,7 +429,6 @@ export interface IMaterialMasterRow extends Record<string, unknown> {
   Weight: string;
   UOMCode: string;
   UOM: string;
-  MinQty: string;
   NpdRequestId: number;
   Initiator: string;
   InitiatorEmail: string;
@@ -487,6 +509,9 @@ export interface IMaterialGroupHydratePayload {
   status: string;
   selectedConfigIds: number[];
   entriesByConfigId: Record<number, IMaterialGroupEntryRow[]>;
+  /** Fingerprint of hydrated form payload — used to skip no-op Draft updates. */
+  savedRequestsJson?: string;
+  savedConfigLookupIds?: number[];
   initiatorName?: string;
   initiatorEmail?: string;
   /** Audit log rows from NPD_MaterialGroupAuditLogs (newest first). */

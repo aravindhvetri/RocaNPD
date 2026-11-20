@@ -10,12 +10,21 @@ export interface ISapMaterialMasterPostDependencies {
   postRow: (row: ISapMaterialMasterRequestRow) => Promise<string>;
   assertSuccess: (responseText: string, materialCode: string) => void;
   markPosted: (sharePointId: number) => Promise<void>;
-  insertMaster: (item: INpdItemDetailRecord) => Promise<void>;
+  /**
+   * Called once after every persistable Item Details line has SAP=true.
+   * Must not run while any SAP=false targets remain.
+   */
+  insertMaster: (items: INpdItemDetailRecord[]) => Promise<void>;
   /**
    * Called when SAP posting starts (0/total) and after each successful
    * createZMatMast + SAP flag write. Failures do not increment current.
+   * `total` is the count of SAP=false lines for this attempt only.
    */
-  onProgress?: (posted: number, total: number) => void;
+  onProgress?: (
+    posted: number,
+    total: number,
+    postedSharePointId?: number,
+  ) => void;
 }
 
 function isPersistableItem(item: INpdItemDetailRecord): boolean {
@@ -30,23 +39,20 @@ function errorText(error: unknown): string {
 }
 
 /**
- * Posts each Item Details line with SAP=false, then inserts that line into Material Master.
- * Lines already marked SAP=true are not sent again; their Material Master row is ensured.
- * Any failure is collected so later lines can still succeed. The caller must not approve
- * when this throws.
- * Network loss fails immediately and does not continue remaining lines.
- * Reconnecting does not resume this batch — the caller must start a new action.
- * An in-flight line that still succeeds after a brief reconnect is not interrupted.
+ * Posts each Item Details line with SAP=false to createZMatMast.
+ * On success, sets that line's NPD_ItemDetails.SAP = true.
+ * Material Master is written once after every persistable line is SAP=true —
+ * never mid-batch when a later line fails.
+ * Retry skips SAP=true lines; progress total is remaining SAP=false count only.
+ * Network loss fails immediately. Reconnecting does not resume this batch.
  */
 export async function postItemDetailsToSap(
   items: INpdItemDetailRecord[],
   buildRow: (item: INpdItemDetailRecord) => ISapMaterialMasterRequestRow,
   deps: ISapMaterialMasterPostDependencies,
 ): Promise<void> {
-  const failures: string[] = [];
-  const sapTargets = items.filter(
-    (item) => isPersistableItem(item) && !item.sapPosted,
-  );
+  const persistable = items.filter(isPersistableItem);
+  const sapTargets = persistable.filter((item) => !item.sapPosted);
   const total = sapTargets.length;
   let posted = 0;
   deps.onProgress?.(0, total);
@@ -96,7 +102,7 @@ export async function postItemDetailsToSap(
   }
 
   try {
-    for (const item of items.filter(isPersistableItem)) {
+    for (const item of sapTargets) {
       // Do not start the next line after offline, even if the network is back.
       if (shouldStop()) {
         throw new Error(NETWORK_OFFLINE_MESSAGE);
@@ -104,57 +110,46 @@ export async function postItemDetailsToSap(
 
       const label = item.materialCode.trim() || item.materialDescription.trim();
 
-      if (item.sapPosted) {
-        try {
-          await deps.insertMaster(item);
-        } catch (error) {
-          if (isNetworkError(error)) {
-            throw error instanceof Error
-              ? error
-              : new Error(NETWORK_OFFLINE_MESSAGE);
-          }
-          failures.push(`${label}: ${errorText(error)}`);
-        }
-        continue;
-      }
-
       if (!item.sharePointId) {
-        failures.push(
+        throw new Error(
           `${label}: the Item Details record was not saved, so it was not sent to SAP.`,
         );
-        continue;
       }
 
       try {
         const row = buildRow(item);
         const responseText = await deps.postRow(row);
+        // Reads sapData[].STATUS / MESSAGE — STATUS False stops the batch here.
         deps.assertSuccess(responseText, label);
         await deps.markPosted(item.sharePointId);
         item.sapPosted = true;
         posted += 1;
-        deps.onProgress?.(posted, total);
-        if (shouldStop()) {
-          throw new Error(NETWORK_OFFLINE_MESSAGE);
-        }
-        await deps.insertMaster(item);
+        deps.onProgress?.(posted, total, item.sharePointId);
         if (shouldStop()) {
           throw new Error(NETWORK_OFFLINE_MESSAGE);
         }
       } catch (error) {
-        // Stop the batch immediately on network loss — do not continue remaining lines.
+        // Stop immediately — do not process remaining records or Material Master.
         if (isNetworkError(error) || shouldStop()) {
           throw error instanceof Error
             ? error
             : new Error(NETWORK_OFFLINE_MESSAGE);
         }
-        failures.push(`${label}: ${errorText(error)}`);
+        const detail = errorText(error);
+        throw new Error(
+          detail.toLowerCase().includes(label.toLowerCase())
+            ? detail
+            : `${label}: ${detail}`,
+        );
       }
     }
 
-    if (failures.length) {
-      throw new Error(
-        `SAP did not process all Item Details records due to the error: ${failures.join(" ")} Records already accepted by SAP have been retained and will not be resubmitted.`,
-      );
+    // All SAP=false lines succeeded (or none remained). One Material Master write.
+    if (shouldStop()) {
+      throw new Error(NETWORK_OFFLINE_MESSAGE);
+    }
+    if (persistable.length) {
+      await deps.insertMaster(persistable);
     }
   } finally {
     stopWatch();

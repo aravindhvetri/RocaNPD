@@ -1,5 +1,6 @@
 import {
   Config,
+  isOwnManufactureProductsMaterialType,
   NpdMaterialTypes,
   NpdMisClassTypeDefault,
   NpdMisLookupTypes,
@@ -51,7 +52,7 @@ export function createEmptyNpdOtherDetails(): INpdOtherDetails {
 }
 
 /**
- * Finished Products → Plant/Source code.
+ * Own Manufacture Products (and legacy Finished Products) → Plant/Source code.
  * Traded Products → CCWH.
  */
 export function resolveMisPlantCode(
@@ -65,7 +66,7 @@ export function resolveMisPlantCode(
     return NpdMisPlantCodes.TradedWarehouse;
   }
 
-  if (type === NpdMaterialTypes.FinishedProducts) {
+  if (isOwnManufactureProductsMaterialType(type)) {
     return plant;
   }
 
@@ -82,7 +83,7 @@ export function resolveMisValuationClass(
   const type = (materialType || "").trim();
   const plant = (plantSource || "").trim().toLowerCase();
 
-  if (type === NpdMaterialTypes.FinishedProducts) {
+  if (isOwnManufactureProductsMaterialType(type)) {
     return NpdValuationClasses.FinishedProduct;
   }
 

@@ -87,14 +87,22 @@ const LookupMaster: React.FC = () => {
     React.useState<ILookupImportParseResult | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
 
-  const isLoading = status === "loading" || lookupTypeStatus === "loading";
+  const isLoading = status === "loading";
   const isSaving = status === "saving";
 
+  // Lookup list Expand already supplies Lookup Type titles for the table.
+  // LookupType list is loaded only when Add/Edit (or Import) needs the dropdown.
   const listFetchPending = useListPageFetch(
-    () =>
-      Promise.all([dispatch(fetchLookups()), dispatch(fetchLookupTypes())]),
+    () => dispatch(fetchLookups()),
     [dispatch],
   );
+
+  const ensureLookupTypesLoaded = React.useCallback((): void => {
+    if (lookupTypes.length || lookupTypeStatus === "loading") {
+      return;
+    }
+    void dispatch(fetchLookupTypes());
+  }, [dispatch, lookupTypeStatus, lookupTypes.length]);
 
   React.useEffect(() => {
     if (!error) {
@@ -170,12 +178,14 @@ const LookupMaster: React.FC = () => {
   }, [globalFilter, tableRows]);
 
   const openCreateDialog = (): void => {
+    ensureLookupTypesLoaded();
     setDialogMode("create");
     setSelectedItem(null);
     setDialogVisible(true);
   };
 
   const openEditDialog = (row: ILookupRow): void => {
+    ensureLookupTypesLoaded();
     setDialogMode("edit");
     setSelectedItem(row);
     setDialogVisible(true);

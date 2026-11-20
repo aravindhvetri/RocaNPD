@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../External/CommonServices/Config";
 import type { NpdWorkflowAction } from "../../../External/CommonServices/Interface";
 import styles from "./NpdApproverMail.module.scss";
 
@@ -24,7 +25,9 @@ function getPrompt(action: NpdWorkflowAction): string {
   return "Are you sure, you want to Re-work?";
 }
 
-const NpdApproverMailActionPanel: React.FC<INpdApproverMailActionPanelProps> = ({
+const NpdApproverMailActionPanel: React.FC<
+  INpdApproverMailActionPanelProps
+> = ({
   requestTitle,
   action,
   comments,
@@ -43,8 +46,9 @@ const NpdApproverMailActionPanel: React.FC<INpdApproverMailActionPanelProps> = (
 
       <textarea
         id="npdApproverMailComments"
-        className={`${styles.commentsTextarea} ${commentsError ? styles.commentsTextareaError : ""
-          }`}
+        className={`${styles.commentsTextarea} ${
+          commentsError ? styles.commentsTextareaError : ""
+        }`}
         placeholder="Enter comments here"
         value={comments}
         disabled={submitting}
@@ -60,7 +64,7 @@ const NpdApproverMailActionPanel: React.FC<INpdApproverMailActionPanelProps> = (
           disabled={submitting}
           onClick={onConfirm}
         >
-          {submitting ? "..." : "Yes"}
+          {submitting ? "..." : Config.Yes}
         </button>
         <button
           type="button"
@@ -68,7 +72,7 @@ const NpdApproverMailActionPanel: React.FC<INpdApproverMailActionPanelProps> = (
           disabled={submitting}
           onClick={onCancel}
         >
-          No
+          {Config.No}
         </button>
       </div>
     </div>

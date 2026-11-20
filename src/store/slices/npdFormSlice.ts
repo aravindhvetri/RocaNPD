@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Config } from "../../External/CommonServices/Config";
 import type {
+  ILookupType,
   INpdGeneralInfo,
   INpdOtherDetails,
   ISelectOption,
@@ -43,6 +44,7 @@ const initialState: INpdFormState = {
   brandOptions: [],
   plantSourceOptions: [],
   lookupOptionsByType: {},
+  lookupTypes: [] as ILookupType[],
   brandOptionsStatus: "idle",
   plantSourceStatus: "idle",
   lookupOptionsStatus: "idle",
@@ -156,7 +158,8 @@ const npdFormSlice = createSlice({
       })
       .addCase(fetchNpdLookupOptions.fulfilled, (state, action) => {
         state.lookupOptionsStatus = "idle";
-        state.lookupOptionsByType = { ...action.payload };
+        state.lookupOptionsByType = { ...action.payload.optionsByType };
+        state.lookupTypes = action.payload.lookupTypes;
       })
       .addCase(fetchNpdLookupOptions.rejected, (state, action) => {
         state.lookupOptionsStatus = "error";
@@ -188,6 +191,11 @@ const npdFormSlice = createSlice({
       })
       .addCase(saveNpdDraft.rejected, (state, action) => {
         state.saveStatus = "idle";
+        const payload = String(action.payload ?? "").toLowerCase();
+        if (payload.includes("no internet") || payload.includes("offline")) {
+          state.error = null;
+          return;
+        }
         state.error = action.payload ?? "Failed to save draft.";
       })
       .addCase(submitNpdRequest.pending, (state) => {
@@ -203,6 +211,13 @@ const npdFormSlice = createSlice({
       })
       .addCase(submitNpdRequest.rejected, (state, action) => {
         state.saveStatus = "idle";
+        // Offline Submit already flashes + navigates. Do not keep the error in
+        // Redux — reopening Edit while online would toast "No Internet" again.
+        const payload = String(action.payload ?? "").toLowerCase();
+        if (payload.includes("no internet") || payload.includes("offline")) {
+          state.error = null;
+          return;
+        }
         state.error = action.payload ?? "Failed to submit the request.";
       })
       .addCase(applyNpdWorkflowAction.pending, (state) => {
@@ -338,10 +353,9 @@ export const {
   setNpdOtherDetails,
 } = npdFormSlice.actions;
 
-export const selectIsFinishedProductsMaterialType = (
+export const selectIsOwnManufactureProductsMaterialType = (
   materialType: string | null,
-): boolean =>
-  materialType === Config.NpdMaterialTypes.FinishedProducts;
+): boolean => Config.isOwnManufactureProductsMaterialType(materialType);
 
 export const selectIsTradedProductsMaterialType = (
   materialType: string | null,
@@ -350,7 +364,7 @@ export const selectIsTradedProductsMaterialType = (
 export const selectHasPlantSourceMaterialType = (
   materialType: string | null,
 ): boolean =>
-  selectIsFinishedProductsMaterialType(materialType) ||
+  selectIsOwnManufactureProductsMaterialType(materialType) ||
   selectIsTradedProductsMaterialType(materialType);
 
 export default npdFormSlice.reducer;

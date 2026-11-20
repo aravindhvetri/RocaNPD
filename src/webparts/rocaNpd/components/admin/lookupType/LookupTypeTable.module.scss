@@ -1,5 +1,9 @@
 @import "../../../styles/_theme-import.scss";
 
+.titleCell {
+  white-space: pre-wrap;
+}
+
 .table {
   :global {
     .p-datatable-thead > tr > th {

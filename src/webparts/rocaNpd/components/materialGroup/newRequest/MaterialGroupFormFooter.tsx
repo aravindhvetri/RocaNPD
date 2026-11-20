@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Config } from "../../../../../External/CommonServices/Config";
 import { Button } from "../../common/controls";
 import type { IMaterialGroupFormFooterProps } from "./materialGroupTypes";
 import styles from "./MaterialGroupFormFooter.module.scss";
@@ -21,7 +22,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
       <div className={styles.footer}>
         <div className={styles.cancelButton}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             onClick={onCancel}
@@ -36,7 +37,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
       <div className={styles.footer}>
         <div className={styles.cancelButton}>
           <Button
-            label="Cancel"
+            label={Config.Cancel}
             variant="secondary"
             size="sm"
             disabled={isBusy}
@@ -47,7 +48,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
         <div className={styles.primaryActions}>
           <div className={styles.reworkButton}>
             <Button
-              label="Rework"
+              label={Config.Rework}
               size="sm"
               disabled={isBusy}
               onClick={() => onConsultantAction?.("Rework")}
@@ -55,7 +56,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
           </div>
           <div className={styles.rejectButton}>
             <Button
-              label="Reject"
+              label={Config.Reject}
               size="sm"
               disabled={isBusy}
               onClick={() => onConsultantAction?.("Rejected")}
@@ -63,7 +64,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
           </div>
           <div className={styles.completeButton}>
             <Button
-              label="Complete"
+              label={Config.Complete}
               size="sm"
               loading={isBusy}
               disabled={isBusy}
@@ -79,7 +80,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
     <div className={styles.footer}>
       <div className={styles.cancelButton}>
         <Button
-          label="Cancel"
+          label={Config.Cancel}
           variant="secondary"
           size="sm"
           disabled={isBusy}
@@ -90,7 +91,7 @@ const MaterialGroupFormFooter: React.FC<IMaterialGroupFormFooterProps> = ({
       <div className={styles.primaryActions}>
         {showSaveDraft ? (
           <Button
-            label="Save as Draft"
+            label={Config.SaveAsDraft}
             variant="secondary"
             icon="pi pi-save"
             size="sm"

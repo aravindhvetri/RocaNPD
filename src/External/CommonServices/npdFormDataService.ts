@@ -12,6 +12,7 @@ import {
   approversRowMatchesEmail,
   resolveLoginEmail,
 } from "./personFieldUtils";
+import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
@@ -105,19 +106,25 @@ export async function fetchInitiatorBrandOptions(
   }
 
   const [rows, userEmailById] = await Promise.all([
-    SPServices.getAnotherSPReadItems({
-      SiteUrl: rocaSiteUrl,
-      Listname: Config.RocaMasterListNames.ApproversMaster,
-      Select: APPROVERS_SELECT,
-      Expand: APPROVERS_EXPAND,
-      Topcount: 5000,
-    }) as Promise<Record<string, unknown>[]>,
+    ensureApproversMasterRows(rocaSiteUrl, () =>
+      SPServices.getAnotherSPReadItems({
+        SiteUrl: rocaSiteUrl,
+        Listname: Config.RocaMasterListNames.ApproversMaster,
+        Select: APPROVERS_SELECT,
+        Expand: APPROVERS_EXPAND,
+        Topcount: 5000,
+      }) as Promise<Record<string, unknown>[]>,
+    ),
     SPServices.getAnotherSPSiteUserEmailMap(rocaSiteUrl).catch(
       () => new Map<number, string>(),
     ),
   ]);
 
-  return mapDistinctBrandOptions(rows, resolvedEmail, userEmailById);
+  return mapDistinctBrandOptions(
+    rows as Record<string, unknown>[],
+    resolvedEmail,
+    userEmailById,
+  );
 }
 
 export async function fetchActiveBrandMasterOptions(
@@ -149,7 +156,7 @@ export async function fetchActiveBrandMasterOptions(
   }
 }
 
-export async function fetchFinishedProductPlantSourceOptions(
+export async function fetchOwnManufactureProductPlantSourceOptions(
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
   const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
@@ -199,8 +206,8 @@ export function getTradedProductPlantSourceOptions(): ISelectOption[] {
 export function getNpdMaterialTypeOptions(): ISelectOption[] {
   return [
     {
-      label: Config.NpdMaterialTypes.FinishedProducts,
-      value: Config.NpdMaterialTypes.FinishedProducts,
+      label: Config.NpdMaterialTypes.OwnManufactureProducts,
+      value: Config.NpdMaterialTypes.OwnManufactureProducts,
     },
     {
       label: Config.NpdMaterialTypes.TradedProducts,
@@ -213,8 +220,8 @@ export async function fetchPlantSourceOptionsForMaterialType(
   materialType: string,
   contextSiteUrl?: string,
 ): Promise<ISelectOption[]> {
-  if (materialType === Config.NpdMaterialTypes.FinishedProducts) {
-    return fetchFinishedProductPlantSourceOptions(contextSiteUrl);
+  if (Config.isOwnManufactureProductsMaterialType(materialType)) {
+    return fetchOwnManufactureProductPlantSourceOptions(contextSiteUrl);
   }
 
   if (materialType === Config.NpdMaterialTypes.TradedProducts) {

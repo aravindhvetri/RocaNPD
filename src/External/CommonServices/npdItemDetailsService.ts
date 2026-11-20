@@ -1,6 +1,9 @@
 import { Config, SharePointMutateBatchSize } from "./Config";
 import type { INpdItemDetailRecord } from "./Interface";
-import { buildNpdItemDetailsMatchKey } from "./npdItemDetailsBackupService";
+import {
+  buildNpdItemDetailsMatchKey,
+  upsertNpdItemDetailsBackupAttachment,
+} from "./npdItemDetailsBackupService";
 import { isDeletedYesFlag } from "./lookupFieldUtils";
 import { NETWORK_OFFLINE_MESSAGE } from "./networkConnectivity";
 import {
@@ -13,6 +16,24 @@ import SPServices from "./SPServices";
 
 const LIST_NAME = (): string => Config.ListNames.NpdItemDetails;
 const FIELDS = Config.FieldNames.NpdItemDetails;
+
+/**
+ * SharePoint $batch cannot be cancelled. After an offline abort the request
+ * may still finish — wait for it before inserting "remaining" rows.
+ */
+let inFlightItemDetailsMutate: Promise<void> = Promise.resolve();
+
+export function waitForInFlightNpdItemDetailsMutate(): Promise<void> {
+  return inFlightItemDetailsMutate;
+}
+
+function trackItemDetailsMutate(mutate: Promise<void>): Promise<void> {
+  inFlightItemDetailsMutate = mutate.then(
+    () => undefined,
+    () => undefined,
+  );
+  return mutate;
+}
 const SEPARATOR = Config.NpdItemImport.MultiValueSeparator;
 
 const SELECT_FIELDS = [
@@ -36,23 +57,31 @@ const SELECT_FIELDS = [
   FIELDS.HSNCode,
   FIELDS.Weight,
   FIELDS.UOM,
-  FIELDS.MinQty,
   FIELDS.SAP,
   FIELDS.IsDeleted,
   FIELDS.RequestGeneralInfoId,
 ].join(",");
 
-/** MIS-added rows first, then remaining rows by SharePoint Id ascending. */
+/**
+ * Display order: MIS-added lines, then VH-added lines, then Initiator lines.
+ * MIS and VH lines share the MIS_ADDED flag; MIS lines are created later so
+ * they have the higher SharePoint Id. Initiator lines stay in Id order.
+ */
 export function sortNpdItemDetailsForDisplay(
   records: INpdItemDetailRecord[],
 ): INpdItemDetailRecord[] {
   return [...records].sort((left, right) => {
-    const leftMis = left.isMisAdded ? 0 : 1;
-    const rightMis = right.isMisAdded ? 0 : 1;
-    if (leftMis !== rightMis) {
-      return leftMis - rightMis;
+    const leftGroup = left.isMisAdded ? 0 : 1;
+    const rightGroup = right.isMisAdded ? 0 : 1;
+    if (leftGroup !== rightGroup) {
+      return leftGroup - rightGroup;
     }
-    return (left.sharePointId || 0) - (right.sharePointId || 0);
+    const leftId = left.sharePointId || 0;
+    const rightId = right.sharePointId || 0;
+    if (left.isMisAdded) {
+      return rightId - leftId;
+    }
+    return leftId - rightId;
   });
 }
 
@@ -154,7 +183,9 @@ function mapItem(item: Record<string, unknown>): INpdItemDetailRecord {
     productSourceMg5: splitMultiValue(item[FIELDS.ProductSourceMG5]),
     colorMgp1a: splitMultiValue(item[FIELDS.ColorMGP1A]),
     productRangeMgp2a: splitMultiValue(item[FIELDS.ProductRangeMGP2A]),
-    productSubCategoryMgp3a: splitMultiValue(item[FIELDS.ProductSubCategoryMGP3A]),
+    productSubCategoryMgp3a: splitMultiValue(
+      item[FIELDS.ProductSubCategoryMGP3A],
+    ),
     materialGroup: splitMultiValue(item[FIELDS.MaterialGroup]),
     extMaterialGroup: splitMultiValue(item[FIELDS.ExtMaterialGroup]),
     productSegment: splitMultiValue(item[FIELDS.ProductSegment]),
@@ -174,7 +205,6 @@ function mapItem(item: Record<string, unknown>): INpdItemDetailRecord {
           ? weightNumber
           : null,
     uom: splitMultiValue(item[FIELDS.UOM]),
-    minQtyBoxQty: readText(item, FIELDS.MinQty),
     isMisAdded: readText(item, FIELDS.Title) === "MIS_ADDED",
     sapPosted: readSapFlag(item[FIELDS.SAP]),
   };
@@ -184,7 +214,9 @@ function readSapFlag(value: unknown): boolean {
   if (value === true || value === 1) {
     return true;
   }
-  const text = String(value ?? "").trim().toLowerCase();
+  const text = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return text === "true" || text === "yes" || text === "1";
 }
 
@@ -203,7 +235,9 @@ function toSharePointPayload(
     [FIELDS.ProductSourceMG5]: joinMultiValue(record.productSourceMg5),
     [FIELDS.ColorMGP1A]: joinMultiValue(record.colorMgp1a),
     [FIELDS.ProductRangeMGP2A]: joinMultiValue(record.productRangeMgp2a),
-    [FIELDS.ProductSubCategoryMGP3A]: joinMultiValue(record.productSubCategoryMgp3a),
+    [FIELDS.ProductSubCategoryMGP3A]: joinMultiValue(
+      record.productSubCategoryMgp3a,
+    ),
     [FIELDS.MaterialGroup]: joinMultiValue(record.materialGroup),
     [FIELDS.ExtMaterialGroup]: joinMultiValue(record.extMaterialGroup),
     [FIELDS.ProductSegment]: joinMultiValue(record.productSegment),
@@ -211,7 +245,6 @@ function toSharePointPayload(
     [FIELDS.ClassNumberPcsName]: joinMultiValue(record.classNumberPcsName),
     [FIELDS.HSNCode]: record.hsnCode.trim(),
     [FIELDS.UOM]: joinMultiValue(record.uom),
-    [FIELDS.MinQty]: record.minQtyBoxQty.trim(),
     [FIELDS.RequestGeneralInfoId]: requestId,
   };
 
@@ -250,7 +283,9 @@ export async function fetchNpdItemDetailsByRequestId(
 
   return sortNpdItemDetailsForDisplay(
     rows
-      .filter((row) => !isDeletedYesFlag(row[SOFT_DELETE_FIELD] ?? row.IsDeleted))
+      .filter(
+        (row) => !isDeletedYesFlag(row[SOFT_DELETE_FIELD] ?? row.IsDeleted),
+      )
       .map(mapItem),
   );
 }
@@ -325,13 +360,38 @@ export interface ISaveNpdItemDetailsOptions {
    * saved stay saved and the rest of this submit is not sent.
    */
   shouldAbort?: () => boolean;
+  /**
+   * When true, caller already wrote the NPD_Request backup attachment —
+   * skip a second attachmentFiles round-trip.
+   */
+  skipBackup?: boolean;
+  /**
+   * When true, caller already wrote NPD_Request.ItemDetailsCount on the header
+   * create/update — skip a separate items(id) PATCH.
+   */
+  skipItemDetailsCountSync?: boolean;
+}
+
+function attachItemDetailsPersistProgress(
+  error: unknown,
+  inserted: number,
+  mutateCompleted: boolean,
+): Error {
+  const wrapped = error instanceof Error ? error : new Error(String(error));
+  const extra = wrapped as Error & {
+    npdInsertedItemCount?: number;
+    npdItemMutateCompleted?: boolean;
+  };
+  extra.npdInsertedItemCount = inserted;
+  extra.npdItemMutateCompleted = mutateCompleted;
+  return wrapped;
 }
 
 export async function saveNpdItemDetailsBatch(
   requestId: number,
   records: INpdItemDetailRecord[],
   options: boolean | ISaveNpdItemDetailsOptions = false,
-): Promise<void> {
+): Promise<number> {
   const normalized: ISaveNpdItemDetailsOptions =
     typeof options === "boolean" ? { isNewRequest: options } : options || {};
   const isNewRequest = Boolean(normalized.isNewRequest);
@@ -359,7 +419,9 @@ export async function saveNpdItemDetailsBatch(
       persistable.map((record) => record.sharePointId).filter((id) => id > 0),
     );
     softDeleteIds = existing
-      .filter((item) => item.sharePointId > 0 && !keepIds.has(item.sharePointId))
+      .filter(
+        (item) => item.sharePointId > 0 && !keepIds.has(item.sharePointId),
+      )
       .map((item) => item.sharePointId);
   }
 
@@ -370,21 +432,45 @@ export async function saveNpdItemDetailsBatch(
   // Soft-delete first so a concurrent update of the same Id cannot revive it.
   const allUpdates = [...softDeleteUpdates, ...toUpdate];
 
+  const syncItemDetailsCount = async (): Promise<void> => {
+    if (normalized.skipItemDetailsCountSync) {
+      return;
+    }
+    // Non-partial replace leaves exactly the persistable rows active.
+    // Partial (soft-delete + insert) needs a recount of active lines.
+    const count = partial
+      ? (await fetchNpdItemDetailsByRequestId(requestId)).length
+      : persistable.length;
+    await syncNpdRequestItemDetailsCount(requestId, count);
+  };
+
   if (!allUpdates.length && !toInsert.length) {
-    return;
+    if (!partial) {
+      await syncItemDetailsCount();
+    }
+    return 0;
   }
 
   // Save Draft and other callers keep a single batch. Submit passes
   // shouldAbort so a dropped connection cannot flush the remaining rows
   // when the browser comes back online.
+
   if (!normalized.shouldAbort) {
-    await SPServices.batchMutate({
-      ListName: LIST_NAME(),
-      remove: [],
-      update: allUpdates,
-      insert: toInsert,
-    });
-    return;
+    // Initiator Draft/Submit already wrote the backup before this batch.
+    if (!normalized.skipBackup) {
+      await upsertNpdItemDetailsBackupAttachment(requestId, records);
+    }
+
+    await trackItemDetailsMutate(
+      SPServices.batchMutate({
+        ListName: LIST_NAME(),
+        remove: [],
+        update: allUpdates,
+        insert: toInsert,
+      }),
+    );
+    await syncItemDetailsCount();
+    return toInsert.length;
   }
 
   const abortIfRequested = (): void => {
@@ -401,12 +487,14 @@ export async function saveNpdItemDetailsBatch(
     let pollId = 0;
     try {
       await Promise.race([
-        SPServices.batchMutate({
-          ListName: LIST_NAME(),
-          remove: [],
-          update: params.update,
-          insert: params.insert,
-        }),
+        trackItemDetailsMutate(
+          SPServices.batchMutate({
+            ListName: LIST_NAME(),
+            remove: [],
+            update: params.update,
+            insert: params.insert,
+          }),
+        ),
         new Promise<never>((_resolve, reject) => {
           pollId = window.setInterval(() => {
             if (normalized.shouldAbort?.()) {
@@ -426,19 +514,58 @@ export async function saveNpdItemDetailsBatch(
   // Up to 100 Item Details per batch. 59 lines are one call.
   // The next batch starts only if this submit is still online.
   const insertChunkSize = SharePointMutateBatchSize;
-  if (!toInsert.length) {
-    await runAbortableMutate({
-      update: allUpdates,
-      insert: [],
-    });
+  let insertedCompleted = 0;
+  let mutateCompleted = false;
+  try {
+    if (!toInsert.length) {
+      await runAbortableMutate({
+        update: allUpdates,
+        insert: [],
+      });
+      mutateCompleted = true;
+      return 0;
+    }
+
+    for (let start = 0; start < toInsert.length; start += insertChunkSize) {
+      const chunk = toInsert.slice(start, start + insertChunkSize);
+      await runAbortableMutate({
+        update: start === 0 ? allUpdates : [],
+        insert: chunk,
+      });
+      mutateCompleted = true;
+      insertedCompleted += chunk.length;
+    }
+    return insertedCompleted;
+  } catch (error) {
+    throw attachItemDetailsPersistProgress(
+      error,
+      insertedCompleted,
+      mutateCompleted,
+    );
+  }
+}
+
+/** Writes NPD_Request.ItemDetailsCount for list Products column (best-effort). */
+async function syncNpdRequestItemDetailsCount(
+  requestId: number,
+  count: number,
+): Promise<void> {
+  if (!requestId) {
     return;
   }
-
-  for (let start = 0; start < toInsert.length; start += insertChunkSize) {
-    await runAbortableMutate({
-      update: start === 0 ? allUpdates : [],
-      insert: toInsert.slice(start, start + insertChunkSize),
+  try {
+    await SPServices.SPUpdateItem({
+      Listname: Config.ListNames.NpdRequest,
+      ID: requestId,
+      RequestJSON: {
+        [Config.FieldNames.NpdRequest.ItemDetailsCount]: Math.max(
+          0,
+          Math.floor(count),
+        ),
+      },
     });
+  } catch {
+    // Older sites without the column must not fail Item Details saves.
   }
 }
 

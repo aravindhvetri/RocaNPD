@@ -1,9 +1,17 @@
 import type { WebPartContext } from "@microsoft/sp-webpart-base";
 import { syncNpdPendingReworkApprovers } from "../../External/CommonServices/npdApproverSyncService";
 import { resolveUserAccess } from "../../External/CommonServices/roleService";
-import { resolveCurrentSiteUrl } from "../../External/CommonServices/rocaSiteUrlResolver";
+import {
+  getCachedRocaSiteUserEmailMap,
+  rocaSiteUserEmailMapToRecord,
+} from "../../External/CommonServices/rocaSiteUserEmailCache";
+import {
+  requireRocaMasterSiteUrl,
+  resolveCurrentSiteUrl,
+} from "../../External/CommonServices/rocaSiteUrlResolver";
 import {
   setInitialized,
+  setRocaSiteUserEmailById,
   setRoleError,
   setRoleStatus,
   setUserAccess,
@@ -67,6 +75,18 @@ export const initializeApp =
           })),
         ),
       );
+      // Persist siteUsers Id→Email once for the session (filled during role / sync).
+      try {
+        const rocaSiteUrl = requireRocaMasterSiteUrl(siteUrl);
+        const emailMap = getCachedRocaSiteUserEmailMap(rocaSiteUrl);
+        if (emailMap?.size) {
+          dispatch(
+            setRocaSiteUserEmailById(rocaSiteUserEmailMapToRecord(emailMap)),
+          );
+        }
+      } catch {
+        // Cache may be empty if ApproversMaster matching skipped siteUsers.
+      }
       await lookupOptionsPromise;
     } catch (error) {
       dispatch(setRoleError(getErrorMessage(error)));

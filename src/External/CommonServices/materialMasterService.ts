@@ -5,15 +5,16 @@ import {
   MaterialMasterUi,
   SharePointMutateBatchSize,
 } from "./Config";
-import type { IMaterialMasterRow, INpdItemDetailRecord, ISelectOption } from "./Interface";
+import type {
+  IMaterialMasterRow,
+  INpdItemDetailRecord,
+  ISelectOption,
+} from "./Interface";
 import { fetchActiveLookups } from "./lookupService";
 import { matchesAnySearchField } from "./searchTextUtils";
 import { isActiveRecord } from "./softDelete";
 import { isDeletedYesFlag } from "./lookupFieldUtils";
-import {
-  SapBrandLookupFieldHints,
-  SapItemDetailsLookupFieldHints,
-} from "./sapMaterialMasterLookupFieldHints";
+import { SapItemDetailsLookupFieldHints } from "./sapMaterialMasterLookupFieldHints";
 import {
   createSapLookupCodeResolver,
   type ISapLookupCodeResolver,
@@ -28,6 +29,7 @@ const CATALOG_ROW_LIMIT = MaterialMasterUi.CatalogFetchRowLimit;
 /** Known internal names from NPD_MaterialMaster list settings (screenshot). */
 const MM_FIELDS = {
   ItemType: "ItemType",
+  RocaGlobalCode: "RocaGlobalCode",
   MaterialCode: "MaterialCode",
   MaterialType: "MaterialType",
   MaterialDescription: "MaterialDescription",
@@ -61,7 +63,6 @@ const MM_FIELDS = {
   Weight: "Weight",
   UOMCode: "UOMCode",
   UOM: "UOM",
-  MinQty: "MinQty",
   NPDRequest: "NPDRequest",
   IsDeleted: "IsDeleted",
 } as const;
@@ -75,6 +76,11 @@ export interface IMaterialMasterColumnDef {
 }
 
 export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
+  {
+    field: "RocaGlobalCode",
+    header: FieldLabels.RocaGlobalCode,
+    minWidth: "10rem",
+  },
   { field: "MaterialCode", header: FieldLabels.MaterialCode, minWidth: "8rem" },
   { field: "MaterialType", header: FieldLabels.MaterialType, minWidth: "8rem" },
   {
@@ -84,18 +90,50 @@ export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
   },
   { field: "BrandCode", header: "Brand Code", minWidth: "7rem" },
   { field: "Brand", header: FieldLabels.Brand, minWidth: "7rem" },
-  { field: "ProductGroupMG2Code", header: "Product Group (MG2) Code", minWidth: "8rem" },
+  {
+    field: "ProductGroupMG2Code",
+    header: "Product Group (MG2) Code",
+    minWidth: "8rem",
+  },
   { field: "ProductGroupMG2", header: "Product Group (MG2)", minWidth: "9rem" },
-  { field: "ProductCategoryMG3Code", header: "Product Category (MG3) Code", minWidth: "8rem" },
-  { field: "ProductCategoryMG3", header: "Product Category (MG3)", minWidth: "9rem" },
-  { field: "ProductTypeMG4Code", header: "Product Type (MG4) Code", minWidth: "8rem" },
+  {
+    field: "ProductCategoryMG3Code",
+    header: "Product Category (MG3) Code",
+    minWidth: "8rem",
+  },
+  {
+    field: "ProductCategoryMG3",
+    header: "Product Category (MG3)",
+    minWidth: "9rem",
+  },
+  {
+    field: "ProductTypeMG4Code",
+    header: "Product Type (MG4) Code",
+    minWidth: "8rem",
+  },
   { field: "ProductTypeMG4", header: "Product Type (MG4)", minWidth: "9rem" },
-  { field: "ProductSourceMG5Code", header: "Product Source (MG5) Code", minWidth: "8rem" },
-  { field: "ProductSourceMG5", header: "Product Source (MG5)", minWidth: "9rem" },
+  {
+    field: "ProductSourceMG5Code",
+    header: "Product Source (MG5) Code",
+    minWidth: "8rem",
+  },
+  {
+    field: "ProductSourceMG5",
+    header: "Product Source (MG5)",
+    minWidth: "9rem",
+  },
   { field: "ColorMG1ACode", header: "Color (MG1A) Code", minWidth: "8rem" },
   { field: "ColorMG1A", header: "Color (MG1A)", minWidth: "8rem" },
-  { field: "ProductRangeMGP2ACode", header: "Product Range (MGP2A) Code", minWidth: "8rem" },
-  { field: "ProductRangeMGP2A", header: "Product Range (MGP2A)", minWidth: "9rem" },
+  {
+    field: "ProductRangeMGP2ACode",
+    header: "Product Range (MGP2A) Code",
+    minWidth: "8rem",
+  },
+  {
+    field: "ProductRangeMGP2A",
+    header: "Product Range (MGP2A)",
+    minWidth: "9rem",
+  },
   {
     field: "ProductSubCategoryMGP3ACode",
     header: "Product Sub Category (MGP3A) Code",
@@ -106,21 +144,48 @@ export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
     header: "Product Sub Category (MGP3A)",
     minWidth: "10rem",
   },
-  { field: "MaterialGroupCode", header: "Material Group Code", minWidth: "8rem" },
-  { field: "MaterialGroup", header: "Material Group", minWidth: "9rem" },
-  { field: "ExtMaterialGroupCode", header: "Ext. Material Group Code", minWidth: "8rem" },
-  { field: "ExtMaterialGroup", header: "Ext. Material Group", minWidth: "9rem" },
-  { field: "ProductSegmentCode", header: "Product Segment Code", minWidth: "8rem" },
+  {
+    field: "MaterialGroupCode",
+    header: "Business / Material Group Code",
+    minWidth: "11.5rem",
+  },
+  {
+    field: "MaterialGroup",
+    header: "Business / Material Group",
+    minWidth: "9rem",
+  },
+  {
+    field: "ExtMaterialGroupCode",
+    header: "Ext. Material Group Code",
+    minWidth: "8rem",
+  },
+  {
+    field: "ExtMaterialGroup",
+    header: "Ext. Material Group",
+    minWidth: "9rem",
+  },
+  {
+    field: "ProductSegmentCode",
+    header: "Product Segment Code",
+    minWidth: "8rem",
+  },
   { field: "ProductSegment", header: "Product Segment", minWidth: "9rem" },
-  { field: "TaxClassificationCode", header: "Tax Classification Code", minWidth: "8rem" },
-  { field: "TaxClassification", header: "Tax Classification", minWidth: "9rem" },
+  {
+    field: "TaxClassificationCode",
+    header: "Tax Classification Code",
+    minWidth: "8rem",
+  },
+  {
+    field: "TaxClassification",
+    header: "Tax Classification",
+    minWidth: "9rem",
+  },
   { field: "ClassPCSCode", header: "Class (PCS) Code", minWidth: "8rem" },
   { field: "ClassPCS", header: "Class (PCS)", minWidth: "9rem" },
   { field: "HSNCode", header: "HSN Code", minWidth: "7rem" },
   { field: "Weight", header: "Weight", minWidth: "6rem" },
   { field: "UOMCode", header: "UOM Code", minWidth: "6rem" },
   { field: "UOM", header: "UOM", minWidth: "6rem" },
-  { field: "MinQty", header: "Min Qty", minWidth: "6rem" },
 ];
 
 export const MATERIAL_MASTER_META_COLUMNS: IMaterialMasterColumnDef[] = [
@@ -203,7 +268,12 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
 
   const fields = (await getSP()
     .web.lists.getByTitle(LIST_NAME())
-    .fields.select("InternalName", "Title", "EntityPropertyName", "Hidden")()) as Array<{
+    .fields.select(
+      "InternalName",
+      "Title",
+      "EntityPropertyName",
+      "Hidden",
+    )()) as Array<{
     InternalName?: string;
     Title?: string;
     EntityPropertyName?: string;
@@ -228,7 +298,10 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
       });
   });
 
-  const resolve = (logical: keyof typeof MM_FIELDS, extra: string[] = []): string => {
+  const resolve = (
+    logical: keyof typeof MM_FIELDS,
+    extra: string[] = [],
+  ): string => {
     const preferred = MM_FIELDS[logical];
     if (existingInternals.has(preferred)) {
       return preferred;
@@ -237,17 +310,32 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
   };
 
   const internalByLogical: Record<string, string> = {};
-  (Object.keys(MM_FIELDS) as Array<keyof typeof MM_FIELDS>).forEach((logical) => {
-    const internal = resolve(logical, [
-      logical === "ColorMG1ACode" ? "ColorMG1ACode" : "",
-      logical === "ColorMG1A" ? "ColorMG1A" : "",
-      logical === "MaterialGroupCode" ? "Material GroupCode" : "",
-      logical === "MaterialGroup" ? "Material Group" : "",
-    ].filter(Boolean));
-    if (internal) {
-      internalByLogical[logical] = internal;
-    }
-  });
+  (Object.keys(MM_FIELDS) as Array<keyof typeof MM_FIELDS>).forEach(
+    (logical) => {
+      const internal = resolve(
+        logical,
+        [
+          logical === "ColorMG1ACode" ? "ColorMG1ACode" : "",
+          logical === "ColorMG1A" ? "ColorMG1A" : "",
+          logical === "MaterialGroupCode" ? "Material GroupCode" : "",
+          logical === "MaterialGroupCode" ? "Material Group Code" : "",
+          logical === "MaterialGroupCode" ? "Material / Business Group Code" : "",
+          logical === "MaterialGroupCode" ? "Material / Business group Code" : "",
+          logical === "MaterialGroupCode" ? "Business / Material Group Code" : "",
+          logical === "MaterialGroup" ? "Material Group" : "",
+          logical === "MaterialGroup" ? "Material / Business Group" : "",
+          logical === "MaterialGroup" ? "Material / Business group" : "",
+          logical === "MaterialGroup" ? "Business / Material Group" : "",
+          logical === "RocaGlobalCode" ? FieldLabels.RocaGlobalCode : "",
+          logical === "RocaGlobalCode" ? "CMA / Global Code" : "",
+          logical === "RocaGlobalCode" ? "Roca Global Code" : "",
+        ].filter(Boolean),
+      );
+      if (internal) {
+        internalByLogical[logical] = internal;
+      }
+    },
+  );
 
   const itemTypeInternal = internalByLogical.ItemType || MM_FIELDS.ItemType;
   if (!existingInternals.has(itemTypeInternal) && !internalByLogical.ItemType) {
@@ -352,6 +440,7 @@ function mapCatalogRow(
   return {
     Id: Number(item.Id ?? item.ID) || 0,
     ItemType: readItemType(item, schema),
+    RocaGlobalCode: readField(item, schema, "RocaGlobalCode"),
     MaterialCode: readField(item, schema, "MaterialCode"),
     MaterialType: readField(item, schema, "MaterialType"),
     MaterialDescription: readField(item, schema, "MaterialDescription"),
@@ -389,7 +478,6 @@ function mapCatalogRow(
     Weight: readField(item, schema, "Weight"),
     UOMCode: readField(item, schema, "UOMCode"),
     UOM: readField(item, schema, "UOM"),
-    MinQty: readField(item, schema, "MinQty"),
     NpdRequestId: getLookupId(npdRequest, npdRequestIdField),
     Initiator: "",
     InitiatorEmail: "",
@@ -552,8 +640,7 @@ async function loadMaterialMasterCatalogRaw(
   if (
     schema.isDeletedInternal &&
     !viewFieldNames.some(
-      (name) =>
-        name.toLowerCase() === schema.isDeletedInternal.toLowerCase(),
+      (name) => name.toLowerCase() === schema.isDeletedInternal.toLowerCase(),
     )
   ) {
     viewFieldNames.push(schema.isDeletedInternal);
@@ -641,7 +728,9 @@ async function loadMaterialMasterCatalogRaw(
  * Loads all Material Master rows once (Existing + New).
  * Tab switching and filters are applied client-side — no extra SharePoint reads.
  */
-export async function fetchMaterialMasterCatalog(): Promise<IMaterialMasterRow[]> {
+export async function fetchMaterialMasterCatalog(): Promise<
+  IMaterialMasterRow[]
+> {
   // Avoid stale schema after list/column changes during local rebuilds.
   cachedSchema = null;
   const schema = await resolveMaterialMasterSchema();
@@ -657,10 +746,7 @@ export async function fetchMaterialMasterCatalog(): Promise<IMaterialMasterRow[]
       };
     })
     .filter(
-      (row) =>
-        row.Id > 0 &&
-        isActiveRecord(row) &&
-        Boolean(row.ItemType),
+      (row) => row.Id > 0 && isActiveRecord(row) && Boolean(row.ItemType),
     );
 
   const initiatorMap = await fetchInitiatorByRequestId(
@@ -794,7 +880,10 @@ async function fetchMaterialMasterMatchesByCaml(params: {
         maxId = id;
       }
 
-      if (params.isDeletedField && isDeletedYesFlag(row[params.isDeletedField])) {
+      if (
+        params.isDeletedField &&
+        isDeletedYesFlag(row[params.isDeletedField])
+      ) {
         return;
       }
 
@@ -931,12 +1020,11 @@ export async function validateItemsAgainstMaterialMaster(
     .map((item, index) => ({
       line: index + 1,
       materialCode: String(item.materialCode ?? ""),
-      materialDescription: String(item.materialDescription ?? ""),
+      // materialDescription: String(item.materialDescription ?? ""),
     }))
     .filter(
-      (item) =>
-        normalizeMaterialMasterCompareValue(item.materialCode) ||
-        normalizeMaterialMasterCompareValue(item.materialDescription),
+      (item) => normalizeMaterialMasterCompareValue(item.materialCode),
+      // normalizeMaterialMasterCompareValue(item.materialDescription),
     );
 
   if (!filled.length) {
@@ -947,26 +1035,26 @@ export async function validateItemsAgainstMaterialMaster(
     await loadMaterialMasterDuplicateIndex({
       excludeRequestId: options?.excludeRequestId,
       candidateCodes: filled.map((item) => item.materialCode),
-      candidateDescriptions: filled.map((item) => item.materialDescription),
+      // candidateDescriptions: filled.map((item) => item.materialDescription),
     });
   const messages: string[] = [];
 
   filled.forEach((item) => {
     const codeKey = normalizeMaterialMasterCompareValue(item.materialCode);
-    const descriptionKey = normalizeMaterialMasterCompareValue(
-      item.materialDescription,
-    );
+    // const descriptionKey = normalizeMaterialMasterCompareValue(
+    //   item.materialDescription,
+    // );
 
     if (codeKey && materialCodes.has(codeKey)) {
       messages.push(
         `Item line ${item.line}: Material Code "${item.materialCode.trim()}" already exists in Material Master.`,
       );
     }
-    if (descriptionKey && materialDescriptions.has(descriptionKey)) {
-      messages.push(
-        `Item line ${item.line}: Material Description "${item.materialDescription.trim()}" already exists in Material Master.`,
-      );
-    }
+    // if (descriptionKey && materialDescriptions.has(descriptionKey)) {
+    //   messages.push(
+    //     `Item line ${item.line}: Material Description "${item.materialDescription.trim()}" already exists in Material Master.`,
+    //   );
+    // }
   });
 
   return messages;
@@ -991,6 +1079,8 @@ function buildMaterialMasterInsertPayload(
   params: {
     requestId: number;
     brand: string;
+    /** BrandMaster.BrandCode — stored in NPD_MaterialMaster.BrandCode. */
+    brandCode?: string;
     materialType: string;
     schema: IMaterialMasterSchema;
     lookupResolver: ISapLookupCodeResolver;
@@ -998,7 +1088,8 @@ function buildMaterialMasterInsertPayload(
 ): Record<string, unknown> {
   const { schema, lookupResolver } = params;
   const payload: Record<string, unknown> = {
-    Title: item.materialCode.trim() || item.materialDescription.trim() || "Material",
+    Title:
+      item.materialCode.trim() || item.materialDescription.trim() || "Material",
   };
 
   const field = (logical: string, value: string): void => {
@@ -1021,17 +1112,16 @@ function buildMaterialMasterInsertPayload(
     );
   };
 
+  const brandTitle = params.brand.trim();
+  const brandCode = String(params.brandCode ?? "").trim();
+
+  field("RocaGlobalCode", item.rocaGlobalCode.trim());
   field("MaterialCode", item.materialCode.trim());
   field("MaterialType", params.materialType.trim());
   field("MaterialDescription", item.materialDescription.trim());
-  field("Brand", params.brand.trim());
-  field(
-    "BrandCode",
-    lookupResolver.matchedLookupCode(
-      [...SapBrandLookupFieldHints],
-      params.brand.trim(),
-    ),
-  );
+  field("Brand", brandTitle);
+  // BrandCode must come from Brand Master (caller), not NPD_Lookup.
+  field("BrandCode", brandCode);
   lookupValueAndCode(
     "ProductGroupMG2",
     "ProductGroupMG2Code",
@@ -1077,7 +1167,14 @@ function buildMaterialMasterInsertPayload(
   lookupValueAndCode(
     "MaterialGroup",
     "MaterialGroupCode",
-    SapItemDetailsLookupFieldHints.materialGroup,
+    // Display labels used as Lookup Type titles. SAP payload keeps its own
+    // hints in sapMaterialMasterPayload and is not changed here.
+    [
+      ...SapItemDetailsLookupFieldHints.materialGroup,
+      "Material / Business Group",
+      "Material / Business group",
+      "Business / Material Group",
+    ],
     item.materialGroup,
   );
   lookupValueAndCode(
@@ -1117,7 +1214,6 @@ function buildMaterialMasterInsertPayload(
     SapItemDetailsLookupFieldHints.uom,
     item.uom,
   );
-  field("MinQty", item.minQtyBoxQty.trim());
   field("ItemType", MaterialMasterItemTypes.New);
 
   if (schema.isDeletedInternal) {
@@ -1135,7 +1231,8 @@ function materialMasterItemKey(code: string, description: string): string {
   if (normalizedCode) {
     return `code:${normalizedCode}`;
   }
-  const normalizedDescription = normalizeMaterialMasterCompareValue(description);
+  const normalizedDescription =
+    normalizeMaterialMasterCompareValue(description);
   return normalizedDescription ? `desc:${normalizedDescription}` : "";
 }
 
@@ -1181,7 +1278,10 @@ async function excludeMaterialMasterRowsAlreadyStored(
   });
 
   return items.filter((item) => {
-    const key = materialMasterItemKey(item.materialCode, item.materialDescription);
+    const key = materialMasterItemKey(
+      item.materialCode,
+      item.materialDescription,
+    );
     return !key || !storedKeys.has(key);
   });
 }
@@ -1193,6 +1293,8 @@ async function excludeMaterialMasterRowsAlreadyStored(
 export async function insertMaterialMasterFromNpdItems(params: {
   requestId: number;
   brand: string;
+  /** BrandMaster.BrandCode for NPD_MaterialMaster.BrandCode. */
+  brandCode?: string;
   materialType: string;
   items: INpdItemDetailRecord[];
 }): Promise<void> {
@@ -1225,6 +1327,7 @@ export async function insertMaterialMasterFromNpdItems(params: {
     buildMaterialMasterInsertPayload(item, {
       requestId: params.requestId,
       brand: params.brand,
+      brandCode: params.brandCode,
       materialType: params.materialType,
       schema,
       lookupResolver,
