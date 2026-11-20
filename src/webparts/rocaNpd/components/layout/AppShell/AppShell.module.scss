@@ -1,5 +1,5 @@
-@import '../../../styles/theme-import';
-@import '../../../styles/roca-scrollbar';
+@import "../../../styles/theme-import";
+@import "../../../styles/roca-scrollbar";
 
 .appShell {
   position: relative;
@@ -22,7 +22,7 @@
   font-weight: 400;
   line-height: 1;
   color: $roca-color-text-muted;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   user-select: none;
   pointer-events: none;
 }
@@ -48,6 +48,7 @@
   min-height: 0;
   overflow: hidden;
   background-color: $roca-color-nav-bg;
+  transition: width 700ms ease;
 }
 
 .shellExpanded .sidebarColumn {

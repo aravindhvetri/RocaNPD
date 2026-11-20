@@ -33,6 +33,14 @@ const NpdItemDetailsActionCell: React.FC<INpdItemDetailsActionCellProps> = ({
     NpdItemDetailsActionsContext,
   );
 
+  if (posted) {
+    return (
+      <span className={styles.postedActionPlaceholder} aria-hidden="true">
+        -
+      </span>
+    );
+  }
+
   return (
     <div
       className={
@@ -60,7 +68,6 @@ const NpdItemDetailsActionCell: React.FC<INpdItemDetailsActionCellProps> = ({
           title="Delete row"
           aria-label="Delete row"
           className={styles.deleteRowAction}
-          disabled={posted}
           onClick={() => onDeleteRow(rowId)}
         />
       ) : null}

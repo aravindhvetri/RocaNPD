@@ -1,6 +1,7 @@
 import { Config, FieldLabels, FieldNames } from "./Config";
 import type {
   IExportColumn,
+  ILookupType,
   INpdItemDetailRecord,
   INpdItemDetailsImportParseResult,
   ISelectOption,
@@ -15,6 +16,7 @@ import {
 } from "./importService";
 import {
   getLookupOptionsByFieldName,
+  lookupValuesMatch,
   normalizeLookupCompareValue,
 } from "./lookupOptionUtils";
 
@@ -299,6 +301,40 @@ function resolveImportedLookupField(
   return { values: canonical, needsAttention: false };
 }
 
+/** Always-mandatory Item Details fields (independent of NPD_LookupType.Required). */
+const ALWAYS_REQUIRED_IMPORT_FIELDS = new Set<keyof INpdItemDetailRecord>([
+  "materialCode",
+  "materialDescription",
+  "rocaGlobalCode",
+  "hsnCode",
+  "weightKg",
+]);
+
+/**
+ * Red-border attention is only for mandatory fields — always-required columns
+ * or Lookup Types with Required = Yes that match the column header.
+ */
+function isImportAttentionField(
+  column: IImportColumn,
+  lookupTypes: readonly ILookupType[],
+): boolean {
+  if (ALWAYS_REQUIRED_IMPORT_FIELDS.has(column.field)) {
+    return true;
+  }
+
+  const matchLabels = [
+    column.header,
+    String(column.field),
+    ...(column.aliases ?? []),
+  ];
+
+  return lookupTypes.some(
+    (lookupType) =>
+      lookupType.Required === true &&
+      matchLabels.some((label) => lookupValuesMatch(lookupType.Title, label)),
+  );
+}
+
 function createEmptyRecord(): INpdItemDetailRecord {
   return {
     sharePointId: 0,
@@ -399,6 +435,7 @@ export async function parseNpdItemDetailsImportFile(
   existingRecords: INpdItemDetailRecord[],
   lookupOptionsByType: Record<string, ISelectOption[]>,
   _brand: string | null,
+  lookupTypes: readonly ILookupType[] = [],
 ): Promise<INpdItemDetailsImportParseResult> {
   const sheets = await readSpreadsheetWorkbook(file);
   if (!sheets.some((sheet) => sheet.rows.length)) {
@@ -469,12 +506,13 @@ export async function parseNpdItemDetailsImportFile(
       }
 
       const raw = String(row[index] ?? "").trim();
+      const markAttention = isImportAttentionField(column, lookupTypes);
 
       // Material Code duplicates are validated separately. Blank / unmatched
-      // required fields keep the red-border attention flag.
+      // mandatory fields keep the red-border attention flag.
       if (column.controlType === "text") {
         (record[column.field] as string) = raw;
-        if (!raw) {
+        if (!raw && markAttention) {
           importAttentionFields.push(column.field);
         }
         return;
@@ -483,7 +521,9 @@ export async function parseNpdItemDetailsImportFile(
       if (column.controlType === "number") {
         if (!raw) {
           record.weightKg = null;
-          importAttentionFields.push(column.field);
+          if (markAttention) {
+            importAttentionFields.push(column.field);
+          }
           return;
         }
         const weight = parseImportNumericValue(raw);
@@ -491,7 +531,9 @@ export async function parseNpdItemDetailsImportFile(
           record.weightKg = weight;
         } else {
           record.weightKg = null;
-          importAttentionFields.push(column.field);
+          if (markAttention) {
+            importAttentionFields.push(column.field);
+          }
         }
         return;
       }
@@ -507,7 +549,7 @@ export async function parseNpdItemDetailsImportFile(
       );
       const resolved = resolveImportedLookupField(raw, options);
       (record[column.field] as string[]) = resolved.values;
-      if (resolved.needsAttention) {
+      if (resolved.needsAttention && markAttention) {
         importAttentionFields.push(column.field);
       }
     });

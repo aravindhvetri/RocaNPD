@@ -112,6 +112,7 @@ const NpdRequestForm: React.FC = () => {
           isMisCoordinatorActing={isMisCoordinatorActing}
           showExport={showItemDetailsExport}
           showSapStatus={showOtherDetails}
+          hideImportAndBulkDelete={hasAnyItemPostedToSap}
           onRowsChange={setItemRows}
           onImportClick={() => setImportVisible(true)}
           onExportClick={() => {
@@ -183,6 +184,7 @@ const NpdRequestForm: React.FC = () => {
         visible={importVisible}
         brand={generalInfo.brand}
         lookupOptionsByType={npdForm.lookupOptionsByType}
+        lookupTypes={npdForm.lookupTypes}
         isMisCoordinatorActing={isMisCoordinatorActing}
         toastRef={toastRef}
         onHide={() => setImportVisible(false)}

@@ -79,5 +79,9 @@
 
 .label {
   flex: 1;
+  min-width: 0;
   color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

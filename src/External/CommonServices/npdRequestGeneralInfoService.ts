@@ -1049,6 +1049,59 @@ export async function fetchActiveNpdRequests(): Promise<
   return rows.map(mapGeneralInfo).filter(isActiveRecord);
 }
 
+/**
+ * SharePoint reload sorts MIS-added lines by Id descending, which posts the
+ * last grid row first. Restore the order the user sees (top to bottom).
+ */
+function orderStoredItemsLikeGrid(
+  storedItems: INpdItemDetailRecord[],
+  gridItems: readonly INpdItemDetailRecord[],
+): INpdItemDetailRecord[] {
+  const remaining = [...storedItems];
+  const ordered: INpdItemDetailRecord[] = [];
+
+  const takeAt = (index: number): void => {
+    if (index < 0) {
+      return;
+    }
+    const [item] = remaining.splice(index, 1);
+    if (item) {
+      ordered.push(item);
+    }
+  };
+
+  for (const row of gridItems) {
+    if (!row.materialCode.trim() && !row.materialDescription.trim()) {
+      continue;
+    }
+    if (row.sharePointId > 0) {
+      takeAt(
+        remaining.findIndex((item) => item.sharePointId === row.sharePointId),
+      );
+      continue;
+    }
+    const code = row.materialCode.trim();
+    const description = row.materialDescription.trim();
+    let matchIndex = -1;
+    let matchId = Number.POSITIVE_INFINITY;
+    remaining.forEach((item, index) => {
+      if (
+        item.materialCode.trim() === code &&
+        item.materialDescription.trim() === description &&
+        item.sharePointId < matchId
+      ) {
+        matchIndex = index;
+        matchId = item.sharePointId;
+      }
+    });
+    takeAt(matchIndex);
+  }
+
+  remaining.sort((left, right) => left.sharePointId - right.sharePointId);
+  ordered.push(...remaining);
+  return ordered;
+}
+
 export async function applyNpdWorkflowAction(params: {
   requestId: number;
   action: NpdWorkflowAction;
@@ -1273,7 +1326,7 @@ export async function applyNpdWorkflowAction(params: {
         materialType: request.MaterialType,
         plant: request.Plant,
         otherDetails,
-        items: storedItems,
+        items: orderStoredItemsLikeGrid(storedItems, params.items),
         siteUrl: params.siteUrl,
         onProgress:
           sapTargets.length > 0 ? params.sapProgress?.onProgress : undefined,

@@ -37,6 +37,8 @@ export interface INpdItemDetailsSectionProps {
   showExport?: boolean;
   /** Same visibility as Other Details. */
   showSapStatus?: boolean;
+  /** After any Item Details row is posted to SAP, hide Import + Bulk Delete. */
+  hideImportAndBulkDelete?: boolean;
 }
 
 const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
@@ -51,6 +53,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   onExportClick,
   showExport = true,
   showSapStatus = false,
+  hideImportAndBulkDelete = false,
 }) => {
   const visibleFields = React.useMemo(
     () => getVisibleNpdItemDetailFields(brand, lookupTypes),
@@ -262,6 +265,7 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
   ) : null;
 
   // View mode: Export only (no Add / Import / Delete). Edit: full actions.
+  // After any SAP post, Import + Bulk Delete stay hidden for MIS.
   const headerActions = readOnly ? (
     exportButton
   ) : (
@@ -273,23 +277,27 @@ const NpdItemDetailsSection: React.FC<INpdItemDetailsSectionProps> = ({
         className={styles.headerAddButton}
         onClick={() => handleAddItem()}
       />
-      <Button
-        label={Config.Import}
-        icon="pi pi-download"
-        size="xs"
-        className={styles.headerImportButton}
-        onClick={onImportClick}
-      />
+      {!hideImportAndBulkDelete ? (
+        <Button
+          label={Config.Import}
+          icon="pi pi-download"
+          size="xs"
+          className={styles.headerImportButton}
+          onClick={onImportClick}
+        />
+      ) : null}
       {exportButton}
-      <Button
-        label={Config.Delete}
-        icon="pi pi-trash"
-        size="xs"
-        title="Delete all item lines"
-        aria-label="Delete all item lines"
-        className={styles.headerDeleteButton}
-        onClick={handleBulkDeleteRows}
-      />
+      {!hideImportAndBulkDelete ? (
+        <Button
+          label={Config.Delete}
+          icon="pi pi-trash"
+          size="xs"
+          title="Delete all item lines"
+          aria-label="Delete all item lines"
+          className={styles.headerDeleteButton}
+          onClick={handleBulkDeleteRows}
+        />
+      ) : null}
     </>
   );
 
