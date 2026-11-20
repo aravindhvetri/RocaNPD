@@ -30,6 +30,7 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
+  flex: 1;
   min-width: 0;
 }
 
@@ -51,17 +52,25 @@
 }
 
 .sectionTitle {
+  min-width: 0;
   font-size: 0.875rem;
   font-weight: 700;
   color: $roca-color-nav-text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sectionTitleMuted {
+  min-width: 0;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: $roca-color-nav-text-section-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chevron {

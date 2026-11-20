@@ -3,6 +3,7 @@ import { Toast as PrimeToast } from "primereact/toast";
 import { flushSync } from "react-dom";
 import { Config } from "../../../../../External/CommonServices/Config";
 import type {
+  ILookupType,
   INpdItemDetailsImportParseResult,
   ISelectOption,
   ITemplateDocument,
@@ -32,6 +33,7 @@ export interface INpdItemDetailsImportProps {
   visible: boolean;
   brand: string | null;
   lookupOptionsByType: Record<string, ISelectOption[]>;
+  lookupTypes?: readonly ILookupType[];
   isMisCoordinatorActing?: boolean;
   toastRef: React.RefObject<PrimeToast>;
   onHide: () => void;
@@ -42,6 +44,7 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
   visible,
   brand,
   lookupOptionsByType,
+  lookupTypes = [],
   isMisCoordinatorActing = false,
   toastRef,
   onHide,
@@ -108,6 +111,7 @@ const NpdItemDetailsImport: React.FC<INpdItemDetailsImportProps> = ({
         [],
         lookupOptionsByType,
         brand,
+        lookupTypes,
       );
 
       if (result.duplicates.length || result.errors.length) {

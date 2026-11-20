@@ -1,4 +1,5 @@
 import type {
+  ILookupType,
   INpdGeneralInfo,
   INpdOtherDetails,
   INpdWorkflowStepJson,
@@ -21,6 +22,8 @@ export interface INpdFormState {
   brandOptions: ISelectOption[];
   plantSourceOptions: ISelectOption[];
   lookupOptionsByType: Record<string, ISelectOption[]>;
+  /** Active NPD_LookupType rows — drives Item Details Required flags. */
+  lookupTypes: ILookupType[];
   brandOptionsStatus: NpdFormRequestStatus;
   plantSourceStatus: NpdFormRequestStatus;
   lookupOptionsStatus: NpdFormRequestStatus;

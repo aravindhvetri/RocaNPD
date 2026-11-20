@@ -48,6 +48,9 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: $roca-color-nav-text-subtitle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 992px) {

@@ -29,6 +29,7 @@ const CATALOG_ROW_LIMIT = MaterialMasterUi.CatalogFetchRowLimit;
 /** Known internal names from NPD_MaterialMaster list settings (screenshot). */
 const MM_FIELDS = {
   ItemType: "ItemType",
+  RocaGlobalCode: "RocaGlobalCode",
   MaterialCode: "MaterialCode",
   MaterialType: "MaterialType",
   MaterialDescription: "MaterialDescription",
@@ -75,6 +76,11 @@ export interface IMaterialMasterColumnDef {
 }
 
 export const MATERIAL_MASTER_CATALOG_COLUMNS: IMaterialMasterColumnDef[] = [
+  {
+    field: "RocaGlobalCode",
+    header: FieldLabels.RocaGlobalCode,
+    minWidth: "10rem",
+  },
   { field: "MaterialCode", header: FieldLabels.MaterialCode, minWidth: "8rem" },
   { field: "MaterialType", header: FieldLabels.MaterialType, minWidth: "8rem" },
   {
@@ -320,6 +326,9 @@ async function resolveMaterialMasterSchema(): Promise<IMaterialMasterSchema> {
           logical === "MaterialGroup" ? "Material / Business Group" : "",
           logical === "MaterialGroup" ? "Material / Business group" : "",
           logical === "MaterialGroup" ? "Business / Material Group" : "",
+          logical === "RocaGlobalCode" ? FieldLabels.RocaGlobalCode : "",
+          logical === "RocaGlobalCode" ? "CMA / Global Code" : "",
+          logical === "RocaGlobalCode" ? "Roca Global Code" : "",
         ].filter(Boolean),
       );
       if (internal) {
@@ -431,6 +440,7 @@ function mapCatalogRow(
   return {
     Id: Number(item.Id ?? item.ID) || 0,
     ItemType: readItemType(item, schema),
+    RocaGlobalCode: readField(item, schema, "RocaGlobalCode"),
     MaterialCode: readField(item, schema, "MaterialCode"),
     MaterialType: readField(item, schema, "MaterialType"),
     MaterialDescription: readField(item, schema, "MaterialDescription"),
@@ -1105,6 +1115,7 @@ function buildMaterialMasterInsertPayload(
   const brandTitle = params.brand.trim();
   const brandCode = String(params.brandCode ?? "").trim();
 
+  field("RocaGlobalCode", item.rocaGlobalCode.trim());
   field("MaterialCode", item.materialCode.trim());
   field("MaterialType", params.materialType.trim());
   field("MaterialDescription", item.materialDescription.trim());

@@ -1,4 +1,7 @@
-import type { INpdGeneralInfo } from "../../../../../External/CommonServices/Interface";
+import type {
+  ILookupType,
+  INpdGeneralInfo,
+} from "../../../../../External/CommonServices/Interface";
 import {
   getVisibleNpdItemDetailFields,
   isEmptyItemDetailRow,
@@ -111,6 +114,7 @@ export function validateNpdGeneralInfo(
 export function validateNpdItemDetailsRows(
   brand: string | null,
   itemRows: INpdItemDetailRow[],
+  lookupTypes: readonly ILookupType[] = [],
 ): string[] {
   const messages: string[] = [];
 
@@ -119,7 +123,7 @@ export function validateNpdItemDetailsRows(
     return messages;
   }
 
-  const visibleFields = getVisibleNpdItemDetailFields(brand);
+  const visibleFields = getVisibleNpdItemDetailFields(brand, lookupTypes);
 
   itemRows.forEach((row, index) => {
     const lineLabel = `Item line ${index + 1}`;
@@ -172,8 +176,9 @@ export function validateMisCoordinatorAction(
   brand: string | null,
   itemRows: INpdItemDetailRow[],
   profitCenter: string | null | undefined,
+  lookupTypes: readonly ILookupType[] = [],
 ): string[] {
-  const messages = validateNpdItemDetailsRows(brand, itemRows);
+  const messages = validateNpdItemDetailsRows(brand, itemRows, lookupTypes);
   if (!String(profitCenter ?? "").trim()) {
     messages.push("Profit Center is required.");
   }
@@ -206,10 +211,11 @@ export function validateMisCoordinatorRework(
 export function validateNpdRequestForm(
   generalInfo: INpdGeneralInfo,
   itemRows: INpdItemDetailRow[],
+  lookupTypes: readonly ILookupType[] = [],
 ): string[] {
   const messages = validateNpdGeneralInfo(generalInfo);
   messages.push(
-    ...validateNpdItemDetailsRows(generalInfo.brand, itemRows),
+    ...validateNpdItemDetailsRows(generalInfo.brand, itemRows, lookupTypes),
   );
   return messages;
 }

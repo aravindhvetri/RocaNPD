@@ -2,6 +2,8 @@
 export interface ILookupType {
   Id: number;
   Title: string;
+  /** True when NPD_LookupType.Required is Yes. */
+  Required: boolean;
   IsDeleted: boolean;
 }
 
@@ -10,6 +12,20 @@ export interface ILookupTypeRow extends ILookupType, Record<string, unknown> {}
 
 export interface ILookupTypeFormValues {
   title: string;
+  required: boolean;
+}
+
+/** Row parsed from Lookup Type Import before persistence. */
+export interface ILookupTypeImportRecord {
+  title: string;
+  required: boolean;
+}
+
+/** Result of parsing a Lookup Type import spreadsheet before persistence. */
+export interface ILookupTypeImportParseResult {
+  toCreate: ILookupTypeImportRecord[];
+  duplicates: string[];
+  errors: string[];
 }
 
 /**
@@ -379,6 +395,7 @@ export interface IMaterialGroupEntryRow {
 export interface IMaterialMasterRow extends Record<string, unknown> {
   Id: number;
   ItemType: string;
+  RocaGlobalCode: string;
   MaterialCode: string;
   MaterialType: string;
   MaterialDescription: string;

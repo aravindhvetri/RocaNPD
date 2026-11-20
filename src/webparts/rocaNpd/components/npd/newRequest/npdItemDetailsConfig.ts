@@ -1,4 +1,7 @@
-import type { INpdItemDetailRecord } from "../../../../../External/CommonServices/Interface";
+import type {
+  ILookupType,
+  INpdItemDetailRecord,
+} from "../../../../../External/CommonServices/Interface";
 import { FieldLabels } from "../../../../../External/CommonServices/Config";
 import type {
   INpdItemDetailRow,
@@ -6,6 +9,7 @@ import type {
   NpdItemDetailFieldValue,
   NpdItemDetailsControlType,
 } from "./npdItemDetails.types";
+import { withNpdItemDetailsRequiredFlags } from "./npdItemDetailsRequiredUtils";
 
 export interface INpdItemDetailsFieldDef {
   field: NpdItemDetailFieldKey;
@@ -148,14 +152,6 @@ export function isEmptyItemDetailRow(row: INpdItemDetailRow): boolean {
 
 export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
   {
-    field: "rocaGlobalCode",
-    header: FieldLabels.RocaGlobalCode,
-    required: true,
-    placeholder: "Enter the Code",
-    minWidth: "14rem",
-    controlType: "text",
-  },
-  {
     field: "materialCode",
     header: "Material Code",
     required: true,
@@ -172,6 +168,14 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
     minWidth: "22rem",
     controlType: "text",
     maxLength: 40,
+  },
+  {
+    field: "rocaGlobalCode",
+    header: FieldLabels.RocaGlobalCode,
+    required: true,
+    placeholder: "Enter the Code",
+    minWidth: "14rem",
+    controlType: "text",
   },
   {
     field: "productGroupMg2",
@@ -296,9 +300,13 @@ export const NPD_ITEM_DETAILS_FIELDS: INpdItemDetailsFieldDef[] = [
   },
 ];
 
-/** All Item Details columns — CMA - ROCA Global Code is visible for every brand. */
+/**
+ * All Item Details columns — CMA / Global code is visible for every brand.
+ * `required` is resolved from always-mandatory fields + NPD_LookupType.Required.
+ */
 export function getVisibleNpdItemDetailFields(
   _brand: string | null,
+  lookupTypes: readonly ILookupType[] = [],
 ): INpdItemDetailsFieldDef[] {
-  return NPD_ITEM_DETAILS_FIELDS;
+  return withNpdItemDetailsRequiredFlags(NPD_ITEM_DETAILS_FIELDS, lookupTypes);
 }
