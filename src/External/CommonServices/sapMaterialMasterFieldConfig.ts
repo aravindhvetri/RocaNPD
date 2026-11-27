@@ -33,6 +33,7 @@ export const SapMaterialMasterFieldLengths = {
   val_class: 4,
   comm_group: 2,
   mwert: 30,
+  exp_imp: 3,
 } as const;
 
 export type SapMaterialMasterFieldKey = keyof typeof SapMaterialMasterFieldLengths;

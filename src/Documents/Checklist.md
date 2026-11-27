@@ -11,24 +11,24 @@
 | Category | Total Items | Verified | Pending |
 |---|---:|---:|---:|
 | A — Project & Documentation | 16 | 6 | 10 |
-| B — Technical Foundation | 76 | 65 | 11 |
+| B — Technical Foundation | 77 | 66 | 11 |
 | C — SharePoint Data | 26 | 15 | 11 |
 | D — Security & Roles | 31 | 30 | 1 |
 | E — UI / UX / Theme | 41 | 35 | 6 |
-| F — Admin Module | 73 | 70 | 3 |
-| G — NPD Module | 99 | 98 | 1 |
+| F — Admin Module | 74 | 71 | 3 |
+| G — NPD Module | 113 | 112 | 1 |
 | H — Material Group Module | 41 | 41 | 0 |
 | I — Workflow & Automation | 20 | 18 | 2 |
-| J — SAP Integration | 19 | 10 | 9 |
+| J — SAP Integration | 21 | 12 | 9 |
 | K — Material Master | 11 | 8 | 3 |
 | L — Reports | 10 | 0 | 10 |
 | M — Email Notifications | 8 | 6 | 2 |
 | N — Testing | 26 | 0 | 26 |
 | O — UAT | 18 | 0 | 18 |
 | P — Deployment | 22 | 0 | 22 |
-| **TOTAL** | **537** | **402** | **135** |
+| **TOTAL** | **555** | **420** | **135** |
 
-**Last Updated:** 15 October 2026
+**Last Updated:** 26 November 2026
 
 ---
 
@@ -92,6 +92,7 @@
 - [x] **CHK-B23a** Multi-role users see separate role-grouped nav sections (Initiator / VH / MIS / Consultant / Admin) with `?as=` context
 - [x] **CHK-B23b** After Approve/Submit/Save Draft success toast clear, `?as=` is preserved so the same role section stays selected (e.g. VH Pending, not Initiator Pending)
 - [x] **CHK-B23c** Side-nav between list modules does not flash stale DataTable then reload — `useListPageFetch` gates LoaderOverlay until mount fetch settles
+- [x] **CHK-B23d** Expanded nav labels stay on one line with ellipsis; sidebar width transition does not toggle from the whole bar (arrow only)
 - [x] **CHK-B24** Active Login Role indicator removed from side navigation per design requirement
 - [x] **CHK-B25** Unauthorized URL redirects to access-denied page (`/unauthorized`)
 
@@ -225,7 +226,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 ### D.3 Access Control — MIS Coordinator
 
 - [x] **CHK-D16** MIS Coordinator sees requests approved by VH and assigned to self
-- [x] **CHK-D17** MIS Coordinator can edit Item Details and Other Details
+- [x] **CHK-D17** MIS Coordinator can edit Item Details, General Info, and Other Details until any Item Details row is posted to SAP; after that, General Info, Profit Center, and Material Extension are read-only
 - [x] **CHK-D18** MIS Coordinator can Post to SAP, Rework, Reject
 - [x] **CHK-D19** MIS Coordinator cannot access Material Group module
 
@@ -322,6 +323,7 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-F04l** Add/Edit Lookup Type dialog closes immediately on save; page loader until complete
 - [x] **CHK-F04m** Export shows page loader while Excel download runs
 - [x] **CHK-F04n** Import rejects file on browse/drop when required Excel headers do not match FieldLabels (Lookup Type Name); Toast; file not accepted
+- [x] **CHK-F04p** Lookup Type Required is a Yes/No boolean (`true`/`false`); Add/Update and Import persist it; Item Details treats a matching Lookup Type Title with Required=Yes as mandatory, and always requires Material Code, Material Description, CMA/Global Code, Weight, and HSN Code
 
 ### F.2 Lookup Master
 
@@ -417,6 +419,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 ### G.2 Initiator — New NPD Request Form
 
 - [x] **CHK-G09** Brand (MG1) dropdown populated from ROCA `ApproversMaster` — System=`New Product Development`, Role=`Initiator`, Users matched by `EMail` (+ `UsersId` site-user map fallback); options seeded on app init so available on first NPD Form open
+- [x] **CHK-G09a** Armani or Laufen sets Material Type to Traded Products and Plant/Source to Imported and disables those fields; any other brand leaves them editable
+- [x] **CHK-G09b** MIS Coordinator Brand dropdown lists the same ApproversMaster Initiator brands (login cache when already loaded; no extra call when options are present)
 - [x] **CHK-G10** Material Type dropdown populated from `Config.NpdMaterialTypes` (Own Manufacture Products, Traded Products)
 - [x] **CHK-G11** Plant/Source disabled until Material Type selected (Finished or Traded Products)
 - [x] **CHK-G12a** Plant/Source (Own Manufacture Products) from ROCA `PlantMaster` — `PlantType`=Factory, active plants, options=`PlantCode`
@@ -428,6 +432,9 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G15** Item Details grid displays all required BRD columns; MultiSelect options from Lookup list by Lookup Type (`trim` + lowercase, compact / parenthetical-stripped title match); DataTable paginates at 7 rows when there are more than 7 items; lookup options prefetched on app init so available on first NPD Form open
 - [x] **CHK-G15a** Item Details selection fields allow only one option (`selectionLimit={1}`); panel is searchable dropdown-style (no checkboxes, search kept, closes after pick); **other options stay enabled** so the user can change the selection
 - [x] **CHK-G15b** Item Details Tab focus keeps horizontal scroll inside the table wrapper only (does not shift form page layout)
+- [x] **CHK-G15c** Frozen columns are Material Code and Material Description only
+- [x] **CHK-G15d** Import attention (red border) is only on mandatory fields
+- [x] **CHK-G15e** MIS-added yellow rows stay opaque while scrolling; after any SAP post, Import and Bulk Delete are hidden and a posted row’s Actions cell is “-”
 - [x] **CHK-G16** Actions column: Add plus icon on latest row only (adds empty line); Delete works on each row — Clear row pending
 - [x] **CHK-G16a** Item Details: Delete icon hidden when only one row remains; shown on **all** rows once a second row exists (Actions column remounts on mode change); lone Add button is centered
 - [x] **CHK-G16c** Item Details header Bulk Delete (red trash, same chrome as Add/Import) shows only when there are **more than 2** rows; hidden for 1 or 2 rows; clears all lines and leaves one empty row
@@ -512,6 +519,15 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-G52** Initiator has no Remarks/Comments box on NPD form (submit uses system audit comments)
 - [x] **CHK-G53** Last approver Approve / Post to SAP sends Approved email to Initiator when no next pending step remains
 - [x] **CHK-G54** NPD All Requests Export shows page loader while download runs
+- [x] **CHK-G55** MIS Profit Center auto-fills from the coded rules onto an existing lookup option only; no match or missing option leaves it empty
+- [x] **CHK-G56** After a manual Profit Center change, the next Brand, Material Type, Plant/Source, or MG3 change recalculates Profit Center
+- [x] **CHK-G57** MG3 comparison is the full value (case-insensitive). “Faucets” does not select the “Faucets & Faucets Others” Profit Center
+- [x] **CHK-G58** MIS General Info edits are saved on Post to SAP only; Rework and Reject leave Brand, Material Type, and Plant/Source unchanged on the list
+- [x] **CHK-G59** Changing Plant/Source or Material Type refreshes Plant Code, Storage Location, MRP Group, MRP Controller, and Valuation Class for the new values
+- [x] **CHK-G60** Plant Master fields are not left blank by a failed or overlapping load once a successful load has filled them
+- [x] **CHK-G61** Exp/Imp Group is always disabled; IMP only for PW/JP + Traded Products + Imported; otherwise blank; Post to SAP writes `ImpGroup`
+- [x] **CHK-G62** Class Type is on the third Other Details row, wider and first, with Exp/Imp Group in the remaining column
+- [x] **CHK-G63** After any one Item Details row is SAP=true, General Info, Profit Center, and Material Extension are not editable for MIS
 
 ---
 
@@ -618,6 +634,8 @@ Per **`ProjectStandards.md`** — verify each control before feature module deve
 - [x] **CHK-J17** Each Item Details line is a separate API call; body is a one-element TY_DATA array
 - [x] **CHK-J18** `NPD_ItemDetails.SAP` is set true only after `status=True`; duplicates and other `status=False` responses leave it false
 - [x] **CHK-J19** Post to SAP network drop stops the batch, clears the loader, and stays on the form. Restoring the network does not post the remaining lines. The next Post to SAP processes only `SAP=false` rows and does not post `SAP=true` rows again
+- [x] **CHK-J20** New MIS lines are posted in grid order (top to bottom)
+- [x] **CHK-J21** SAP JSON includes `exp_imp` = `IMP` when Exp/Imp Group is IMP, otherwise `""`
 
 ---
 
@@ -871,6 +889,7 @@ Use this table to sign off each phase only when all related checklist items are 
 | 14 Oct 2026 | ApproversMaster cache; ItemDetailsCount + Draft/Submit promote-only / hydrate skip; MG Code uniqueness Complete-only | CHK-B49, CHK-B50, CHK-H11c |
 | 14 Oct 2026 | Shared action labels via `Config.Add` / `Config.Edit` / … | CHK-B48 |
 | 15 Oct 2026 | MIS Rework/Reject skip Item Details empty validation; Post to SAP order Item Details → Profit Center → Comments; offline recovery resubmit rewrites Attachments JSON with latest form edits | CHK-G26g, CHK-G26l, CHK-G26m, CHK-G37d |
+| 26 Nov 2026 | Profit Center rules, exact MG3, recalc after manual change, Armani/Laufen, MIS Brand options, General Info save on Post to SAP only, Other Details refresh and Plant Master race, Exp/Imp Group, Class Type layout, lock after any SAP post, Lookup Type Required, Item Details mandatory/import/freeze/yellow, SAP post order and `exp_imp` | CHK-B23d, CHK-F04p, CHK-D17, CHK-G09a, CHK-G09b, CHK-G15c–e, CHK-G55–G63, CHK-J20, CHK-J21 |
 
 ---
 
