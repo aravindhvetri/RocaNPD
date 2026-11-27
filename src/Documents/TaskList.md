@@ -11,26 +11,26 @@
 | Phase | Total Tasks | Completed | Status |
 |---|---:|---:|---|
 | Phase 0 — Project Preparation | 13 | 1 | In Progress |
-| Phase 1 — Application Foundation | 60 | 51 | In Progress |
+| Phase 1 — Application Foundation | 61 | 52 | In Progress |
 | Phase 2 — SharePoint Data Structure | 22 | 15 | In Progress |
 | Phase 3 — Security & Role Management | 18 | 17 | In Progress |
-| Phase 4 — Admin Module | 87 | 82 | In Progress |
-| Phase 5 — NPD Initiator Module | 58 | 57 | In Progress |
+| Phase 4 — Admin Module | 89 | 84 | In Progress |
+| Phase 5 — NPD Initiator Module | 62 | 61 | In Progress |
 | Phase 6 — NPD Vertical Head Module | 23 | 23 | Complete |
-| Phase 7 — NPD MIS Coordinator Module | 27 | 27 | Complete |
+| Phase 7 — NPD MIS Coordinator Module | 37 | 37 | Complete |
 | Phase 8 — Material Group Initiator Module | 22 | 22 | Complete |
 | Phase 9 — Material Group Consultant Module | 22 | 22 | Complete |
 | Phase 10 — Workflow Automation | 19 | 17 | In Progress |
-| Phase 11 — SAP Integration | 13 | 9 | In Progress |
+| Phase 11 — SAP Integration | 14 | 10 | In Progress |
 | Phase 12 — Material Master Integration | 9 | 6 | In Progress |
 | Phase 13 — Analytics & Reports | 10 | 0 | Not Started |
 | Phase 14 — Email Notifications | 8 | 3 | In Progress |
 | Phase 15 — Testing | 16 | 0 | Not Started |
 | Phase 16 — UAT | 12 | 0 | Not Started |
 | Phase 17 — Deployment | 13 | 0 | Not Started |
-| **TOTAL** | **447** | **347** | **In Progress** |
+| **TOTAL** | **465** | **365** | **In Progress** |
 
-**Last Updated:** 15 October 2026
+**Last Updated:** 26 November 2026
 
 ---
 
@@ -94,6 +94,7 @@
 - [x] **T-0134** Implement `SideNavigation.tsx` — Plant Master, Role, and Approver Configuration removed (ROCA-sourced; no local modules)
 - [x] **T-0134a** Role-grouped side navigation — separate NPD / MG / Admin sections per assigned role with `?as=` view context; brand-scoped Initiator data vs unscoped Admin All Requests
 - [x] **T-0134b** Preserve `?as=` on Pending toast-state clear and related navigations so multi-role VH/Initiator keep the correct nav section
+- [x] **T-0134c** Expanded side-nav labels stay on one line with ellipsis; sidebar width eases open/closed (arrow toggle only)
 - [ ] **T-0135** Implement `PageHeader.tsx` (screen title, breadcrumbs, actions)
 - [x] **T-0136** `RoleIndicator.tsx` implemented (removed from side navigation / AppShell per design requirement)
 - [x] **T-0137** Wire navigation to react-router-dom routes (HashRouter)
@@ -213,6 +214,7 @@ Per **`ProjectStandards.md` Section 5** — one folder per control; feature modu
 - [x] **T-0407c** Implement Lookup Type Export (Excel of filtered grid data)
 - [x] **T-0408** Redesign Add/Edit popup and common `DeleteConfirmDialog` per latest wireframes
 - [x] **T-0409** Validation via common Toast (no inline field errors)
+- [x] **T-0409a** Lookup Type “Is This Field Mandatory?” saves `NPD_LookupType.Required` as boolean; Excel import accepts Yes/No and true/false
 
 ### 4.2 Lookup Master
 
@@ -346,12 +348,15 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 
 - [x] **T-0510** Implement General Information section (Brand, Material Type, Plant/Source) — Brand from ROCA `ApproversMaster` (client-filter: System, Role, Users email); Material Type from `Config.NpdMaterialTypes`; Plant/Source per material type
 - [x] **T-0510a** Seed Brand options on `initializeApp` so NPD Form Brand dropdown is ready on first open
+- [x] **T-0510b** Armani or Laufen on a new/draft request sets Material Type to Traded Products and Plant/Source to Imported, then disables those two fields; other brands stay editable
 - [x] **T-0511** Implement cascading Plant/Source — disabled until Material Type selected; Own Manufacture Products → ROCA `PlantMaster` (Factory + active); Traded Products → `Config.NpdTradedPlantSources` (Imported, Domestic)
 - [ ] **T-0512** Filter Plant/Source by Brand Material Extension
 - [x] **T-0513** Implement conditional Roca Global Code column (Roca, Laufen, Armani brands) — UI only; options/validation wiring pending
 - [x] **T-0514** Implement Item Details grid (all BRD columns; MultiSelect options from `NPD_Lookup` by Lookup Type matching field name); paginate at 7 rows when there are more than 7 items
 - [x] **T-0514a** Prefetch Item Details lookup options on app init; selection fields single-select only (`selectionLimit={1}`); no checkboxes — searchable dropdown look
 - [x] **T-0514b** MultiSelect overlay panel matches each Item Details input width/position; long option labels ellipsize with full-text tooltip
+- [x] **T-0514c** Frozen Item Details columns are Material Code and Material Description only
+- [x] **T-0514d** Item Details import highlights only mandatory fields; mandatory set is Lookup Type Required=Yes plus always-required Material Code, Material Description, CMA/Global Code, Weight, and HSN Code
 - [x] **T-0515** Implement row actions: Add (latest row only, new empty line), Delete (any row) — Clear row pending
 - [x] **T-0515a** Item Details header bulk Delete (Add/Import style, red icon) shows only when row count &gt; 2; clears all rows to one empty line
 - [x] **T-0515b** Min. Qty/Box Qty InputText digits-only (SP text column unchanged; shared `sanitizeDigitsOnlyTextInput`)
@@ -364,6 +369,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0517a** Item Details Excel import: Weight / Min. Qty reject invalid numeric cells; text fields reject special characters (shared `importService` validators; validation popup with row + field)
 - [x] **T-0518** Implement Total Item Lines counter in section footer
 - [x] **T-0519** Implement Cancel / Back, Save Draft + Submit Request buttons — Save Draft persists header + items (`Status=Draft`); Submit generates Request ID and routes to Vertical Head; Cancel/Back returns to the source list via `from`
+- [x] **T-0519b** MIS-added Item Details rows stay opaque yellow on scroll; normal row hover is light; after any SAP post, Import and Bulk Delete hide and a posted row’s Actions cell shows “-”
 
 ### 5.3 NPD Form Validation
 
@@ -431,7 +437,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0701** Implement MIS All Requests table (pending + self-posted)
 - [x] **T-0702** Implement MIS Pending Approval table
 - [x] **T-0703** Implement MIS Approved Requests table (posted to SAP by self)
-- [x] **T-0704** Implement MIS Request Detail — read-only General Information
+- [x] **T-0704** Implement MIS Request Detail — General Information editable while MIS is pending and no line is posted (see T-0725, T-0731)
 - [x] **T-0705** Implement editable Item Details grid
 - [x] **T-0705a** MIS Post to SAP / Approve requires every Item Details row’s mandatory fields (parity with Initiator Submit)
 - [x] **T-0705b** MIS Profit Center mandatory on Rework / Reject / Post to SAP (UI toast + workflow thunk)
@@ -453,6 +459,16 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-0720** Other Details: show only in MIS Coordinator module (`?as=`) until Approved; after Post to SAP / Approved show in all modules; dual-role VH+MIS must not see Other Details in VH module
 - [x] **T-0721** NPD Item Details: MIS Coordinator-added rows display first in the DataTable; remaining Initiator rows keep Id ascending order
 - [x] **T-0721a** NPD Item Details soft-delete via `IsDeleted=true` (no recycle); all Item Details fetches filter `IsDeleted=false` so deleted lines never reappear for VH / Initiator / MIS
+- [x] **T-0722** Profit Center auto-fills on MIS Other Details from the Excel rules in code (`profitCenterDerivation`); existing lookup options only; empty when no rule or no matching option
+- [x] **T-0723** A manual Profit Center choice does not block the next auto-fill when Brand, Material Type, Plant/Source, or any Item Details MG3 changes
+- [x] **T-0724** MG3 rules match the full category text only (case-insensitive). “Faucets” does not satisfy “Faucets & Faucets Others”
+- [x] **T-0725** MIS can edit General Info; Brand, Material Type, and Plant/Source are written to `NPD_Request` only on Post to SAP (not Rework or Reject)
+- [x] **T-0726** MIS Brand dropdown uses the same ApproversMaster Initiator brand list as the Initiator, from the login cache when it is already loaded
+- [x] **T-0727** Changing Plant/Source or Material Type refreshes Other Details Plant Master fields and Valuation Class for the new selection
+- [x] **T-0728** A failed or overlapping Plant Master load does not leave Storage Location / MRP blank after a later successful load, and does not treat plant code alone as “already saved”
+- [x] **T-0729** Other Details Exp/Imp Group (`NPD_Request.ImpGroup`) is disabled; shows IMP only for PW/JP + Traded Products + Imported; saved on Post to SAP; SAP payload key `exp_imp`
+- [x] **T-0730** Class Type sits on the third Other Details row, wider and first, with Exp/Imp Group beside it
+- [x] **T-0731** After any one Item Details row is posted to SAP, MIS cannot edit General Info, Profit Center, or Material Extension
 
 ---
 
@@ -540,6 +556,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 - [x] **T-1102** Create SAP Material Master payload builder (`sapMaterialMasterFieldConfig` + `sapMaterialMasterPayload`)
 - [x] **T-1103** Map NPD Item Details, General Information, and Other Details to TY_DATA fields and documented lengths
 - [x] **T-1104** Post to SAP: one `createZMatMast` call per Item Details line (`SAP=false` only); set `NPD_ItemDetails.SAP=true` only after success
+- [x] **T-1104a** Post to SAP sends new MIS lines in on-screen grid order (top to bottom), not reverse Id order
 - [x] **T-1105** Treat documented `status=True/False` as the result; surface the SAP message on failure (success is the item `SAP` flag, not a second request column)
 - [x] **T-1106** Approve the NPD request only after every line is accepted by SAP and written to `NPD_MaterialMaster`
 - [x] **T-1107** On SAP or Material Master failure, keep status unchanged; successful lines stay `SAP=true` and are not sent again
@@ -733,6 +750,7 @@ Plant Master, Role, and Approver Configuration are maintained on the **ROCA site
 | 14 Oct 2026 | ApproversMaster cache + skip VH/MIS brand/plant prefetch; ItemDetailsCount list Products; Draft/Submit promote-only / hydrate skip backup; MG duplicate Code check Complete-only | T-0526d, T-0526e, T-0811c |
 | 14 Oct 2026 | Reusable UI action labels centralized in `Config.ActionLabels` / `Config.Add` / `Config.Edit` / … | T-0150a |
 | 15 Oct 2026 | MIS Rework/Reject skip Item Details empty validation; Post to SAP validates Item Details → Profit Center → Comments; offline recovery resubmit rewrites Attachments JSON with latest form edits | T-0523e, T-0523f, T-0526f |
+| 26 Nov 2026 | Document MIS/Initiator enhancements: Profit Center rules and exact MG3 match, recalc after manual change, Armani/Laufen lock, MIS Brand options, General Info save on Post to SAP only, Other Details refresh and Plant Master race fix, Exp/Imp Group + `exp_imp`, Class Type layout, lock GI/PC/Material Extension after any SAP post, Lookup Type Required, Item Details mandatory/import/freeze/yellow row, SAP post order | T-0134c, T-0409a, T-0510b, T-0514c, T-0514d, T-0519b, T-0704, T-0722–T-0731, T-1104a |
 
 ---
 

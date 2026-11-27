@@ -48,7 +48,35 @@ export function createEmptyNpdOtherDetails(): INpdOtherDetails {
     valuationClass: "",
     classType: NpdMisClassTypeDefault,
     materialExtension: "",
+    impGroup: "",
   };
+}
+
+/**
+ * IMP only for Brand PW or JP, Traded Products (HAWA), and Imported.
+ * Stored brand titles (Parryware / Johnson Pedder) count as PW / JP.
+ */
+export function resolveMisExpImpGroup(
+  brand: string | null | undefined,
+  materialType: string | null | undefined,
+  plantSource: string | null | undefined,
+): string {
+  const brandKey = (brand || "").trim().toLowerCase();
+  const isPwOrJp =
+    brandKey === "pw" ||
+    brandKey === "parryware" ||
+    brandKey === "paryware" ||
+    brandKey === "jp" ||
+    brandKey === "johnson" ||
+    brandKey === "johnson pedder";
+  const isTraded =
+    (materialType || "").trim().toLowerCase() ===
+    NpdMaterialTypes.TradedProducts.toLowerCase();
+  const plantKey = (plantSource || "").trim().toLowerCase();
+  const isImported =
+    plantKey === NpdTradedPlantSources.Imported.toLowerCase() ||
+    plantKey === "import";
+  return isPwOrJp && isTraded && isImported ? "IMP" : "";
 }
 
 /**
@@ -280,6 +308,11 @@ export function buildMisOtherDetails(
     valuationClass,
     classType: NpdMisClassTypeDefault,
     materialExtension,
+    impGroup: resolveMisExpImpGroup(
+      params.brand,
+      params.materialType,
+      params.plantSource,
+    ),
   };
 }
 
@@ -293,6 +326,7 @@ export function mapOtherDetailsFromRequest(
     ValuationClass?: string;
     ClassType?: string;
     MaterialExtension?: string;
+    ImpGroup?: string;
   },
 ): INpdOtherDetails {
   return {
@@ -305,6 +339,7 @@ export function mapOtherDetailsFromRequest(
     classType:
       String(request.ClassType ?? "").trim() || NpdMisClassTypeDefault,
     materialExtension: String(request.MaterialExtension ?? "").trim(),
+    impGroup: String(request.ImpGroup ?? "").trim(),
   };
 }
 

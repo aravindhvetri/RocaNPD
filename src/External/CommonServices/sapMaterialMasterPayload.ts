@@ -44,6 +44,7 @@ export interface ISapMaterialMasterRequestRow {
   val_class: string;
   comm_group: string;
   mwert: string;
+  exp_imp: string;
 }
 
 export interface ISapMaterialMasterPayloadSource {
@@ -228,5 +229,6 @@ export function buildSapMaterialMasterRequestRow(
       item.classNumberPcsName,
       "mwert",
     ),
+    exp_imp: charField("exp_imp", otherDetails.impGroup),
   };
 }

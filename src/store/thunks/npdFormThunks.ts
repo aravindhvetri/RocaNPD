@@ -5,6 +5,7 @@ import type {
   INpdOtherDetails,
   INpdRequestGeneralInfo,
   INpdWorkflowStepJson,
+  IPlantMasterSapDetails,
   ISelectOption,
   NpdWorkflowAction,
 } from "../../External/CommonServices/Interface";
@@ -113,8 +114,32 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
         Config.Roles.Initiator,
       );
       const isAdmin = roleListIncludes(assignedRoles, Config.Roles.Admin);
+      const isMisCoordinator = roleListIncludes(
+        assignedRoles,
+        Config.Roles.MisCoordinator,
+      );
 
-      // VH / MIS / Consultant: empty initiator brands after login is expected.
+      // MIS: same ApproversMaster Initiator brands as the create form.
+      // Prefer the login cache (no network); fall back to shared ensure-cache.
+      if (isMisCoordinator) {
+        const cached =
+          npdFormDataService.getAllNpdInitiatorBrandOptionsFromCache(
+            siteUrl || undefined,
+          );
+        if (cached.length > 0) {
+          return cached;
+        }
+        try {
+          return await npdFormDataService.fetchAllNpdInitiatorBrandOptions(
+            siteUrl || undefined,
+          );
+        } catch (fetchErr) {
+          console.warn("fetchAllNpdInitiatorBrandOptions failed:", fetchErr);
+          return [];
+        }
+      }
+
+      // VH / Consultant: empty initiator brands after login is expected.
       // Do not re-query ApproversMaster or BrandMaster on form open.
       if (app.roleStatus === "succeeded" && !isInitiator && !isAdmin) {
         return [];
@@ -167,13 +192,14 @@ export const fetchNpdInitiatorBrandOptions = createAsyncThunk<
       if (npdForm.brandOptions.length > 0) {
         return false;
       }
-      // After roles resolve, VH / MIS / Consultant never need Initiator brand fetch.
+      // After roles resolve, only Initiator / Admin / MIS need brand options.
       if (app.roleStatus === "succeeded") {
         const roles = app.assignedRoles || [];
-        const needsInitiatorBrandFetch =
+        const needsBrandFetch =
           roleListIncludes(roles, Config.Roles.Initiator) ||
-          roleListIncludes(roles, Config.Roles.Admin);
-        if (!needsInitiatorBrandFetch) {
+          roleListIncludes(roles, Config.Roles.Admin) ||
+          roleListIncludes(roles, Config.Roles.MisCoordinator);
+        if (!needsBrandFetch) {
           return false;
         }
         // Initiator brands were seeded at login (possibly empty) — do not refetch.
@@ -261,6 +287,36 @@ export const fetchNpdLookupOptions = createAsyncThunk<
   },
 );
 
+/** True when Storage Location / MRP fields from Plant Master are already present. */
+function hasPlantMasterDerivedFields(details: INpdOtherDetails): boolean {
+  return Boolean(
+    (details.storageLocation || "").trim() ||
+      (details.mrpGroup || "").trim() ||
+      (details.mrpController || "").trim(),
+  );
+}
+
+async function fetchPlantMasterSapDetailsWithRetry(
+  plantCode: string,
+  siteUrl: string | undefined,
+): Promise<IPlantMasterSapDetails | null> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const details =
+        await npdOtherDetailsService.fetchPlantMasterSapDetails(
+          plantCode,
+          siteUrl,
+        );
+      if (details) {
+        return details;
+      }
+    } catch {
+      // Retry once — Plant Master reads can fail intermittently.
+    }
+  }
+  return null;
+}
+
 /**
  * Loads Other Details for the open request.
  * Once values exist on NPD_Request (after MIS Post to SAP),
@@ -280,28 +336,50 @@ export const populateNpdOtherDetails = createAsyncThunk<
     const hasSavedOtherDetails =
       npdOtherDetailsService.otherDetailsHaveSavedValues(existing);
 
-    // Already persisted on NPD_Request — do not overwrite with Brand / PlantMaster defaults.
-    if (hasSavedOtherDetails) {
-      const profitCenterOptions = await npdOtherDetailsService
-        .fetchProfitCenterOptions()
-        .catch(() => []);
-      return {
-        otherDetails: { ...existing },
-        profitCenterOptions,
-      };
-    }
-
     const plantCode = npdOtherDetailsService.resolveMisPlantCode(
       materialType,
       plantSource,
     );
+    const valuationClass = npdOtherDetailsService.resolveMisValuationClass(
+      materialType,
+      plantSource,
+    );
+    const impGroup = npdOtherDetailsService.resolveMisExpImpGroup(
+      brand,
+      materialType,
+      plantSource,
+    );
+    const samePlantCode =
+      plantCode.trim().toLowerCase() ===
+      (existing.plantCode || "").trim().toLowerCase();
+
+    // Reuse current Other Details only when Plant Code still matches.
+    // MIS can change Plant/Source or Material Type — those must refresh
+    // Plant Master fields (and Valuation Class when plant code is unchanged,
+    // e.g. Traded Domestic ↔ Imported both use CCWH).
+    if (
+      hasSavedOtherDetails &&
+      hasPlantMasterDerivedFields(existing) &&
+      samePlantCode
+    ) {
+      const profitCenterOptions = await npdOtherDetailsService
+        .fetchProfitCenterOptions()
+        .catch(() => []);
+      return {
+        otherDetails: {
+          ...existing,
+          plantCode,
+          valuationClass,
+          impGroup,
+        },
+        profitCenterOptions,
+      };
+    }
 
     const [plantDetails, materialExtension, profitCenterOptions] =
       await Promise.all([
         plantCode
-          ? npdOtherDetailsService
-              .fetchPlantMasterSapDetails(plantCode, siteUrl)
-              .catch(() => null)
+          ? fetchPlantMasterSapDetailsWithRetry(plantCode, siteUrl)
           : Promise.resolve(null),
         npdOtherDetailsService
           .fetchMaterialExtensionForBrand(brand)
@@ -599,6 +677,7 @@ export const applyNpdWorkflowAction = createAsyncThunk<
             ClassType: state.npdForm.otherDetails.classType || "",
             MaterialExtension:
               state.npdForm.otherDetails.materialExtension || "",
+            ImpGroup: state.npdForm.otherDetails.impGroup || "",
           }
         : undefined;
 

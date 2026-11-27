@@ -40,6 +40,7 @@ const initialState: INpdFormState = {
   generalInfo: initialGeneralInfo,
   otherDetails: createEmptyNpdOtherDetails(),
   otherDetailsStatus: "idle",
+  otherDetailsRequestId: null,
   profitCenterOptions: [],
   brandOptions: [],
   plantSourceOptions: [],
@@ -89,6 +90,7 @@ const npdFormSlice = createSlice({
       state.generalInfo = { ...initialGeneralInfo };
       state.otherDetails = createEmptyNpdOtherDetails();
       state.otherDetailsStatus = "idle";
+      state.otherDetailsRequestId = null;
       state.profitCenterOptions = [];
       state.plantSourceOptions = [];
       state.plantSourceStatus = "idle";
@@ -165,15 +167,50 @@ const npdFormSlice = createSlice({
         state.lookupOptionsStatus = "error";
         state.error = action.payload ?? "Failed to load lookup options.";
       })
-      .addCase(populateNpdOtherDetails.pending, (state) => {
+      .addCase(populateNpdOtherDetails.pending, (state, action) => {
         state.otherDetailsStatus = "loading";
+        state.otherDetailsRequestId = action.meta.requestId;
       })
       .addCase(populateNpdOtherDetails.fulfilled, (state, action) => {
+        // Concurrent populates: only the latest request may write state.
+        if (action.meta.requestId !== state.otherDetailsRequestId) {
+          return;
+        }
         state.otherDetailsStatus = "idle";
-        state.otherDetails = action.payload.otherDetails;
+        const next = action.payload.otherDetails;
+        const prev = state.otherDetails;
+        const nextHasPlantMaster = Boolean(
+          (next.storageLocation || "").trim() ||
+            (next.mrpGroup || "").trim() ||
+            (next.mrpController || "").trim(),
+        );
+        const prevHasPlantMaster = Boolean(
+          (prev.storageLocation || "").trim() ||
+            (prev.mrpGroup || "").trim() ||
+            (prev.mrpController || "").trim(),
+        );
+        // Do not let a later empty Plant Master result wipe values already shown.
+        if (
+          !nextHasPlantMaster &&
+          prevHasPlantMaster &&
+          (next.plantCode || "").trim().toLowerCase() ===
+            (prev.plantCode || "").trim().toLowerCase()
+        ) {
+          state.otherDetails = {
+            ...next,
+            storageLocation: prev.storageLocation,
+            mrpGroup: prev.mrpGroup,
+            mrpController: prev.mrpController,
+          };
+        } else {
+          state.otherDetails = next;
+        }
         state.profitCenterOptions = action.payload.profitCenterOptions;
       })
       .addCase(populateNpdOtherDetails.rejected, (state, action) => {
+        if (action.meta.requestId !== state.otherDetailsRequestId) {
+          return;
+        }
         state.otherDetailsStatus = "error";
         state.error =
           action.payload ?? "Failed to load MIS Other Details.";

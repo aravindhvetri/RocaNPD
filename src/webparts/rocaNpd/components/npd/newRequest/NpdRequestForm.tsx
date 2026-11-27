@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Toast as PrimeToast } from "primereact/toast";
+import { isArmaniOrLaufenBrand } from "../../../../../External/CommonServices/npdFormDataService";
 import { exportNpdItemDetailsToExcel } from "../../../../../External/CommonServices/npdItemDetailsImportService";
 import { isNpdRequestIdTitle } from "../../../../../External/CommonServices/npdRequestIdService";
 import { useAppDispatch, useAppSelector } from "../../../../../store/hooks";
@@ -97,6 +98,9 @@ const NpdRequestForm: React.FC = () => {
           brandOptions={npdForm.brandOptions}
           plantSourceOptions={npdForm.plantSourceOptions}
           readOnly={generalInfoReadOnly}
+          lockMaterialTypeAndPlant={
+            !generalInfoReadOnly && isArmaniOrLaufenBrand(generalInfo.brand)
+          }
           brandLoading={isBrandLoading}
           plantSourceLoading={isPlantLoading}
           onBrandChange={(value) => dispatch(setNpdBrand(value))}

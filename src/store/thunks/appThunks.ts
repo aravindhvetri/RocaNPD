@@ -1,5 +1,8 @@
 import type { WebPartContext } from "@microsoft/sp-webpart-base";
+import { Config } from "../../External/CommonServices/Config";
+import { getAllNpdInitiatorBrandOptionsFromCache } from "../../External/CommonServices/npdFormDataService";
 import { syncNpdPendingReworkApprovers } from "../../External/CommonServices/npdApproverSyncService";
+import { hasRole } from "../../External/CommonServices/permissionService";
 import { resolveUserAccess } from "../../External/CommonServices/roleService";
 import {
   getCachedRocaSiteUserEmailMap,
@@ -67,12 +70,22 @@ export const initializeApp =
         siteUrl,
       );
       dispatch(setUserAccess(access));
+      // Initiator: brands from login access. MIS (no Initiator brands): same
+      // ApproversMaster Initiator brand list from the cache already filled above.
+      const initiatorBrandOptions = access.npdInitiatorBrands.map((title) => ({
+        label: title,
+        value: title,
+      }));
+      const misBrandOptions =
+        initiatorBrandOptions.length === 0 &&
+        hasRole(access.assignedRoles, Config.Roles.MisCoordinator)
+          ? getAllNpdInitiatorBrandOptionsFromCache(siteUrl)
+          : [];
       dispatch(
         setNpdBrandOptions(
-          access.npdInitiatorBrands.map((title) => ({
-            label: title,
-            value: title,
-          })),
+          initiatorBrandOptions.length > 0
+            ? initiatorBrandOptions
+            : misBrandOptions,
         ),
       );
       // Persist siteUsers Id→Email once for the session (filled during role / sync).

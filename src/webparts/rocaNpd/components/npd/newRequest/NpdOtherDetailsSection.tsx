@@ -90,6 +90,13 @@ const NpdOtherDetailsSection: React.FC<INpdOtherDetailsSectionProps> = ({
             }}
           />
           <InputText
+            id="npdMisExpImpGroup"
+            label={FieldLabels.ExpImpGroup}
+            value={details.impGroup}
+            disabled
+            onChange={() => undefined}
+          />
+          <InputText
             id="npdMisMrpGroup"
             label={FieldLabels.MRPGroup}
             value={details.mrpGroup}

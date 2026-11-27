@@ -19,6 +19,8 @@ export interface INpdGeneralInfoSectionProps {
   brandLoading: boolean;
   plantSourceLoading: boolean;
   readOnly?: boolean;
+  /** Armani / Laufen: Material Type and Plant/Source stay filled and locked. */
+  lockMaterialTypeAndPlant?: boolean;
   onBrandChange: (value: string | null) => void;
   onMaterialTypeChange: (value: string | null) => void;
   onPlantSourceChange: (value: string | null) => void;
@@ -33,6 +35,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
   brandLoading,
   plantSourceLoading,
   readOnly = false,
+  lockMaterialTypeAndPlant = false,
   onBrandChange,
   onMaterialTypeChange,
   onPlantSourceChange,
@@ -43,6 +46,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
   const hasPlantSourceMaterialType = selectHasPlantSourceMaterialType(materialType);
   const plantDisabled =
     readOnly ||
+    lockMaterialTypeAndPlant ||
     !hasPlantSourceMaterialType ||
     plantSourceLoading ||
     !materialType;
@@ -122,7 +126,7 @@ const NpdGeneralInfoSection: React.FC<INpdGeneralInfoSectionProps> = ({
           value={materialType}
           options={materialTypeOptions}
           placeholder="Select Material Type"
-          disabled={readOnly}
+          disabled={readOnly || lockMaterialTypeAndPlant}
           className={styles.inlineField}
           onChange={(value) =>
             onMaterialTypeChange(typeof value === "string" ? value : null)
