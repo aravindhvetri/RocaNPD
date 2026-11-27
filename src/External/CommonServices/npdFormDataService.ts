@@ -12,7 +12,10 @@ import {
   approversRowMatchesEmail,
   resolveLoginEmail,
 } from "./personFieldUtils";
-import { ensureApproversMasterRows } from "./rocaApproversMasterCache";
+import {
+  ensureApproversMasterRows,
+  getCachedApproversMasterRows,
+} from "./rocaApproversMasterCache";
 import { requireRocaMasterSiteUrl } from "./rocaSiteUrlResolver";
 import SPServices from "./SPServices";
 
@@ -91,6 +94,75 @@ function mapDistinctBrandOptions(
   return Array.from(brandTitles)
     .sort((left, right) => left.localeCompare(right))
     .map((title) => ({ label: title, value: title }));
+}
+
+/**
+ * All NPD Initiator brands from ApproversMaster (not filtered by user).
+ * Used so MIS can pick the same Brand options Initiators use.
+ */
+function mapAllNpdInitiatorBrandOptions(
+  rows: readonly Record<string, unknown>[],
+): ISelectOption[] {
+  const brandTitles = new Set<string>();
+
+  rows.forEach((row) => {
+    if (isDeletedApproverRow(row)) {
+      return;
+    }
+    if (!isSystemMatchingNpd(row.System)) {
+      return;
+    }
+    const roleTitles = getLookupTitles(row.Role);
+    const isInitiator = roleTitles.some((t) =>
+      t.trim().toLowerCase().includes("initiator"),
+    );
+    if (!isInitiator) {
+      return;
+    }
+    getLookupTitles(row.Brand).forEach((title) => {
+      const trimmed = title.trim();
+      if (trimmed) {
+        brandTitles.add(trimmed);
+      }
+    });
+  });
+
+  return Array.from(brandTitles)
+    .sort((left, right) => left.localeCompare(right))
+    .map((title) => ({ label: title, value: title }));
+}
+
+/** Sync read from ApproversMaster cache filled during login — no network. */
+export function getAllNpdInitiatorBrandOptionsFromCache(
+  contextSiteUrl?: string,
+): ISelectOption[] {
+  try {
+    const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
+    const cached = getCachedApproversMasterRows(rocaSiteUrl);
+    if (!cached?.length) {
+      return [];
+    }
+    return mapAllNpdInitiatorBrandOptions(cached);
+  } catch {
+    return [];
+  }
+}
+
+/** Same ApproversMaster source as Initiator brands; uses shared cache when warm. */
+export async function fetchAllNpdInitiatorBrandOptions(
+  contextSiteUrl?: string,
+): Promise<ISelectOption[]> {
+  const rocaSiteUrl = requireRocaMasterSiteUrl(contextSiteUrl);
+  const rows = await ensureApproversMasterRows(rocaSiteUrl, () =>
+    SPServices.getAnotherSPReadItems({
+      SiteUrl: rocaSiteUrl,
+      Listname: Config.RocaMasterListNames.ApproversMaster,
+      Select: APPROVERS_SELECT,
+      Expand: APPROVERS_EXPAND,
+      Topcount: 5000,
+    }) as Promise<Record<string, unknown>[]>,
+  );
+  return mapAllNpdInitiatorBrandOptions(rows);
 }
 
 export async function fetchInitiatorBrandOptions(
@@ -201,6 +273,14 @@ export function getTradedProductPlantSourceOptions(): ISelectOption[] {
       value: NpdTradedPlantSources.Domestic,
     },
   ];
+}
+
+/** Armani and Laufen always use Traded Products + Imported on a new request. */
+export function isArmaniOrLaufenBrand(
+  brand: string | null | undefined,
+): boolean {
+  const key = (brand || "").trim().toLowerCase();
+  return key === "armani" || key === "laufen";
 }
 
 export function getNpdMaterialTypeOptions(): ISelectOption[] {

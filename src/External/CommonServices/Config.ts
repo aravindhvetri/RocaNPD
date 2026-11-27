@@ -317,6 +317,7 @@ export const FieldNames = {
     ValuationClass: "ValuationClass",
     ClassType: "ClassType",
     MaterialExtension: "MaterialExtension",
+    ImpGroup: "ImpGroup",
     /** Person field. REST write uses `InitiatorId`. */
     Initiator: "Initiator",
     InitiatorId: "InitiatorId",
@@ -474,6 +475,7 @@ export const FieldLabels = {
   ValuationClass: "Valuation Class",
   ClassType: "Class Type",
   MaterialExtension: "Material Extension",
+  ExpImpGroup: "Exp/Imp Group",
   RequestType: "Request Type",
   CurrentRole: "Current Role",
   NextRole: "Next Role",
@@ -676,7 +678,7 @@ export const Config = {
   Navigation: NAV_SECTIONS,
 
   /** Display version shown in the app shell footer. */
-  AppVersion: "V2.10",
+  AppVersion: "V3.1",
 };
 
 export type UserRole = (typeof Config.Roles)[keyof typeof Config.Roles];

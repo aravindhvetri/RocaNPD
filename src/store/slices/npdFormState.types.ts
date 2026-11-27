@@ -18,6 +18,8 @@ export interface INpdFormState {
   generalInfo: INpdGeneralInfo;
   otherDetails: INpdOtherDetails;
   otherDetailsStatus: NpdFormRequestStatus;
+  /** Latest populateNpdOtherDetails request id — ignore stale fulfilled results. */
+  otherDetailsRequestId: string | null;
   profitCenterOptions: ISelectOption[];
   brandOptions: ISelectOption[];
   plantSourceOptions: ISelectOption[];

@@ -94,7 +94,7 @@
 }
 
 .classTypeFullRow {
-  grid-column: 1 / -1;
+  grid-column: span 2;
   min-width: 0;
 }
 
@@ -152,6 +152,10 @@
 
   .leftFields {
     grid-template-columns: 1fr;
+  }
+
+  .classTypeFullRow {
+    grid-column: auto;
   }
 
   .materialExtensionField {

@@ -134,6 +134,7 @@ const SELECT_FIELDS = [
   "ValuationClass",
   "ClassType",
   "MaterialExtension",
+  "ImpGroup",
   "Created",
   "Modified",
   "Author/Id",
@@ -278,6 +279,7 @@ function mapGeneralInfo(item: Record<string, unknown>): INpdRequestGeneralInfo {
     ValuationClass: String(item[FIELDS.ValuationClass] ?? "").trim(),
     ClassType: String(item[FIELDS.ClassType] ?? "").trim(),
     MaterialExtension: String(item[FIELDS.MaterialExtension] ?? "").trim(),
+    ImpGroup: String(item[FIELDS.ImpGroup] ?? "").trim(),
   };
 }
 
@@ -293,6 +295,7 @@ function buildOtherDetailsUpdatePayload(
     [FIELDS.ValuationClass]: otherDetails.valuationClass.trim(),
     [FIELDS.ClassType]: otherDetails.classType.trim() || "001",
     [FIELDS.MaterialExtension]: otherDetails.materialExtension.trim(),
+    [FIELDS.ImpGroup]: otherDetails.impGroup.trim(),
   };
 }
 
@@ -975,6 +978,7 @@ export async function submitNpdRequest(
     ValuationClass: "",
     ClassType: "",
     MaterialExtension: "",
+    ImpGroup: "",
   };
 
   const auditAction = isResubmit ? "Resubmit" : "Initiated";
@@ -1290,6 +1294,7 @@ export async function applyNpdWorkflowAction(params: {
       valuationClass: String(request.ValuationClass ?? "").trim(),
       classType: String(request.ClassType ?? "").trim() || "001",
       materialExtension: String(request.MaterialExtension ?? "").trim(),
+      impGroup: String(request.ImpGroup ?? "").trim(),
     };
     const sapTargets = storedItems.filter(
       (item) =>
@@ -1358,13 +1363,18 @@ export async function applyNpdWorkflowAction(params: {
     );
   }
 
-  // Other Details columns on NPD_Request are written only with Post to SAP.
-  // MIS Rework / Reject (and VH) must not update Plant Code, Profit Center, etc.
-  if (isMisPostToSap && params.otherDetails) {
-    Object.assign(
-      updatePayload,
-      buildOtherDetailsUpdatePayload(params.otherDetails),
-    );
+  // General Info + Other Details on NPD_Request are written only with Post to SAP.
+  // MIS Rework / Reject must not update Brand, Plant, Profit Center, etc.
+  if (isMisPostToSap) {
+    updatePayload[FIELDS.Brand] = (request.Brand || "").trim();
+    updatePayload[FIELDS.MaterialType] = (request.MaterialType || "").trim();
+    updatePayload[FIELDS.Plant] = (request.Plant || "").trim();
+    if (params.otherDetails) {
+      Object.assign(
+        updatePayload,
+        buildOtherDetailsUpdatePayload(params.otherDetails),
+      );
+    }
   }
 
   try {
@@ -1374,7 +1384,7 @@ export async function applyNpdWorkflowAction(params: {
       RequestJSON: updatePayload,
     });
   } catch (updateError) {
-    // Status / workflow must still persist even if Other Details columns fail.
+    // Status / workflow / General Info must still persist even if Other Details columns fail.
     if (isMisPostToSap && params.otherDetails) {
       await SPServices.SPUpdateItem({
         Listname: LIST_NAME(),
@@ -1382,6 +1392,9 @@ export async function applyNpdWorkflowAction(params: {
         RequestJSON: {
           [FIELDS.Status]: headerStatus,
           [FIELDS.WorkFlowJSON]: stringifyWorkflowJson(updatedSteps),
+          [FIELDS.Brand]: (request.Brand || "").trim(),
+          [FIELDS.MaterialType]: (request.MaterialType || "").trim(),
+          [FIELDS.Plant]: (request.Plant || "").trim(),
         },
       });
       console.warn(

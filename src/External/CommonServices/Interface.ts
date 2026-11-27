@@ -171,6 +171,8 @@ export interface INpdOtherDetails {
   valuationClass: string;
   classType: string;
   materialExtension: string;
+  /** NPD_Request.ImpGroup — IMP or blank. */
+  impGroup: string;
 }
 
 /** PlantMaster row fields used for MIS Other Details auto-populate. */
@@ -221,6 +223,7 @@ export interface INpdRequestGeneralInfo {
   ValuationClass?: string;
   ClassType?: string;
   MaterialExtension?: string;
+  ImpGroup?: string;
 }
 
 export interface INpdRequestGeneralInfoRow

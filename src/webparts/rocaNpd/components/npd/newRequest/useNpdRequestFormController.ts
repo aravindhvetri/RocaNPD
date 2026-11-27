@@ -35,7 +35,15 @@ import {
   clearNpdFormError,
   resetNpdFormState,
   selectHasPlantSourceMaterialType,
+  setNpdMaterialType,
+  setNpdOtherDetailsProfitCenter,
+  setNpdPlantSource,
 } from "../../../../../store/slices/npdFormSlice";
+import { isArmaniOrLaufenBrand } from "../../../../../External/CommonServices/npdFormDataService";
+import {
+  deriveProfitCenterText,
+  resolveProfitCenterOptionValue,
+} from "../../../../../External/CommonServices/profitCenterDerivation";
 import { setFlashMessage } from "../../../../../store/slices/uiSlice";
 import {
   applyNpdWorkflowAction,
@@ -312,11 +320,96 @@ export function useNpdRequestFormController(
     hasReachedMis,
     footerMode: lockedFooterMode,
   });
-  const otherDetailsReadOnly = lockedFooterMode !== "mis-pending";
+  const hasAnyItemPostedToSap = itemRows.some((row) => row.sapPosted === true);
+  const otherDetailsReadOnly =
+    lockedFooterMode !== "mis-pending" || hasAnyItemPostedToSap;
   const showApproverRemarks =
     lockedFooterMode === "vertical-head-pending" ||
     lockedFooterMode === "mis-pending";
   const showAuditLog = Boolean(editId || npdForm.requestId);
+
+  const profitCenterRequestKeyRef = React.useRef("");
+  const profitCenterConditionsKeyRef = React.useRef("");
+
+  React.useEffect(() => {
+    const requestKey = String(editId || npdForm.requestId || "");
+    if (profitCenterRequestKeyRef.current !== requestKey) {
+      profitCenterRequestKeyRef.current = requestKey;
+      profitCenterConditionsKeyRef.current = "";
+    }
+    if (otherDetailsReadOnly || !showOtherDetails || !recordReady) {
+      return;
+    }
+    if (
+      npdForm.otherDetailsStatus === "loading" ||
+      npdForm.loadStatus === "loading"
+    ) {
+      return;
+    }
+    if (!npdForm.profitCenterOptions.length) {
+      return;
+    }
+
+    const current = (npdForm.otherDetails.profitCenter || "").trim();
+    const mg3ByRow = itemRows
+      .filter(
+        (row) =>
+          Boolean(String(row.materialCode || "").trim()) ||
+          Boolean(String(row.materialDescription || "").trim()) ||
+          (row.productCategoryMg3 || []).some((value) =>
+            Boolean(String(value || "").trim()),
+          ),
+      )
+      .map((row) => row.productCategoryMg3 || []);
+    const conditionKey = JSON.stringify({
+      brand: npdForm.generalInfo.brand || "",
+      materialType: npdForm.generalInfo.materialType || "",
+      plantSource: npdForm.generalInfo.plantSource || "",
+      mg3ByRow,
+    });
+    const isFirst = profitCenterConditionsKeyRef.current === "";
+    const conditionsChanged =
+      profitCenterConditionsKeyRef.current !== conditionKey;
+    profitCenterConditionsKeyRef.current = conditionKey;
+
+    // Keep a value already on the request until Brand, Material Type,
+    // Plant/Source, or MG3 actually changes. A manual dropdown pick alone
+    // must not block the next condition-based update.
+    if (isFirst && current) {
+      return;
+    }
+    if (!conditionsChanged) {
+      return;
+    }
+
+    const derived = resolveProfitCenterOptionValue(
+      deriveProfitCenterText({
+        brand: npdForm.generalInfo.brand,
+        materialType: npdForm.generalInfo.materialType,
+        plantSource: npdForm.generalInfo.plantSource,
+        mg3ByRow,
+      }),
+      npdForm.profitCenterOptions,
+    );
+    if (current !== derived) {
+      dispatch(setNpdOtherDetailsProfitCenter(derived));
+    }
+  }, [
+    dispatch,
+    itemRows,
+    otherDetailsReadOnly,
+    showOtherDetails,
+    recordReady,
+    npdForm.otherDetailsStatus,
+    npdForm.loadStatus,
+    npdForm.profitCenterOptions,
+    npdForm.otherDetails.profitCenter,
+    npdForm.generalInfo.brand,
+    npdForm.generalInfo.materialType,
+    npdForm.generalInfo.plantSource,
+    editId,
+    npdForm.requestId,
+  ]);
 
   React.useEffect(() => {
     if (!showOtherDetails || !recordReady || npdForm.loadStatus === "loading") {
@@ -354,12 +447,13 @@ export function useNpdRequestFormController(
     if (npdForm.brandOptions.length > 0) {
       return;
     }
-    // VH / MIS / Consultant never need Initiator brand options for View/Approve.
+    // Initiator / Admin / MIS may need Brand options. VH / Consultant do not.
     if (roleStatus === "succeeded") {
-      const needsInitiatorBrandFetch =
+      const needsBrandFetch =
         hasRole(assignedRoles, Config.Roles.Initiator) ||
-        hasRole(assignedRoles, Config.Roles.Admin);
-      if (!needsInitiatorBrandFetch) {
+        hasRole(assignedRoles, Config.Roles.Admin) ||
+        hasRole(assignedRoles, Config.Roles.MisCoordinator);
+      if (!needsBrandFetch) {
         return;
       }
       // Initiator brands already resolved at login (possibly empty).
@@ -550,7 +644,33 @@ export function useNpdRequestFormController(
     userLoginName,
   ]);
 
-  const generalInfoEditable = lockedFooterMode === "initiator-edit";
+  // Initiator draft/rework and MIS pending may edit General Info.
+  // MIS edits persist only on Post to SAP (not Rework / Reject).
+  const generalInfoEditable =
+    lockedFooterMode === "initiator-edit" ||
+    (lockedFooterMode === "mis-pending" && !hasAnyItemPostedToSap);
+
+  React.useEffect(() => {
+    if (!generalInfoEditable || !isArmaniOrLaufenBrand(npdForm.generalInfo.brand)) {
+      return;
+    }
+    if (
+      npdForm.generalInfo.materialType !== Config.NpdMaterialTypes.TradedProducts
+    ) {
+      dispatch(setNpdMaterialType(Config.NpdMaterialTypes.TradedProducts));
+    }
+    if (
+      npdForm.generalInfo.plantSource !== Config.NpdTradedPlantSources.Imported
+    ) {
+      dispatch(setNpdPlantSource(Config.NpdTradedPlantSources.Imported));
+    }
+  }, [
+    dispatch,
+    generalInfoEditable,
+    npdForm.generalInfo.brand,
+    npdForm.generalInfo.materialType,
+    npdForm.generalInfo.plantSource,
+  ]);
 
   React.useEffect(() => {
     if (
@@ -560,9 +680,9 @@ export function useNpdRequestFormController(
     ) {
       return;
     }
-    // View / approver edit: Plant is already on NPD_Request — reuse it
-    // (General Info dropdown injects the saved value). Only New / Initiator
-    // Draft needs the PlantMaster list for the picker.
+    // View / VH: Plant is already on NPD_Request — reuse it
+    // (General Info dropdown injects the saved value). New / Initiator /
+    // MIS pending need the PlantMaster list for the picker.
     if (editId && !generalInfoEditable) {
       return;
     }
@@ -1359,7 +1479,7 @@ export function useNpdRequestFormController(
           (npdForm.requestStatus || "").trim().toLowerCase() === "approved"
         ? "View NPD Request"
         : "View NPD Request",
-    generalInfoReadOnly: lockedFooterMode !== "initiator-edit",
+    generalInfoReadOnly: !generalInfoEditable,
     itemDetailsReadOnly: isTabLocked || itemDetailsReadOnly,
     // Initiator: Export only on Edit/View of an existing request (not New).
     // VH / MIS keep Export whenever Item Details actions are available.
@@ -1372,7 +1492,7 @@ export function useNpdRequestFormController(
       lockedFooterMode === "vertical-head-pending",
     showOtherDetails,
     otherDetailsReadOnly,
-    hasAnyItemPostedToSap: itemRows.some((row) => row.sapPosted === true),
+    hasAnyItemPostedToSap,
     tabRestriction: tabLock.restriction,
     handleCancel: () =>
       navigate(
